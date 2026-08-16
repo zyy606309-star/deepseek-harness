@@ -8,7 +8,7 @@
   flex-direction: column;
   height: 100%;
   min-width: 0;
-  background: var(--dsw-alias-bg-base);
+  background: color-mix(in srgb, var(--dsw-alias-bg-base) var(--dsw-surface-opacity, 100%), transparent);
 
   /* Shared width axis for the whole column: one content width W
      (--dsh-chat-content-width) for the transcript, the dock cards
@@ -249,28 +249,21 @@
 }
 
 .root[data-phase='active'] .composerSeat {
-  position: sticky;
-  bottom: 0;
-  /* Above markdown CodeBlock sticky banners (z-index 6) so the footer never
-     paints under a sticking code header while scrolling. */
-  z-index: 7;
-  /* Input mask (figma 1205:27463): transcript fades out under a FIXED 36px
-     band at the seat's top (the figma 24% of the resting ~150px composer),
-     solid below — px stops, not %, so a growing draft only widens the solid
-     region and the fade band never stretches. The 0px stop is bg-base at
-     zero alpha (not white, which the figma export hardcodes) so both themes
-     fade from their own base. */
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px,
-    var(--dsw-alias-bg-base) 36px
-  );
+  /* The seat sits below the scroll body (a flex sibling), so transcript rows
+     stop above it and never need a mask; transparent keeps the whole-page
+     image and the view area's tint uninterrupted across the boundary. */
+  background: transparent;
 }
 
 /* Views may opt into a composer overlay while ConversationRoot retains
-   ownership of the seat geometry and its active-phase precedence. */
-.scrollBody:has([data-conversation-composer-overlay]) {
+   ownership of the seat geometry and its active-phase precedence. The seat is
+   a flex sibling of the scroll body, so the root becomes the containing block
+   for its overlay absolute positioning. */
+.root:has([data-conversation-composer-overlay]) {
   position: relative;
+}
+
+.scrollBody:has([data-conversation-composer-overlay]) {
   /* A clipping box nothing scrolls out of, stated as a scroll container on both
      axes rather than `overflow: hidden`: a single-axis scroller computes the
      other axis to `auto`, and the seat's absolute positioning below needs the
@@ -291,11 +284,11 @@
   overflow: hidden;
 }
 
-.scrollBody:has([data-conversation-composer-overlay]) > .composerSeat {
+.root:has([data-conversation-composer-overlay]) .composerSeat {
   position: absolute;
-  /* Chat's seat rides this box's content box, which its own scrolling shortens
-     by the bar's width; the overlay seat is against the padding box, so it
-     must give back the same width to keep the input card in place across
+  /* Chat's seat rides the scroll body's content box, which its own scrolling
+     shortens by the bar's width; the overlay seat is against the padding box,
+     so it must give back the same width to keep the input card in place across
      tabs. Reads ui-theme's --dsh-scrollbar-width, which mirrors the WebKit
      bar's layout width. Chat reserves the engine-resolved width, so on an
      engine where the resolved width differs from this fixed 8px the card
@@ -351,11 +344,18 @@
   padding-left: 20px;
 }
 
-/* Hero: the composer sits inside the session scroll body; center there so
-   the tree seat matches active (sticky footer) without a Root remount. */
+/* Hero: the empty scroll body collapses and the composer seat (a flex sibling
+   below it) fills the column and centers the stack, matching the old
+   centered-in-scroll-body layout without a Root remount. */
 .root[data-phase='hero'] .scrollBody {
-  justify-content: center;
+  flex: 0 1 auto;
   overflow-y: auto;
+}
+
+.root[data-phase='hero'] .composerSeat {
+  flex: 1;
+  justify-content: center;
+  align-items: center;
 }
 
 /* Settling (session replaying, hero/docked unknown): keep the composer seat

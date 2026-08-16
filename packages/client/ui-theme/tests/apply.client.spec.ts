@@ -34,7 +34,7 @@ async function bench(isLoopback = true) {
   const namespace = () => ({
     ns: THEME_SETTINGS_NAMESPACE,
     schema: ThemeSettingsSchema.toJSON(),
-    value: { preference },
+    value: { preference, backgroundImage: '', backgroundOpacity: 1 },
     applies: 'live' as const,
     secrets: [],
     revision: 0,

@@ -32,18 +32,18 @@ export function ConversationRoot({
   const [pendingWorkspaceId, setPendingWorkspaceId] = useState<WorkspaceId | undefined>()
   const pickerAnchor = useRef<HTMLButtonElement>(null)
 
-  // Publishes the seat's live height as --dsh-composer-height on the scroll
-  // body so floating controls (ChatView back-to-bottom) clear the composer as
-  // it grows. Callback ref, not an effect; stable identity prevents observer
-  // churn while the first blank session fills the resident body outlet.
+  // Publishes the seat's live height as --dsh-composer-height on its parent
+  // (the root column) so floating controls (ChatView back-to-bottom) clear the
+  // composer as it grows. Callback ref, not an effect; stable identity prevents
+  // observer churn while the first blank session fills the resident body outlet.
   const seatObserver = useRef<ResizeObserver | null>(null)
   const seatResizeRef = useCallback((seat: HTMLDivElement | null): void => {
     seatObserver.current?.disconnect()
     seatObserver.current = null
-    const scroller = seat?.parentElement ?? null
-    if (seat === null || scroller === null) return
+    const seatHost = seat?.parentElement ?? null
+    if (seat === null || seatHost === null) return
     seatObserver.current = new ResizeObserver(() => {
-      scroller.style.setProperty('--dsh-composer-height', `${seat.offsetHeight}px`)
+      seatHost.style.setProperty('--dsh-composer-height', `${seat.offsetHeight}px`)
     })
     seatObserver.current.observe(seat)
   }, [])
@@ -188,8 +188,8 @@ export function ConversationRoot({
       {renderSlot('conversation.session.header', {})}
       <div className={css.scrollBody} data-conversation-scroll="">
         {renderSlot('conversation.session', {})}
-        {composerSeat}
       </div>
+      {composerSeat}
     </div>
   )
 }

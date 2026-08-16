@@ -55,3 +55,52 @@
   background: var(--dsw-alias-bg-module-platform);
   border-color: var(--dsw-static-neutral-bluish-400);
 }
+
+/* Background controls: pick/clear buttons and preview. */
+.fieldLabel {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.backgroundRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pickButton,
+.clearButton {
+  padding: 6px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+}
+
+.pickButton:hover,
+.clearButton:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.clearButton {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.preview {
+  margin-top: 8px;
+  max-width: 100%;
+  max-height: 120px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.hiddenFileInput {
+  display: none;
+}

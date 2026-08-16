@@ -20,6 +20,7 @@ import { AppearanceRow } from './AppearanceRow.tsx'
 import { createAppearanceRowStore } from './settings-store.ts'
 import { en, zh, type ThemeKey } from './locales.ts'
 import {
+  BACKGROUND_IMAGE_FIELD, DEFAULT_BACKGROUND_IMAGE, DEFAULT_BACKGROUND_OPACITY,
   DEFAULT_PREFERENCE, isThemePreference, THEME_PREFERENCE_FIELD, THEME_SETTINGS_NAMESPACE,
   type ThemePreference, type ThemeSettings,
 } from '../theme-settings.ts'
@@ -70,6 +71,14 @@ export interface ThemeDefinition {
   tokens: ThemeTokens
 }
 
+/** Whole-page background: image URL and its opacity, owned by the same plugin. */
+export interface ThemeBackground {
+  /** Background image URL; empty string means none. */
+  image: string
+  /** Background image opacity, clamped to 0..1. */
+  opacity: number
+}
+
 /** Immutable theme state published on every change. */
 export interface ThemeSnapshot {
   /** The persisted preference (may be `system`). */
@@ -82,6 +91,8 @@ export interface ThemeSnapshot {
   active: ThemeDefinition
   /** Registered themes in registration order. */
   themes: readonly ThemeDefinition[]
+  /** Whole-page background image and opacity. */
+  background: ThemeBackground
   /** Monotonic change counter (registry or active changes). */
   revision: number
 }
@@ -152,6 +163,7 @@ export class ThemeRuntime {
   private readonly host: SettingsScope<ThemeSettings>
   private themes: ThemeDefinition[] = [...BUILTIN_THEMES]
   private preference: ThemePreference
+  private background: ThemeBackground
   private revision = 0
   private snapshot: ThemeSnapshot
   private readonly media: MediaQueryList | undefined
@@ -168,6 +180,7 @@ export class ThemeRuntime {
     this.ctx = ctx
     this.host = host
     this.preference = DEFAULT_PREFERENCE
+    this.background = { image: DEFAULT_BACKGROUND_IMAGE, opacity: DEFAULT_BACKGROUND_OPACITY }
     // Non-browser runs (node e2e booting the client tree) have no matchMedia.
     this.media = typeof matchMedia === 'undefined' ? undefined : matchMedia('(prefers-color-scheme: dark)')
     this.snapshot = this.buildSnapshot()
@@ -229,11 +242,27 @@ export class ThemeRuntime {
     this.publish()
   }
 
-  /** Adopt the scope's accepted durable preference without writing it back. */
+  /**
+   * Set the whole-page background image URL; an empty string clears it.
+   * @param image - the URL to use as the page background.
+   */
+  setBackgroundImage(image: string): void {
+    if (this.background.image === image) return
+    this.background = { ...this.background, image }
+    void this.host.set(BACKGROUND_IMAGE_FIELD, image)
+    this.publish()
+  }
+
+  /** Adopt the scope's accepted durable preference and background without writing them back. */
   private adopt(): void {
     const section = this.host.getSnapshot().value
-    if (section === undefined || this.preference === section.preference) return
+    if (section === undefined) return
+    const changed = this.preference !== section.preference
+      || this.background.image !== section.backgroundImage
+      || this.background.opacity !== section.backgroundOpacity
+    if (!changed) return
     this.preference = section.preference
+    this.background = { image: section.backgroundImage, opacity: Math.min(1, Math.max(0, section.backgroundOpacity)) }
     this.publish()
   }
 
@@ -302,6 +331,7 @@ export class ThemeRuntime {
       preference: this.preference,
       active: this.composeActive(active),
       themes: Object.freeze([...this.themes]),
+      background: Object.freeze({ ...this.background }),
       revision: this.revision,
     })
   }
@@ -391,7 +421,7 @@ export function apply(ctx: ClientContext): void {
   const store = createAppearanceRowStore()
   let bound: BoundActions<typeof store> | undefined
   const sync = (snapshot: ThemeSnapshot): void => {
-    bound?.sync(snapshot.preference, snapshot.revision)
+    bound?.sync(snapshot.preference, snapshot.background.image, snapshot.revision)
   }
   ctx.on('theme/change', sync)
   const injected = (actions: BoundActions<typeof store>): AppearanceRowInjected => {
@@ -401,6 +431,7 @@ export function apply(ctx: ClientContext): void {
     sync(theme.getTheme())
     return {
       setTheme: (id) => { theme.setTheme(id) },
+      setBackgroundImage: (image) => { theme.setBackgroundImage(image) },
     }
   }
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({

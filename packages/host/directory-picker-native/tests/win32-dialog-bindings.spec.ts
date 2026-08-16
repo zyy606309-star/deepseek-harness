@@ -180,6 +180,18 @@ describe('loadWin32DialogBindings over the fake COM world', () => {
     expect(world.uninitialized).toBe(1)
   })
 
+  it('keeps CJK characters whose UTF-16LE low byte is NUL (开 U+5F00) instead of truncating the path', async () => {
+    // Regression: the old terminator scan checked only each code unit's low
+    // byte, so 开 (U+5F00 → 0x00 0x5F) read as end-of-string and the picked
+    // path lost every character after it.
+    const path = 'D:\\逆向开发\\project'
+    const world = comWorld({ path })
+    installFakeKoffi(world)
+    const { loadWin32DialogBindings } = await loadBindingsModule()
+    const bindings = await loadWin32DialogBindings()
+    expect(runFolderDialog(bindings, 'Pick', vi.fn())).toBe(path)
+  })
+
   it('maps dismissal and the S_FALSE CoInitializeEx', async () => {
     const world = comWorld({ showHr: HRESULT_CANCELLED, coInitHr: 1 })
     installFakeKoffi(world)

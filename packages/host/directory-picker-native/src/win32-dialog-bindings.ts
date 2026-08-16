@@ -37,7 +37,10 @@ interface Koffi {
 function readUtf16(koffi: Koffi, address: unknown): string {
   const bytes = Buffer.from(koffi.view(address, 32768))
   let end = 0
-  while (end + 1 < bytes.length && bytes[end] !== 0) end += 2
+  // Terminate on a full NUL code unit (0x0000), never on a code unit whose
+  // low byte is 0x00 — that misreads CJK characters such as 开 (U+5F00, UTF-16LE
+  // 0x00 0x5F) as the end of the string and truncates the picked path.
+  while (end + 1 < bytes.length && bytes.readUInt16LE(end) !== 0) end += 2
   return bytes.toString('utf16le', 0, end)
 }
 

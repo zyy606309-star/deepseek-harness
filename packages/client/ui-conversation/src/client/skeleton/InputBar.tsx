@@ -255,7 +255,11 @@ export function InputBar({
     const el = scrollRef.current
     if (el === null) return
     const onWheel = (e: WheelEvent): void => {
+      // The host is either an ancestor scrollport, or (in the real tree) the
+      // scrollport sibling of the composer seat that wraps this bar.
       const host = el.closest('[data-conversation-scroll]')
+        ?? el.closest('[data-composer-seat]')?.parentElement?.querySelector('[data-conversation-scroll]')
+        ?? null
       if (!(host instanceof HTMLElement) || e.deltaY === 0) return
       const atTop = el.scrollTop <= 0
       const atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 1

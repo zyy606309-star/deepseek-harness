@@ -6,6 +6,9 @@ export const zh = {
   'appearance.light': '浅色',
   'appearance.dark': '深色',
   'appearance.system': '跟随系统',
+  'appearance.backgroundImage': '背景图',
+  'appearance.backgroundPick': '选择图片',
+  'appearance.backgroundClear': '清除',
 } satisfies Record<string, string>
 
 /** The settings.theme namespace key union. */
@@ -17,4 +20,7 @@ export const en = {
   'appearance.light': 'Light',
   'appearance.dark': 'Dark',
   'appearance.system': 'System',
+  'appearance.backgroundImage': 'Background image',
+  'appearance.backgroundPick': 'Choose image',
+  'appearance.backgroundClear': 'Clear',
 } satisfies Record<ThemeKey, string>

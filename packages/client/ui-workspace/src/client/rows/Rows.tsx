@@ -122,6 +122,8 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, t }: 
   const label = row.workspaceId === undefined ? t('group.ungrouped') : row.label
   const active = group.expanded && group.containsCurrent
   const [menuOpen, setMenuOpen] = useState(false)
+  // 悬停在行尾操作按钮（… / +）上时抑制悬浮卡片，避免卡片盖住按钮导致点不到。
+  const [actionsHovered, setActionsHovered] = useState(false)
   const workspaceMenuItems = [
     { id: 'rename', label: t('rename'), icon: <IconEditOutline16 /> },
     { id: 'delete', label: t('delete.workspace'), icon: <IconTrashOutline16 />, danger: true },
@@ -151,7 +153,11 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, t }: 
       <span className={css.projectText}>
         <span className={css.title}>{label}</span>
       </span>
-      <span className={css.rowActions}>
+      <span
+        className={css.rowActions}
+        onPointerEnter={() => { setActionsHovered(true) }}
+        onPointerLeave={() => { setActionsHovered(false) }}
+      >
         {actions !== undefined && (
           <Menu
             open={menuOpen}
@@ -197,7 +203,7 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, t }: 
     <HoverCard
       anchor={ownRow}
       content={<WorkspaceHoverContent label={row.label} cwd={row.cwd} createdAt={row.createdAt} t={t} />}
-      disabled={menuOpen}
+      disabled={menuOpen || actionsHovered}
       copyText={row.cwd}
       copyLabel={t('copy')}
       copiedLabel={t('hover.copied')}
@@ -374,6 +380,8 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
   const primaryStatus = statuses[0]
   const showStatus = primaryStatus.state !== 'done' || row.completed
   const [menuOpen, setMenuOpen] = useState(false)
+  // 悬停在行尾操作按钮（…）上时抑制悬浮卡片，避免卡片盖住按钮导致点不到。
+  const [actionsHovered, setActionsHovered] = useState(false)
   // Archive hides the row through the registry-global archive set and never
   // touches the session log, so it is not styled as destructive and needs no
   // confirmation dialog.
@@ -434,7 +442,11 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
           exist — both trailing cells stay off until the first prompt. */}
       {!row.blank && <span className={css.time}>{timeLabel(row.updatedAt, now, t)}</span>}
       {!row.blank && (
-        <span className={css.rowActions}>
+        <span
+          className={css.rowActions}
+          onPointerEnter={() => { setActionsHovered(true) }}
+          onPointerLeave={() => { setActionsHovered(false) }}
+        >
           <Menu
             open={menuOpen}
             onClose={() => { setMenuOpen(false) }}
@@ -466,7 +478,7 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
     <HoverCard
       anchor={ownRow}
       content={<SessionHoverContent node={node} now={now} t={t} />}
-      disabled={menuOpen || drag?.active === true}
+      disabled={menuOpen || drag?.active === true || actionsHovered}
       copyText={row.blank ? undefined : row.title}
       copyLabel={t('copy')}
       copiedLabel={t('hover.copied')}

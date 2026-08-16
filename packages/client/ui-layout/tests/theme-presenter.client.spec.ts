@@ -5,16 +5,16 @@
 // retracts everything the presenter wrote.
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { ThemeSnapshot } from '@deepseek-ai/dsh-client-ui-theme/client'
+import type { ThemeBackground, ThemeSnapshot } from '@deepseek-ai/dsh-client-ui-theme/client'
 import { DARK_ATTRIBUTE, ThemePresenter } from '@deepseek-ai/dsh-client-ui-layout/src/client/theme-presenter.ts'
 
 const LIGHT_THEME_COLOR = 'rgb(255, 255, 255)'
 const DARK_THEME_COLOR = 'rgb(21, 21, 23)'
 
-function snapshot(colorScheme: 'light' | 'dark', tokens: Record<string, string> = {}): ThemeSnapshot {
+function snapshot(colorScheme: 'light' | 'dark', tokens: Record<string, string> = {}, background: ThemeBackground = { image: '', opacity: 1 }): ThemeSnapshot {
   // The presenter must key off colorScheme, not the id — keep them distinct.
   const active = { id: `${colorScheme}-test`, colorScheme, tokens }
-  return { preference: colorScheme, active, themes: [active], revision: 1 }
+  return { preference: colorScheme, active, themes: [active], background, revision: 1 }
 }
 
 function clearThemePresentation(): void {
@@ -87,5 +87,24 @@ describe('ThemePresenter', () => {
     expect(document.body.style.getPropertyValue('--dsw-alias-bg')).toBe('')
     expect(document.body.style.getPropertyValue('--foreign')).toBe('kept')
     expect(meta?.isConnected).toBe(false)
+  })
+
+  it('applies background image/surface-opacity variables, turns an empty image into none, and clears them on dispose', () => {
+    const presenter = new ThemePresenter()
+    presenter.apply(snapshot('light', {}, { image: 'https://example.com/bg.png', opacity: 0.5 }))
+    expect(document.body.style.getPropertyValue('--dsw-bg-image')).toBe('url("https://example.com/bg.png")')
+    expect(document.body.style.getPropertyValue('--dsw-surface-opacity')).toBe('50%')
+    presenter.apply(snapshot('light', {}, { image: '', opacity: 1 }))
+    expect(document.body.style.getPropertyValue('--dsw-bg-image')).toBe('none')
+    expect(document.body.style.getPropertyValue('--dsw-surface-opacity')).toBe('100%')
+    presenter.dispose()
+    expect(document.body.style.getPropertyValue('--dsw-bg-image')).toBe('')
+    expect(document.body.style.getPropertyValue('--dsw-surface-opacity')).toBe('')
+  })
+
+  it('escapes a quote in the background URL so it cannot break the url() string', () => {
+    const presenter = new ThemePresenter()
+    presenter.apply(snapshot('light', {}, { image: 'https://e.com/a"b.png', opacity: 1 }))
+    expect(document.body.style.getPropertyValue('--dsw-bg-image')).toContain('a\\"b.png')
   })
 })

@@ -48,19 +48,37 @@ describe('ThemeRuntime', () => {
     expect(host.set).toHaveBeenCalledOnce()
   })
 
+  it('setBackgroundImage writes through the scope and keeps the default visibility', () => {
+    const { theme, events, host } = make()
+    theme.setBackgroundImage('https://example.com/bg.png')
+    expect(theme.getTheme().background).toEqual({ image: 'https://example.com/bg.png', opacity: 0.58 })
+    expect(host.set).toHaveBeenCalledWith('backgroundImage', 'https://example.com/bg.png')
+    expect(events).toHaveLength(1)
+    // Same-value set is a no-op (no extra event).
+    theme.setBackgroundImage('https://example.com/bg.png')
+    expect(events).toHaveLength(1)
+  })
+
+  it('adopts a published background section', () => {
+    const host = stubSettingsScope<ThemeSettings>()
+    host.publish({ status: 'ready', value: { preference: 'system', backgroundImage: 'https://example.com/bg.png', backgroundOpacity: 0.3 }, revision: 1, writable: true })
+    const { theme } = make(host)
+    expect(theme.getTheme().background).toEqual({ image: 'https://example.com/bg.png', opacity: 0.3 })
+  })
+
   it('adopts a published Host section without writing it back', () => {
     const { theme, events, host } = make()
-    host.publish({ status: 'ready', value: { preference: 'dark' }, revision: 1, writable: true })
+    host.publish({ status: 'ready', value: { preference: 'dark', backgroundImage: '', backgroundOpacity: 1 }, revision: 1, writable: true })
     expect(theme.getTheme().preference).toBe('dark')
     expect(events).toHaveLength(1)
     expect(host.set).not.toHaveBeenCalled()
-    host.publish({ value: { preference: 'dark' }, revision: 2 })
+    host.publish({ value: { preference: 'dark', backgroundImage: '', backgroundOpacity: 1 }, revision: 2 })
     expect(events).toHaveLength(1)
   })
 
   it('adopts a section already standing at construction', () => {
     const host = stubSettingsScope<ThemeSettings>()
-    host.publish({ status: 'ready', value: { preference: 'dark' }, revision: 1, writable: true })
+    host.publish({ status: 'ready', value: { preference: 'dark', backgroundImage: '', backgroundOpacity: 1 }, revision: 1, writable: true })
     const { theme } = make(host)
     expect(theme.getTheme().preference).toBe('dark')
   })
