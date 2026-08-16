@@ -190,3 +190,66 @@
 .toBottom:hover {
   background: var(--dsw-alias-button-floating-hover);
 }
+
+/* Question-navigation rail: a zero-height sticky slot pinned to the top of
+   the scrollport; the strip's height rides the scrollport via ChatView's
+   ResizeObserver and markers are absolutely positioned by their content
+   offset. pointer-events are opt-in so the strip never blocks the transcript. */
+.railSlot {
+  position: sticky;
+  top: 16px;
+  height: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.rail {
+  position: absolute;
+  top: 0;
+  right: 8px;
+  width: 10px;
+  pointer-events: auto;
+}
+
+.marker {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--dsw-alias-label-caption);
+  cursor: pointer;
+  transition: background 120ms var(--ds-ease-in-out);
+}
+
+.marker:hover {
+  background: var(--dsw-alias-label-primary);
+}
+
+/* Hover preview: the question text, floating to the LEFT of its marker so it
+   never overflows the right edge. Non-interactive (the marker keeps the click). */
+.preview {
+  position: absolute;
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 280px;
+  padding: 8px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: var(--dsw-alias-button-floating-fill);
+  box-shadow: var(--dsw-shadow-lv2);
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  pointer-events: none;
+}

@@ -28,6 +28,19 @@ function scrollerOf(from: HTMLElement): HTMLElement {
   return (from.closest('[data-conversation-scroll]')) ?? from
 }
 
+/** Plain text of a user/steering chat node's text blocks (rail preview only). */
+function userNodeText(node: { readonly kind: string; readonly data: unknown } | undefined): string {
+  if (node === undefined || (node.kind !== 'user' && node.kind !== 'steering')) return ''
+  const content = (node.data as { content?: readonly unknown[] } | null)?.content
+  if (content === undefined) return ''
+  const texts: string[] = []
+  for (const block of content) {
+    const b = block as { type?: string; text?: string }
+    if (b.type === 'text' && typeof b.text === 'string') texts.push(b.text)
+  }
+  return texts.join('')
+}
+
 interface PagingAnchor {
   /** Stable node/call identity, independent of boundary-spanning group keys. */
   key: string
@@ -149,6 +162,15 @@ export function ChatView({
 }: ChatViewSlotProps) {
   const order = useSession(s => s.chat.order)
   const nodeStore = useSession(s => s.chat.nodes)
+  // Turn-opening user questions (and mid-turn steering messages): the rail's
+  // jump targets, in timeline order.
+  const userKeys = useMemo(
+    () => order.filter((key) => {
+      const kind = nodeStore.get(key)?.kind
+      return kind === 'user' || kind === 'steering'
+    }),
+    [order, nodeStore],
+  )
   const timeline = useSession(s => s.chat.timeline)
   const inbox = useSession(s => s.queue)
   // Workspace root off the session list row: path summaries display relative to it.
@@ -168,6 +190,11 @@ export function ChatView({
 
   const listRef = useRef<HTMLDivElement | null>(null)
   const columnRef = useRef<HTMLDivElement | null>(null)
+  // Question-navigation rail: strip height rides the scrollport, marker Y
+  // positions are computed from each user row's offset in the flow content.
+  const railRef = useRef<HTMLDivElement | null>(null)
+  const [markers, setMarkers] = useState<readonly number[]>([])
+  const [hovered, setHovered] = useState<number | null>(null)
   const atBottomRef = useRef(true)
   const [atBottom, setAtBottom] = useState(true)
   /** Last position delivered or written on the main thread. */
@@ -362,9 +389,74 @@ export function ChatView({
     loadOlder()
   }
 
+  /** Scroll the given user row to just below the top of the scrollport. */
+  const jumpToUser = (key: string): void => {
+    const local = listRef.current
+    /* v8 ignore next -- ref-null guard: the handler only fires while mounted. */
+    if (local === null) return
+    const el = scrollerOf(local)
+    const row = anchorElement(local, key)
+    if (row === null) return
+    el.scrollTop = flowTop(row, el) + el.scrollTop - 12
+  }
+
+  // Recompute the rail's marker positions whenever the question set changes or
+  // the flow/viewport resizes (streaming, images, window resize). Markers are
+  // proportional to the WHOLE content, so scrolling does not move them — only
+  // content growth does.
+  useEffect(() => {
+    const local = listRef.current
+    const column = columnRef.current
+    const rail = railRef.current
+    if (local === null || column === null || rail === null || typeof ResizeObserver === 'undefined') return
+    const el = scrollerOf(local)
+    const measure = (): void => {
+      const height = el.clientHeight - 32
+      if (height <= 0) return
+      rail.style.height = `${height}px`
+      const contentHeight = el.scrollHeight
+      setMarkers(userKeys.map((key) => {
+        const row = anchorElement(local, key)
+        if (row === null) return 0
+        const contentTop = flowTop(row, el) + el.scrollTop
+        return Math.max(0, Math.min(height, (contentTop / contentHeight) * height))
+      }))
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    observer.observe(column)
+    return () => { observer.disconnect() }
+  }, [userKeys])
+
   return (
     <div className={css.root}>
       <div ref={listRef} className={css.scroll}>
+        {userKeys.length > 1 && (
+          <div className={css.railSlot}>
+            <div ref={railRef} className={css.rail}>
+              {userKeys.map((key, index) => {
+                const preview = userNodeText(nodeStore.get(key))
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    className={css.marker}
+                    style={{ top: `${markers[index] ?? 0}px` }}
+                    aria-label={t('chat.jumpToQuestion', { n: index + 1 })}
+                    onClick={() => { jumpToUser(key) }}
+                    onPointerEnter={() => { setHovered(index) }}
+                    onPointerLeave={() => { setHovered(null) }}
+                  >
+                    {hovered === index && preview !== '' && (
+                      <span className={css.preview}>{preview}</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
         <div ref={columnRef} className={css.column} data-chat-flow="">
           {openState === 'loading' && <div className={css.hint}>{t('chat.loadingHistory')}</div>}
           {openState === 'error' && openError !== null && (
