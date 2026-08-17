@@ -12,6 +12,7 @@ import {
   IconDarkOutline16, IconFollowsystemOutline16, IconLightOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsLocale, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
+import { FONT_SCALE_MAX, FONT_SCALE_MIN, FONT_SCALE_STEP } from '../theme-settings.ts'
 import type { ThemePreference } from '../theme-settings.ts'
 import type { ThemeKey } from './locales.ts'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
@@ -24,6 +25,8 @@ export interface AppearanceRowInjected {
   setTheme: (id: ThemePreference) => void
   /** Set the whole-page background image (a URL or data URL). */
   setBackgroundImage: (image: string) => void
+  /** Set the UI font-size scale. */
+  setFontScale: (scale: number) => void
 }
 
 /** Full component props: runtime share + store share + locale seat + injected face. */
@@ -72,9 +75,10 @@ function compressBackground(src: string, apply: (dataUrl: string) => void, fallb
  * @param props - composed slot props.
  * @returns the row element tree.
  */
-export function AppearanceRow({ t, setTheme, setBackgroundImage, useStore }: AppearanceRowComponentProps) {
+export function AppearanceRow({ t, setTheme, setBackgroundImage, setFontScale, useStore }: AppearanceRowComponentProps) {
   const preference = useStore(s => s.preference)
   const backgroundImage = useStore(s => s.backgroundImage)
+  const fontScale = useStore(s => s.fontScale)
   const fileInput = useRef<HTMLInputElement>(null)
 
   /** Read the picked image, compress it, and apply it as the background. */
@@ -121,6 +125,20 @@ export function AppearanceRow({ t, setTheme, setBackgroundImage, useStore }: App
         )}
       </div>
       {backgroundImage !== '' && <img className={css.preview} src={backgroundImage} alt="" />}
+      <label className={css.fieldLabel}>{t('appearance.fontSize')}</label>
+      <div className={css.fontSizeRow}>
+        <input
+          type="range"
+          className={css.fontSizeSlider}
+          min={FONT_SCALE_MIN}
+          max={FONT_SCALE_MAX}
+          step={FONT_SCALE_STEP}
+          value={fontScale}
+          aria-label={t('appearance.fontSize')}
+          onChange={(event) => { setFontScale(Number(event.target.value)) }}
+        />
+        <span className={css.fontSizeValue}>{Math.round(fontScale * 100)}%</span>
+      </div>
       <input
         ref={fileInput}
         className={css.hiddenFileInput}

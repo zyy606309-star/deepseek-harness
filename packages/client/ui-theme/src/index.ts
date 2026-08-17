@@ -5,8 +5,8 @@ import type {} from '@deepseek-ai/dsh-host-webserver'
 import { settingsNamespace } from '@deepseek-ai/dsh-settings'
 import { DEFAULT_THEME_SETTINGS, injectBootTheme } from './boot-theme.ts'
 import {
-  DEFAULT_BACKGROUND_IMAGE, DEFAULT_BACKGROUND_OPACITY, DEFAULT_PREFERENCE,
-  THEME_SETTINGS_NAMESPACE, ThemeSettingsSchema,
+  DEFAULT_BACKGROUND_IMAGE, DEFAULT_BACKGROUND_OPACITY, DEFAULT_FONT_SCALE,
+  DEFAULT_PREFERENCE, THEME_SETTINGS_NAMESPACE, ThemeSettingsSchema,
   type ThemeSettings,
 } from './theme-settings.ts'
 
@@ -27,6 +27,7 @@ function readSettings(ctx: Context): ThemeSettings {
     preference: section.preference ?? DEFAULT_PREFERENCE,
     backgroundImage: section.backgroundImage ?? DEFAULT_BACKGROUND_IMAGE,
     backgroundOpacity: section.backgroundOpacity ?? DEFAULT_BACKGROUND_OPACITY,
+    fontScale: section.fontScale ?? DEFAULT_FONT_SCALE,
   }
 }
 

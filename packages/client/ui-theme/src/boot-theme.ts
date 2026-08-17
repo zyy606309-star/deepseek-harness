@@ -8,7 +8,8 @@
 
 import {
   backgroundImageCssValue,
-  DEFAULT_BACKGROUND_IMAGE, DEFAULT_BACKGROUND_OPACITY, DEFAULT_PREFERENCE,
+  DEFAULT_BACKGROUND_IMAGE, DEFAULT_BACKGROUND_OPACITY, DEFAULT_FONT_SCALE,
+  DEFAULT_PREFERENCE, FONT_SCALE_MAX, FONT_SCALE_MIN,
   type ThemeSettings,
 } from './theme-settings.ts'
 
@@ -17,11 +18,13 @@ export const DEFAULT_THEME_SETTINGS: ThemeSettings = Object.freeze({
   preference: DEFAULT_PREFERENCE,
   backgroundImage: DEFAULT_BACKGROUND_IMAGE,
   backgroundOpacity: DEFAULT_BACKGROUND_OPACITY,
+  fontScale: DEFAULT_FONT_SCALE,
 })
 
 /** Build the inline script for one theme settings section. */
 function bootThemeScript(settings: ThemeSettings): string {
   const clamped = Math.min(1, Math.max(0, settings.backgroundOpacity))
+  const fontScale = Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, settings.fontScale))
   const surfaceOpacity = settings.backgroundImage === ''
     ? '100%'
     : `${Math.round((1 - clamped) * 100)}%`
@@ -36,6 +39,7 @@ function bootThemeScript(settings: ThemeSettings): string {
   document.body.style.setProperty('--dsw-bg-image', ${JSON.stringify(backgroundImageCssValue(settings.backgroundImage))})
   document.body.style.setProperty('--dsw-surface-opacity', ${JSON.stringify(surfaceOpacity)})
   document.body.style.setProperty('--dsw-bg-opacity', ${JSON.stringify(String(clamped))})
+  document.body.style.setProperty('--dsw-font-scale', ${JSON.stringify(String(fontScale))})
 })()</script>`
 }
 

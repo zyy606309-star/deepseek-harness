@@ -8,7 +8,7 @@ import type { ThemePreference, ThemeSettings } from '../src/theme-settings.ts'
 const DARK_ATTRIBUTE = 'data-ds-dark-theme'
 
 function settings(preference: ThemePreference = 'system'): ThemeSettings {
-  return { preference, backgroundImage: '', backgroundOpacity: 1 }
+  return { preference, backgroundImage: '', backgroundOpacity: 1, fontScale: 1 }
 }
 
 function mockSystemDark(matches: boolean): void {
@@ -33,6 +33,7 @@ afterEach(() => {
   document.body.removeAttribute(DARK_ATTRIBUTE)
   document.body.style.removeProperty('--dsw-bg-image')
   document.body.style.removeProperty('--dsw-surface-opacity')
+  document.body.style.removeProperty('--dsw-font-scale')
 })
 
 describe('theme boot index transform', () => {
@@ -72,7 +73,7 @@ describe('theme boot index transform', () => {
 
   it('applies the durable background before the shell mounts', () => {
     mockSystemDark(false)
-    executeBootstrap({ preference: 'system', backgroundImage: 'https://example.com/bg.png', backgroundOpacity: 0.5 })
+    executeBootstrap({ preference: 'system', backgroundImage: 'https://example.com/bg.png', backgroundOpacity: 0.5, fontScale: 1.1 })
     expect(document.body.style.getPropertyValue('--dsw-bg-image')).toBe('url("https://example.com/bg.png")')
     expect(document.body.style.getPropertyValue('--dsw-surface-opacity')).toBe('50%')
   })

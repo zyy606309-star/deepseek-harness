@@ -22,6 +22,9 @@ export const SURFACE_OPACITY_VARIABLE = '--dsw-surface-opacity'
 /** Body custom property holding the background image opacity (0..1). */
 export const BACKGROUND_OPACITY_VARIABLE = '--dsw-bg-opacity'
 
+/** Body custom property holding the UI font-size scale. */
+export const FONT_SCALE_VARIABLE = '--dsw-font-scale'
+
 /**
  * CSS `url()` value for a background image; an empty string resolves to
  * `none`. Backslashes and quotes are escaped so an image URL cannot break
@@ -85,6 +88,7 @@ export class ThemePresenter {
     body.style.setProperty(BACKGROUND_IMAGE_VARIABLE, backgroundImageCssValue(image))
     body.style.setProperty(SURFACE_OPACITY_VARIABLE, image === '' ? '100%' : surfaceOpacityValue(snapshot.background.opacity))
     body.style.setProperty(BACKGROUND_OPACITY_VARIABLE, String(snapshot.background.opacity))
+    body.style.setProperty(FONT_SCALE_VARIABLE, String(snapshot.fontScale))
     this.themeColorMeta.content = getComputedStyle(body).backgroundColor
     if (!this.themeColorMeta.isConnected) document.head.append(this.themeColorMeta)
   }
@@ -99,6 +103,7 @@ export class ThemePresenter {
     body.style.removeProperty(BACKGROUND_IMAGE_VARIABLE)
     body.style.removeProperty(SURFACE_OPACITY_VARIABLE)
     body.style.removeProperty(BACKGROUND_OPACITY_VARIABLE)
+    body.style.removeProperty(FONT_SCALE_VARIABLE)
     this.themeColorMeta.remove()
   }
 }

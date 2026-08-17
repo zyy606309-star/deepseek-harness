@@ -21,7 +21,8 @@ import { createAppearanceRowStore } from './settings-store.ts'
 import { en, zh, type ThemeKey } from './locales.ts'
 import {
   BACKGROUND_IMAGE_FIELD, DEFAULT_BACKGROUND_IMAGE, DEFAULT_BACKGROUND_OPACITY,
-  DEFAULT_PREFERENCE, isThemePreference, THEME_PREFERENCE_FIELD, THEME_SETTINGS_NAMESPACE,
+  DEFAULT_FONT_SCALE, DEFAULT_PREFERENCE, FONT_SCALE_FIELD, FONT_SCALE_MAX, FONT_SCALE_MIN,
+  isThemePreference, THEME_PREFERENCE_FIELD, THEME_SETTINGS_NAMESPACE,
   type ThemePreference, type ThemeSettings,
 } from '../theme-settings.ts'
 
@@ -93,6 +94,8 @@ export interface ThemeSnapshot {
   themes: readonly ThemeDefinition[]
   /** Whole-page background image and opacity. */
   background: ThemeBackground
+  /** UI font-size scale (1 = default). */
+  fontScale: number
   /** Monotonic change counter (registry or active changes). */
   revision: number
 }
@@ -164,6 +167,7 @@ export class ThemeRuntime {
   private themes: ThemeDefinition[] = [...BUILTIN_THEMES]
   private preference: ThemePreference
   private background: ThemeBackground
+  private fontScale: number
   private revision = 0
   private snapshot: ThemeSnapshot
   private readonly media: MediaQueryList | undefined
@@ -181,6 +185,7 @@ export class ThemeRuntime {
     this.host = host
     this.preference = DEFAULT_PREFERENCE
     this.background = { image: DEFAULT_BACKGROUND_IMAGE, opacity: DEFAULT_BACKGROUND_OPACITY }
+    this.fontScale = DEFAULT_FONT_SCALE
     // Non-browser runs (node e2e booting the client tree) have no matchMedia.
     this.media = typeof matchMedia === 'undefined' ? undefined : matchMedia('(prefers-color-scheme: dark)')
     this.snapshot = this.buildSnapshot()
@@ -253,6 +258,18 @@ export class ThemeRuntime {
     this.publish()
   }
 
+  /**
+   * Set the UI font-size scale, clamped to the supported range.
+   * @param scale - the font-size multiplier (1 = default).
+   */
+  setFontScale(scale: number): void {
+    const clamped = Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, scale))
+    if (this.fontScale === clamped) return
+    this.fontScale = clamped
+    void this.host.set(FONT_SCALE_FIELD, clamped)
+    this.publish()
+  }
+
   /** Adopt the scope's accepted durable preference and background without writing them back. */
   private adopt(): void {
     const section = this.host.getSnapshot().value
@@ -260,9 +277,11 @@ export class ThemeRuntime {
     const changed = this.preference !== section.preference
       || this.background.image !== section.backgroundImage
       || this.background.opacity !== section.backgroundOpacity
+      || this.fontScale !== section.fontScale
     if (!changed) return
     this.preference = section.preference
     this.background = { image: section.backgroundImage, opacity: Math.min(1, Math.max(0, section.backgroundOpacity)) }
+    this.fontScale = Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, section.fontScale))
     this.publish()
   }
 
@@ -332,6 +351,7 @@ export class ThemeRuntime {
       active: this.composeActive(active),
       themes: Object.freeze([...this.themes]),
       background: Object.freeze({ ...this.background }),
+      fontScale: this.fontScale,
       revision: this.revision,
     })
   }
@@ -421,7 +441,7 @@ export function apply(ctx: ClientContext): void {
   const store = createAppearanceRowStore()
   let bound: BoundActions<typeof store> | undefined
   const sync = (snapshot: ThemeSnapshot): void => {
-    bound?.sync(snapshot.preference, snapshot.background.image, snapshot.revision)
+    bound?.sync(snapshot.preference, snapshot.background.image, snapshot.fontScale, snapshot.revision)
   }
   ctx.on('theme/change', sync)
   const injected = (actions: BoundActions<typeof store>): AppearanceRowInjected => {
@@ -432,6 +452,7 @@ export function apply(ctx: ClientContext): void {
     return {
       setTheme: (id) => { theme.setTheme(id) },
       setBackgroundImage: (image) => { theme.setBackgroundImage(image) },
+      setFontScale: (scale) => { theme.setFontScale(scale) },
     }
   }
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({

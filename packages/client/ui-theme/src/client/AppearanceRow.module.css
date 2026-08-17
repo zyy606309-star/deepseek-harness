@@ -101,6 +101,27 @@
   object-fit: cover;
 }
 
+.fontSizeRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fontSizeSlider {
+  flex: 1 1 auto;
+  accent-color: var(--dsw-alias-brand-primary);
+  cursor: pointer;
+}
+
+.fontSizeValue {
+  min-width: 44px;
+  text-align: right;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
 .hiddenFileInput {
   display: none;
 }

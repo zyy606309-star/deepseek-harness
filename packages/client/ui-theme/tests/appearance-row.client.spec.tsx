@@ -21,6 +21,7 @@ const COPY: Record<string, string> = {
   'appearance.backgroundImage': 'Background image',
   'appearance.backgroundPick': 'Choose image',
   'appearance.backgroundClear': 'Clear',
+  'appearance.fontSize': 'Font size',
 }
 
 /** Empty global standard-kit hooks (the row reads neither). */
@@ -40,9 +41,10 @@ function emptyWorkspaces() {
 function mount(preference: ThemePreference = 'system') {
   // Real store instance — the sanctioned zero-machinery path for tests.
   const store = createAppearanceRowStore().create()
-  store.actions.sync(preference, '', 0)
+  store.actions.sync(preference, '', 1, 0)
   const setTheme = vi.fn()
   const setBackgroundImage = vi.fn()
+  const setFontScale = vi.fn()
   const props: AppearanceRowComponentProps = {
     useSessions: emptySessions(),
     useWorkspaces: emptyWorkspaces(),
@@ -51,9 +53,10 @@ function mount(preference: ThemePreference = 'system') {
     t: (key: string) => COPY[key] ?? key,
     setTheme,
     setBackgroundImage,
+    setFontScale,
   }
   render(<AppearanceRow {...props} />)
-  return { store, setTheme, setBackgroundImage }
+  return { store, setTheme, setBackgroundImage, setFontScale }
 }
 
 const pressed = (name: RegExp): string | null =>
@@ -74,7 +77,7 @@ describe('AppearanceRow', () => {
     expect(b.setTheme).toHaveBeenCalledWith('light')
     // No store write yet: selection is unchanged.
     expect(pressed(/Dark/)).toBe('true')
-    act(() => { b.store.actions.sync('light', '', 1) })
+    act(() => { b.store.actions.sync('light', '', 1, 1) })
     expect(pressed(/Light/)).toBe('true')
     expect(pressed(/Dark/)).toBe('false')
   })
@@ -92,7 +95,7 @@ describe('AppearanceRow', () => {
     expect(document.querySelector('img')).toBeNull()
 
     // A set background surfaces the clear button and a preview thumbnail.
-    act(() => { b.store.actions.sync('system', 'data:image/png;base64,abc', 1) })
+    act(() => { b.store.actions.sync('system', 'data:image/png;base64,abc', 1, 1) })
     expect(document.querySelector('img')).not.toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
     expect(b.setBackgroundImage).toHaveBeenCalledWith('')

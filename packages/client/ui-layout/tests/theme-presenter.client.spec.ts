@@ -14,7 +14,7 @@ const DARK_THEME_COLOR = 'rgb(21, 21, 23)'
 function snapshot(colorScheme: 'light' | 'dark', tokens: Record<string, string> = {}, background: ThemeBackground = { image: '', opacity: 1 }): ThemeSnapshot {
   // The presenter must key off colorScheme, not the id — keep them distinct.
   const active = { id: `${colorScheme}-test`, colorScheme, tokens }
-  return { preference: colorScheme, active, themes: [active], background, revision: 1 }
+  return { preference: colorScheme, active, themes: [active], background, fontScale: 1, revision: 1 }
 }
 
 function clearThemePresentation(): void {
