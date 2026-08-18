@@ -7,7 +7,7 @@
  * (running/removed/promptError) are self-selected via useSession. */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ChangeEvent, KeyboardEvent, MouseEvent, ReactNode } from 'react'
+import type { ChangeEvent, KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from 'react'
 import clsx from 'clsx'
 import {
   IconPlusOutline16, IconWarningOutline16, Toast, Tooltip,
@@ -35,6 +35,10 @@ import css from './InputBar.module.css'
 
 /** Decoration product of the no-session state (no machine, empty draft). */
 const INERT_DECORATIONS: DraftDecorations = { token: null, chips: [], textRefs: [], hint: null }
+
+/** Composer drag-resize bounds (px): 2-line floor, ~20-line ceiling. */
+const MIN_COMPOSER_HEIGHT = 52
+const MAX_COMPOSER_HEIGHT = 500
 
 /** Rail thumbnail carrying its source attachment for the open/remove callbacks. */
 interface ComposerRailItem extends AttachmentRailItem {
@@ -106,6 +110,10 @@ export function InputBar({
   const dragDepthRef = useRef(0)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const mirrorRef = useRef<HTMLDivElement | null>(null)
+  // Drag-resize: a manual composer height (px) overriding the auto-grow cap;
+  // null = auto (mirror-grown, capped at --dsh-composer-text-max-height).
+  const [composerHeight, setComposerHeight] = useState<number | null>(null)
+  const resizeRef = useRef<{ startY: number; startHeight: number } | null>(null)
   // IME guard: composition Enter picks a candidate, it must not send. The ref outlives renders;
   // clearing is deferred one tick because Safari delivers the closing keydown AFTER compositionend.
   const composingRef = useRef(false)
@@ -542,6 +550,29 @@ export function InputBar({
     if (el !== null) toggleCommandMenu?.(selectionOf(el))
   }
 
+  // Drag-resize: the top grip captures the pointer and sets a manual height
+  // (dragging up grows the box). Double-click clears it back to auto-grow.
+  const onResizePointerDown = (e: PointerEvent<HTMLDivElement>): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    const current = scrollRef.current?.getBoundingClientRect().height ?? MIN_COMPOSER_HEIGHT
+    resizeRef.current = { startY: e.clientY, startHeight: composerHeight ?? current }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  const onResizePointerMove = (e: PointerEvent<HTMLDivElement>): void => {
+    const start = resizeRef.current
+    if (start === null) return
+    const next = start.startHeight + (start.startY - e.clientY)
+    setComposerHeight(Math.min(MAX_COMPOSER_HEIGHT, Math.max(MIN_COMPOSER_HEIGHT, next)))
+  }
+  const onResizePointerUp = (e: PointerEvent<HTMLDivElement>): void => {
+    resizeRef.current = null
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+  }
+  const onResizeDoubleClick = (): void => {
+    setComposerHeight(null)
+  }
+
   // Ordinary sessions retain their primary Send/Stop toggle. A continuable
   // child keeps Send as the primary action and exposes Stop independently so
   // pointer users can queue follow-ups while its current turn is running.
@@ -678,6 +709,17 @@ export function InputBar({
         onClick={workspaceTrigger ? onRequestWorkspace : undefined}
         onPointerDown={workspaceTrigger ? (e) => { e.stopPropagation() } : undefined}
       >
+        <div
+          className={css.resizeHandle}
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label={t('input.resize')}
+          title={t('input.resize')}
+          onPointerDown={onResizePointerDown}
+          onPointerMove={onResizePointerMove}
+          onPointerUp={onResizePointerUp}
+          onDoubleClick={onResizeDoubleClick}
+        />
         {overlay !== undefined && <div className={css.overlayAnchor}>{overlay}</div>}
         {accessory !== undefined && <div className={css.accessory}>{accessory}</div>}
         {railItems.length > 0 && (
@@ -697,8 +739,13 @@ export function InputBar({
             glyphs to the backdrop, so they can only stay together by moving together: one scroll
             offset the browser applies to both layers at once, never a JS mirror between two boxes,
             which a compositor-driven gesture outruns and leaves the words trailing the caret. */}
-        <div ref={scrollRef} className={css.scroll} data-input-scroll>
-          <div className={css.grow}>
+        <div
+          ref={scrollRef}
+          className={css.scroll}
+          data-input-scroll
+          style={composerHeight !== null ? { maxHeight: composerHeight } : undefined}
+        >
+          <div className={css.grow} style={composerHeight !== null ? { minHeight: composerHeight } : undefined}>
             <div aria-hidden className={css.backdrop} data-input-backdrop>{backdrop}</div>
             <textarea
               ref={inputRef}

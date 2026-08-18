@@ -81,6 +81,43 @@
   --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
 }
 
+/* Drag-resize grip: an absolute handle centered on the card's top edge. The
+   grip glyph is a thin caption-colored bar; the 12px hit area keeps the drag
+   target comfortable without stealing the textarea's first row. */
+.resizeHandle {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  width: 44px;
+  height: 12px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.resizeHandle::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--dsw-alias-label-caption);
+  opacity: 0.45;
+  transition: opacity 100ms ease;
+}
+
+.resizeHandle:hover::before,
+.resizeHandle:active::before {
+  opacity: 0.85;
+}
+
 /* No-workspace trigger state: dashed l4 stroke marks the card as a pick-a-
    workspace affordance rather than a live composer; hover answers in the
    business blue to invite the click. Native `dashed` has a fixed browser
