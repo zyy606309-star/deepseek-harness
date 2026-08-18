@@ -6,7 +6,7 @@
  * region-slot content) ride the owner props. Session facts
  * (running/removed/promptError) are self-selected via useSession. */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from 'react'
 import clsx from 'clsx'
 import {
@@ -114,6 +114,40 @@ export function InputBar({
   // null = auto (mirror-grown, capped at --dsh-composer-text-max-height).
   const [composerHeight, setComposerHeight] = useState<number | null>(null)
   const resizeRef = useRef<{ startY: number; startHeight: number } | null>(null)
+  // Custom thick caret: the draft index the 2px bar tracks, plus focus visibility.
+  const [caretIndex, setCaretIndex] = useState<number | null>(null)
+  const [caretFocused, setCaretFocused] = useState(false)
+  const caretRef = useRef<HTMLDivElement | null>(null)
+
+  // Custom thick caret: read the native caret's index and drive the backdrop bar.
+  const trackCaret = useCallback((): void => {
+    const el = inputRef.current
+    if (el === null) return
+    setCaretIndex(el.selectionStart)
+  }, [])
+
+  // Position the 2px caret from the mirror's Range at the caret index. The
+  // mirror renders the exact draft (same font/wrap), so its rect is the caret's
+  // true position in the backdrop's coordinate space.
+  useLayoutEffect(() => {
+    const caret = caretRef.current
+    const mirror = mirrorRef.current
+    const text = mirror?.firstChild
+    if (caret === null) return
+    if (mirror === null || !(text instanceof Text) || caretIndex === null || !caretFocused) {
+      caret.style.visibility = 'hidden'
+      return
+    }
+    const at = Math.min(caretIndex, text.data.length)
+    const range = document.createRange()
+    range.setStart(text, at)
+    range.collapse(true)
+    const rect = range.getBoundingClientRect()
+    const box = mirror.getBoundingClientRect()
+    caret.style.visibility = 'visible'
+    caret.style.transform = `translate(${rect.left - box.left}px, ${rect.top - box.top}px)`
+    caret.style.height = `${rect.height}px`
+  }, [caretIndex, draft, caretFocused])
   // IME guard: composition Enter picks a candidate, it must not send. The ref outlives renders;
   // clearing is deferred one tick because Safari delivers the closing keydown AFTER compositionend.
   const composingRef = useRef(false)
@@ -359,6 +393,7 @@ export function InputBar({
     // selectionStart is number|null in lib.dom; the type-aware lint program narrows it.
     // oxlint-disable-next-line typescript/no-unnecessary-condition
     keyboard.track(next, e.target.selectionStart ?? next.length)
+    trackCaret()
   }
 
   // ---- chip atomicity (DOM layer; the machine sees only transactions) ----
@@ -533,6 +568,7 @@ export function InputBar({
     // Any caret/selection gesture ends a live paste attempt (the machine
     // cannot observe DOM selection). Cheap no-op when none is live.
     if (keyboard !== undefined && keyboard.snapshot.paste !== undefined) keyboard.invalidatePaste()
+    trackCaret()
     void e
   }
 
@@ -746,7 +782,10 @@ export function InputBar({
           style={composerHeight !== null ? { maxHeight: composerHeight } : undefined}
         >
           <div className={css.grow} style={composerHeight !== null ? { minHeight: composerHeight } : undefined}>
-            <div aria-hidden className={css.backdrop} data-input-backdrop>{backdrop}</div>
+            <div aria-hidden className={css.backdrop} data-input-backdrop>
+              {backdrop}
+              <div ref={caretRef} className={css.customCaret} aria-hidden />
+            </div>
             <textarea
               ref={inputRef}
               className={css.input}
@@ -769,6 +808,8 @@ export function InputBar({
                     : planActive ? t('placeholder.plan') : t('placeholder.default'))}
               rows={2}
               onChange={onChange}
+              onFocus={() => { setCaretFocused(true); trackCaret() }}
+              onBlur={() => { setCaretFocused(false) }}
               onKeyDown={onKeyDown}
               onSelect={onSelect}
               onCopy={(e) => { onCopyOrCut(e, false) }}

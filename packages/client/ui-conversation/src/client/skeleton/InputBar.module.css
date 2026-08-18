@@ -251,16 +251,27 @@
   outline: none;
   background: transparent;
   color: transparent;
-  /* Darkened vertical caret: a deeper blue bar is far more findable than the
-     faint default blue. The native bar's width is browser-fixed (~1px) and CSS
-     cannot widen it, so contrast does the work here. */
-  caret-color: #1d4ed8;
-  caret-shape: bar;
+  /* The native caret's 1px width is browser-fixed, so hide it and render a 2px
+     custom bar in the backdrop instead (positioned by InputBar's layout effect). */
+  caret-color: transparent;
 }
 
-/* Dark theme: a brighter blue keeps the caret visible on the dark card. */
-body[data-ds-dark-theme] .input {
-  caret-color: #60a5fa;
+/* Custom caret: a 2px vertical bar, high-contrast per theme. */
+.customCaret {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 24px;
+  border-radius: 1px;
+  background: #1e40af;
+  pointer-events: none;
+  visibility: hidden;
+  will-change: transform;
+}
+
+body[data-ds-dark-theme] .customCaret {
+  background: #93c5fd;
 }
 
 .input,
