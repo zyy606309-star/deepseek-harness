@@ -251,8 +251,11 @@
   outline: none;
   background: transparent;
   color: transparent;
-  /* Business blue, not brand-primary: that token resolves to ink in this sheet. */
-  caret-color: var(--dsw-alias-state-business-primary);
+  /* High-contrast caret: the thin default bar is too faint against the
+     translucent card; a block caret + ink color keeps the insertion point
+     findable in both themes. */
+  caret-color: var(--dsw-alias-label-primary);
+  caret-shape: block;
 }
 
 .input,
