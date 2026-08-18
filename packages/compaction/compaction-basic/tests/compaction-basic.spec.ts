@@ -375,6 +375,27 @@ describe('compact configuration and defaults', () => {
     })
   })
 
+  it('prices the pressure threshold against the effective input budget, reserving the output cap', () => {
+    const policy = resolveTargetPolicy(resolveConfig({ thresholdRatio: 0.8 }), {
+      provider: 'provider',
+      model: 'model',
+    })
+
+    // A 256K output cap on a 1M combined window leaves 744K for input.
+    expect(resolveCompactSpec(policy, 1_000_000, 256_000)).toMatchObject({
+      thresholdTokens: 595_200, // floor((1_000_000 - 256_000) * 0.8)
+      retainTokens: 160_000,    // retention still prices the full window
+    })
+
+    // An omitted, non-integer, non-positive, or at-or-above-window cap falls back to the full window.
+    expect(resolveCompactSpec(policy, 1_000_000)).toMatchObject({ thresholdTokens: 800_000 })
+    expect(resolveCompactSpec(policy, 1_000_000, 1.5)).toMatchObject({ thresholdTokens: 800_000 })
+    expect(resolveCompactSpec(policy, 1_000_000, 0)).toMatchObject({ thresholdTokens: 800_000 })
+    expect(resolveCompactSpec(policy, 1_000_000, -5)).toMatchObject({ thresholdTokens: 800_000 })
+    expect(resolveCompactSpec(policy, 1_000_000, 1_000_000)).toMatchObject({ thresholdTokens: 800_000 })
+    expect(resolveCompactSpec(policy, 1_500_000, 2_000_000)).toMatchObject({ thresholdTokens: 1_200_000 })
+  })
+
   it('inherits, clears, and replaces the summarization target as a pair', () => {
     const config = resolveConfig({
       summarizationProvider: 'default-provider',
@@ -540,6 +561,30 @@ describe('pressure measurement and retention', () => {
       reason: 'change',
     })
     await expect(compactIfNeeded(compact, session)).resolves.not.toBeNull()
+  })
+
+  it('reserves the adapter output cap when pricing proactive pressure', async () => {
+    const ctx = new Context()
+    void new LlmRuntime(ctx)
+    void new TokenMeter(ctx)
+    ctx.llm.registerAdapter([MODEL], new ContextAdapter(2_000))
+    const resolveModelInfo = vi.spyOn(ctx.llm, 'resolveModelInfo')
+    const compact = service({ auto: false, thresholdRatio: 0.5, retainTokens: 300 }, ctx)
+
+    // No output cap: threshold is 0.5 × 2000 = 1000, above the ~724-token fixture.
+    resolveModelInfo.mockResolvedValue({
+      provider: MODEL, id: MODEL, name: MODEL,
+      context: { contextWindow: 2_000 },
+    })
+    await expect(compactIfNeeded(compact, conversation(4))).resolves.toBeNull()
+
+    // A 1000-token output cap leaves 1000 of input: threshold is 0.5 × 1000 = 500, below the fixture.
+    resolveModelInfo.mockResolvedValue({
+      provider: MODEL, id: MODEL, name: MODEL,
+      context: { contextWindow: 2_000 },
+      defaultMaxTokens: 1_000,
+    })
+    await expect(compactIfNeeded(compact, conversation(4))).resolves.not.toBeNull()
   })
 
   it('requires capacity only for proactive pressure, not provider-confirmed overflow', async () => {

@@ -126,13 +126,19 @@ export function resolveTargetPolicy(
 
 /**
  * Scale one routed policy into concrete token budgets for its model capacity.
+ * The pressure threshold is priced against the effective input budget —
+ * `contextWindow` minus the model's per-request output cap — because a
+ * provider's combined context window reserves room for the output the request
+ * itself may still produce. Retention keeps its fraction of the full window.
  * @param policy - merged policy for the exact routed target.
- * @param contextWindow - positive adapter-owned capacity for that target.
+ * @param contextWindow - positive adapter-owned combined context capacity for that target.
+ * @param outputCap - adapter-owned per-request output cap for that target; omitted falls back to the full window.
  * @returns detached immutable pressure and retention budgets.
  */
 export function resolveCompactSpec(
   policy: ResolvedTargetPolicy,
   contextWindow: number,
+  outputCap?: number,
 ): ResolvedCompactSpec {
   const targetKey = `${policy.target.provider}/${policy.target.model}`
   if (!Number.isInteger(contextWindow) || contextWindow <= 0) {
@@ -141,7 +147,14 @@ export function resolveCompactSpec(
       `BasicCompactionConfig: contextWindow (${contextWindow}) must be a positive integer`,
     )
   }
-  const thresholdTokens = Math.floor(contextWindow * policy.thresholdRatio)
+  const outputReserve = outputCap !== undefined
+    && Number.isSafeInteger(outputCap)
+    && outputCap > 0
+    && outputCap < contextWindow
+    ? outputCap
+    : 0
+  const effectiveWindow = contextWindow - outputReserve
+  const thresholdTokens = Math.floor(effectiveWindow * policy.thresholdRatio)
   const retainTokens = policy.retainTokens === undefined
     ? Math.floor(contextWindow * policy.retainRatio)
     : policy.retainTokens

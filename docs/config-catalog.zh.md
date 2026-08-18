@@ -484,7 +484,11 @@ export interface BasicCompactionConfig extends CompactionPolicyConfig {
 
 /** Policy fields shared by the default policy and exact model overrides. */
 export interface CompactionPolicyConfig {
-  /** Compact at this fraction of the model's context window. Defaults to `0.8`. */
+  /**
+   * Compact when recent history reaches this fraction of the effective input
+   * budget — the model's combined context window minus its per-request output
+   * cap. Defaults to `0.8`.
+   */
   thresholdRatio?: number
   /** Recent context retained as a fraction of the model's window. Defaults to `0.16`. */
   retainRatio?: number
