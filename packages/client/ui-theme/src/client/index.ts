@@ -20,9 +20,9 @@ import { AppearanceRow } from './AppearanceRow.tsx'
 import { createAppearanceRowStore } from './settings-store.ts'
 import { en, zh, type ThemeKey } from './locales.ts'
 import {
-  BACKGROUND_IMAGE_FIELD, DEFAULT_BACKGROUND_IMAGE, DEFAULT_BACKGROUND_OPACITY,
+  AUTO_FONT_SCALE, BACKGROUND_IMAGE_FIELD, DEFAULT_BACKGROUND_IMAGE, DEFAULT_BACKGROUND_OPACITY,
   DEFAULT_FONT_SCALE, DEFAULT_PREFERENCE, FONT_SCALE_FIELD, FONT_SCALE_MAX, FONT_SCALE_MIN,
-  isThemePreference, THEME_PREFERENCE_FIELD, THEME_SETTINGS_NAMESPACE,
+  isThemePreference, resolveFontScale, THEME_PREFERENCE_FIELD, THEME_SETTINGS_NAMESPACE,
   type ThemePreference, type ThemeSettings,
 } from '../theme-settings.ts'
 
@@ -94,10 +94,17 @@ export interface ThemeSnapshot {
   themes: readonly ThemeDefinition[]
   /** Whole-page background image and opacity. */
   background: ThemeBackground
-  /** UI font-size scale (1 = default). */
+  /** UI font-size scale preference (`0` = auto-derived from the viewport). */
   fontScale: number
+  /** Effective scale resolved from the preference and the current viewport width. */
+  effectiveFontScale: number
   /** Monotonic change counter (registry or active changes). */
   revision: number
+}
+
+/** Current viewport width in CSS px; the 1440px design anchor outside the browser. */
+function viewportWidth(): number {
+  return typeof window === 'undefined' ? 1440 : window.innerWidth
 }
 
 /** One theme token exposed to pre-definition Cordis inspection. */
@@ -200,6 +207,19 @@ export class ThemeRuntime {
         return () => { media.removeEventListener('change', onChange) }
       }, 'ui-theme: prefers-color-scheme listener')
     }
+    // Auto font scale follows the viewport width; a resize only re-publishes
+    // when it actually moves the effective scale (manual mode is viewport-free).
+    if (typeof window !== 'undefined') {
+      const onResize = (): void => {
+        if (this.fontScale !== AUTO_FONT_SCALE) return
+        if (resolveFontScale(AUTO_FONT_SCALE, viewportWidth()) === this.snapshot.effectiveFontScale) return
+        this.publish()
+      }
+      ctx.effect(() => {
+        window.addEventListener('resize', onResize)
+        return () => { window.removeEventListener('resize', onResize) }
+      }, 'ui-theme: viewport resize listener')
+    }
     ctx.effect(() => host.subscribe(() => { this.adopt() }), 'ui-theme: settings scope adoption')
     this.adopt()
   }
@@ -259,10 +279,18 @@ export class ThemeRuntime {
   }
 
   /**
-   * Set the UI font-size scale, clamped to the supported range.
-   * @param scale - the font-size multiplier (1 = default).
+   * Set the UI font-size scale; `0` returns to auto (viewport-derived), a
+   * number is clamped to the supported range and pinned as the explicit scale.
+   * @param scale - the font-size multiplier, or `0` for auto.
    */
   setFontScale(scale: number): void {
+    if (scale === AUTO_FONT_SCALE) {
+      if (this.fontScale === AUTO_FONT_SCALE) return
+      this.fontScale = AUTO_FONT_SCALE
+      void this.host.set(FONT_SCALE_FIELD, AUTO_FONT_SCALE)
+      this.publish()
+      return
+    }
     const clamped = Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, scale))
     if (this.fontScale === clamped) return
     this.fontScale = clamped
@@ -281,7 +309,7 @@ export class ThemeRuntime {
     if (!changed) return
     this.preference = section.preference
     this.background = { image: section.backgroundImage, opacity: Math.min(1, Math.max(0, section.backgroundOpacity)) }
-    this.fontScale = Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, section.fontScale))
+    this.fontScale = Math.min(FONT_SCALE_MAX, Math.max(AUTO_FONT_SCALE, section.fontScale))
     this.publish()
   }
 
@@ -352,6 +380,7 @@ export class ThemeRuntime {
       themes: Object.freeze([...this.themes]),
       background: Object.freeze({ ...this.background }),
       fontScale: this.fontScale,
+      effectiveFontScale: resolveFontScale(this.fontScale, viewportWidth()),
       revision: this.revision,
     })
   }
@@ -441,7 +470,7 @@ export function apply(ctx: ClientContext): void {
   const store = createAppearanceRowStore()
   let bound: BoundActions<typeof store> | undefined
   const sync = (snapshot: ThemeSnapshot): void => {
-    bound?.sync(snapshot.preference, snapshot.background.image, snapshot.fontScale, snapshot.revision)
+    bound?.sync(snapshot.preference, snapshot.background.image, snapshot.fontScale, snapshot.effectiveFontScale, snapshot.revision)
   }
   ctx.on('theme/change', sync)
   const injected = (actions: BoundActions<typeof store>): AppearanceRowInjected => {

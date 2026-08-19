@@ -39,6 +39,28 @@
   box-sizing: border-box;
 }
 
+/* Collapsed to the header strip: drop the height cap and the inner scroll
+   seat so the card hugs the title row, freeing the viewport for the
+   conversation above while the question stays pending. */
+.cardMinimized {
+  max-height: none;
+}
+
+/* The header strip is the whole card when collapsed: the title row needs
+   bottom padding once the body that normally carries it is hidden. */
+.cardMinimized .header {
+  padding-bottom: 14px;
+}
+
+/* Header button group: minimize sits next to the close action, both on the
+   same 24px icon-button grid. */
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 /* Figma 1019:36938 header, user-tuned: heading block left, close right; the
    pager sits in the footer to balance the card. */
 .header {
@@ -58,13 +80,13 @@
   /* Eyebrow-to-title gap widened from the figma 2px (user-tuned). */
   margin-bottom: 5px;
   color: var(--dsw-alias-label-tertiary);
-  font-size: 11px;
+  font-size: calc(11px * var(--dsw-font-scale));
   line-height: 16px;
 }
 
 .title {
   margin: 0;
-  font-size: 16px;
+  font-size: calc(16px * var(--dsw-font-scale));
   line-height: 22px;
   font-weight: 500;
 }
@@ -90,7 +112,7 @@
 .progress {
   padding: 0 4px;
   color: var(--dsw-alias-label-secondary);
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   line-height: 24px;
   font-weight: 500;
   white-space: nowrap;
@@ -191,7 +213,7 @@
   border-radius: 6px;
   background: var(--dsw-alias-bg-overlay);
   color: var(--dsw-alias-label-secondary);
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   font-weight: 500;
   line-height: 18px;
 }
@@ -247,7 +269,7 @@
 }
 
 .optionLabel {
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   line-height: 24px;
   font-weight: 500;
 }
@@ -257,14 +279,14 @@
   border-radius: 6px;
   background: var(--dsw-specific-sidebar-nav-item-active-accent);
   color: var(--dsw-alias-button-info-fill);
-  font-size: 11px;
+  font-size: calc(11px * var(--dsw-font-scale));
   line-height: 18px;
   font-weight: 600;
 }
 
 .description {
   color: var(--dsw-alias-label-tertiary);
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   line-height: 24px;
   font-weight: 400;
 }
@@ -309,7 +331,7 @@
   color: var(--dsw-alias-label-primary);
   caret-color: var(--dsw-alias-state-business-primary);
   font: inherit;
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   line-height: 24px;
 }
 
@@ -335,7 +357,7 @@
   color: var(--dsw-alias-label-primary);
   caret-color: var(--dsw-alias-state-business-primary);
   font: inherit;
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   line-height: 24px;
 }
 
@@ -361,7 +383,7 @@
   flex: 1;
   min-height: 16px;
   color: var(--dsw-alias-state-error-primary);
-  font-size: 11px;
+  font-size: calc(11px * var(--dsw-font-scale));
   line-height: 16px;
   text-align: right;
 }
@@ -380,7 +402,7 @@
   }
 
   .title {
-    font-size: 15px;
+    font-size: calc(15px * var(--dsw-font-scale));
     line-height: 21px;
   }
 

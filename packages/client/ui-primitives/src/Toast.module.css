@@ -23,7 +23,7 @@
   border-radius: 14px;
   background: var(--dsw-alias-button-contrast-fill);
   color: var(--dsw-alias-label-primary-inverted);
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   line-height: 22px;
   box-shadow: var(--dsw-shadow-lv3);
   transform: translateX(-50%);

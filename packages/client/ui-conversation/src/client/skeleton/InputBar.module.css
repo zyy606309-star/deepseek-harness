@@ -43,7 +43,7 @@
   border-radius: 8px;
   background: var(--dsw-alias-interactive-bg-hover);
   color: var(--dsw-alias-label-secondary);
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   line-height: 18px;
 }
 
@@ -70,7 +70,7 @@
   border-radius: 22px;
   background: var(--dsw-specific-input-major);
   box-shadow: var(--dsw-shadow-lv2);
-  font-size: 16px;
+  font-size: calc(16px * var(--dsw-font-scale));
   line-height: 24px;
   /* Elevated surface in dark, same as the menus: the draft scrollport inside
      scrolls once the composer hits its height cap, so the thumb takes the l2
@@ -251,12 +251,15 @@
   outline: none;
   background: transparent;
   color: transparent;
-  /* The native caret's 1px width is browser-fixed, so hide it and render a 2px
-     custom bar in the backdrop instead (positioned by InputBar's layout effect). */
+  /* The custom 2px bar in the backdrop replaces the native caret: the native
+     bar's width is browser-fixed at ~1px and cannot be thickened, and its color
+     cannot adapt to a changing wallpaper. Hide it and render the overlay. */
   caret-color: transparent;
 }
 
-/* Custom caret: a 2px vertical bar, high-contrast per theme. */
+/* Custom caret: a 2px vertical bar, blinking, contrast-adaptive. The white
+   fill under `mix-blend-mode: difference` renders as the inverse of whatever
+   is behind it, so it stays visible on any wallpaper or theme. */
 .customCaret {
   position: absolute;
   top: 0;
@@ -264,14 +267,16 @@
   width: 2px;
   height: 24px;
   border-radius: 1px;
-  background: #1e40af;
+  background: #fff;
+  mix-blend-mode: difference;
   pointer-events: none;
   visibility: hidden;
   will-change: transform;
+  animation: input-caret-blink 1.2s steps(1, end) infinite;
 }
 
-body[data-ds-dark-theme] .customCaret {
-  background: #93c5fd;
+@keyframes input-caret-blink {
+  50% { opacity: 0; }
 }
 
 .input,
@@ -417,7 +422,7 @@ body[data-ds-dark-theme] .customCaret {
   background-position: right 4px center;
   background-size: 12px 12px;
   color: var(--dsw-alias-label-secondary);
-  font-size: 13px;
+  font-size: calc(13px * var(--dsw-font-scale));
   line-height: 20px;
   font-weight: 500;
   white-space: nowrap;
@@ -473,7 +478,7 @@ body[data-ds-dark-theme] .customCaret {
   border-radius: 4px;
   background: transparent;
   color: inherit;
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   cursor: pointer;
 }
 

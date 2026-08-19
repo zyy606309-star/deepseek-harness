@@ -33,6 +33,20 @@ import {
 } from 'node:fs'
 import { join, resolve, normalize, basename } from 'node:path'
 import { execFileSync } from 'node:child_process'
+import { settingsNamespace } from '@deepseek-ai/dsh-settings'
+import z from '@deepseek-ai/schemastery'
+
+/** Durable settings namespace holding the user's wallpaper selection. */
+const WE_SETTINGS_NS = settingsNamespace('wallpaper-engine')
+
+/** Schema for the persisted selection (id + the four effect knobs). */
+const SelectionSchema = z.object({
+  id: z.string().default(''),
+  scrim: z.number().min(0).max(1).default(0.25),
+  border: z.number().min(0).max(1).default(0.35),
+  blur: z.number().min(0).max(40).default(24),
+  wallpaperBlur: z.number().min(0).max(60).default(0),
+})
 
 /** Steam appid for Wallpaper Engine. */
 const WE_APPID = '431960'
@@ -203,6 +217,15 @@ function mimeFor(absPath) {
 export const inject = ['webServer']
 
 export function apply(ctx) {
+  // Register the durable selection namespace when the settings service is
+  // composed (absent in headless/TUI profiles). A stored section that fails
+  // validation must not take the whole plugin down.
+  ctx.inject(['settings'], (settingsCtx) => {
+    try {
+      settingsCtx.settings.register(WE_SETTINGS_NS, SelectionSchema)
+    } catch { /* invalid stored selection: keep defaults */ }
+  })
+
   const webServer = ctx.webServer
   if (!webServer || typeof webServer.register !== 'function') {
     return () => {} // defensive: never expected in practice

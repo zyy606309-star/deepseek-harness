@@ -13,9 +13,16 @@
   height: 100%;
   padding: 6px var(--dsh-sidebar-inline-padding);
   box-sizing: border-box;
-  background: color-mix(in srgb, var(--dsw-specific-sidebar-fill) var(--dsw-surface-opacity, 100%), transparent);
+  /* One-fifth black over the sidebar fill: the column reads 20% darker than the
+     conversation surface so it recedes behind the active content. The outer mix
+     keeps the theme background's surface-opacity transparency underneath. */
+  background: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--dsw-specific-sidebar-fill) var(--dsw-surface-opacity, 100%), transparent) 80%,
+    rgb(0 0 0) 20%
+  );
   color: var(--dsw-alias-label-primary);
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   /* The sidebar is elevated above the conversation surface, so a revealed
      scrollbar uses the l2 pair. .quietBars hides it without changing layout. */
   --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
@@ -185,7 +192,7 @@
   border-radius: 12px;
   background: var(--dsw-alias-button-elevated-fill);
   color: var(--dsw-alias-label-primary);
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   font-weight: 500;
   line-height: 22px;
   cursor: pointer;

@@ -6,7 +6,7 @@
 .root {
   display: flex;
   flex-direction: column;
-  font-size: 16px;
+  font-size: calc(16px * var(--dsw-font-scale));
   line-height: 28px;
   color: var(--dsw-alias-label-primary);
 }
@@ -24,7 +24,7 @@
   border-radius: 6px;
   background: var(--dsw-alias-interactive-bg-hover);
   color: var(--dsw-alias-label-tertiary);
-  font-size: 11px;
+  font-size: calc(11px * var(--dsw-font-scale));
   line-height: 18px;
 }
 

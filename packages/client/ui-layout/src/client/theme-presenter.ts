@@ -88,7 +88,7 @@ export class ThemePresenter {
     body.style.setProperty(BACKGROUND_IMAGE_VARIABLE, backgroundImageCssValue(image))
     body.style.setProperty(SURFACE_OPACITY_VARIABLE, image === '' ? '100%' : surfaceOpacityValue(snapshot.background.opacity))
     body.style.setProperty(BACKGROUND_OPACITY_VARIABLE, String(snapshot.background.opacity))
-    body.style.setProperty(FONT_SCALE_VARIABLE, String(snapshot.fontScale))
+    body.style.setProperty(FONT_SCALE_VARIABLE, String(snapshot.effectiveFontScale))
     this.themeColorMeta.content = getComputedStyle(body).backgroundColor
     if (!this.themeColorMeta.isConnected) document.head.append(this.themeColorMeta)
   }

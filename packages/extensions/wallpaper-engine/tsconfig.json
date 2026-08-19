@@ -27,6 +27,12 @@
     },
     {
       "path": "../../client/ui-slots"
+    },
+    {
+      "path": "../../settings/settings"
+    },
+    {
+      "path": "../../client/ui-settings"
     }
   ]
 }

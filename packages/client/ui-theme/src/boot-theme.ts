@@ -9,7 +9,7 @@
 import {
   backgroundImageCssValue,
   DEFAULT_BACKGROUND_IMAGE, DEFAULT_BACKGROUND_OPACITY, DEFAULT_FONT_SCALE,
-  DEFAULT_PREFERENCE, FONT_SCALE_MAX, FONT_SCALE_MIN,
+  DEFAULT_PREFERENCE,
   type ThemeSettings,
 } from './theme-settings.ts'
 
@@ -24,10 +24,12 @@ export const DEFAULT_THEME_SETTINGS: ThemeSettings = Object.freeze({
 /** Build the inline script for one theme settings section. */
 function bootThemeScript(settings: ThemeSettings): string {
   const clamped = Math.min(1, Math.max(0, settings.backgroundOpacity))
-  const fontScale = Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, settings.fontScale))
+  const storedFontScale = settings.fontScale
   const surfaceOpacity = settings.backgroundImage === ''
     ? '100%'
     : `${Math.round((1 - clamped) * 100)}%`
+  // The auto formula must match `autoFontScale` in theme-settings.ts; the
+  // bootstrap runs before the client plugin tree, so it cannot import it.
   return `<script>(() => {
   const preference = ${JSON.stringify(settings.preference)}
   const systemDark = preference === 'system'
@@ -39,7 +41,10 @@ function bootThemeScript(settings: ThemeSettings): string {
   document.body.style.setProperty('--dsw-bg-image', ${JSON.stringify(backgroundImageCssValue(settings.backgroundImage))})
   document.body.style.setProperty('--dsw-surface-opacity', ${JSON.stringify(surfaceOpacity)})
   document.body.style.setProperty('--dsw-bg-opacity', ${JSON.stringify(String(clamped))})
-  document.body.style.setProperty('--dsw-font-scale', ${JSON.stringify(String(fontScale))})
+  const viewport = document.documentElement.clientWidth || 1440
+  const auto = Math.min(1.2, Math.max(0.9, 1 + ((viewport - 1440) / 480) * 0.05))
+  const fontScale = ${JSON.stringify(storedFontScale)} === 0 ? auto : ${JSON.stringify(storedFontScale)}
+  document.body.style.setProperty('--dsw-font-scale', String(fontScale))
 })()</script>`
 }
 

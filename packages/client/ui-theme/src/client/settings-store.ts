@@ -12,15 +12,17 @@ export interface AppearanceRowState {
   preference: ThemePreference
   /** Persisted whole-page background image URL. */
   backgroundImage: string
-  /** Persisted UI font-size scale. */
+  /** Persisted UI font-size scale (`0` = auto). */
   fontScale: number
+  /** Effective scale (the auto resolution when `fontScale` is 0). */
+  effectiveFontScale: number
   /** Service revision; -1 until first sync so revision 0 lands as a change. */
   revision: number
 }
 
 /** Declared action shape giving the exported factory a stable return type. */
 type AppearanceRowActions = {
-  sync: (draft: AppearanceRowState, preference: ThemePreference, backgroundImage: string, fontScale: number, revision: number) => void
+  sync: (draft: AppearanceRowState, preference: ThemePreference, backgroundImage: string, fontScale: number, effectiveFontScale: number, revision: number) => void
 }
 
 /**
@@ -29,13 +31,14 @@ type AppearanceRowActions = {
  */
 export function createAppearanceRowStore(): EngineStoreHandle<AppearanceRowState, AppearanceRowActions> {
   return defineStore({
-    init: (): AppearanceRowState => ({ preference: 'system', backgroundImage: '', fontScale: 1, revision: -1 }),
+    init: (): AppearanceRowState => ({ preference: 'system', backgroundImage: '', fontScale: 0, effectiveFontScale: 1, revision: -1 }),
     actions: {
-      sync: (d, preference, backgroundImage, fontScale, revision) => {
+      sync: (d, preference, backgroundImage, fontScale, effectiveFontScale, revision) => {
         if (revision <= d.revision) return
         d.preference = preference
         d.backgroundImage = backgroundImage
         d.fontScale = fontScale
+        d.effectiveFontScale = effectiveFontScale
         d.revision = revision
       },
     },

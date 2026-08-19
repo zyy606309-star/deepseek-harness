@@ -31,6 +31,7 @@ import {
 } from '../image-labels.ts'
 import { ContextMeter } from './ContextMeter.tsx'
 import { PermissionSelect } from './PermissionSelect.tsx'
+import { isSafariBrowser, repairSafariTextareaLayout } from './safari.ts'
 import css from './InputBar.module.css'
 
 /** Decoration product of the no-session state (no machine, empty draft). */
@@ -114,49 +115,65 @@ export function InputBar({
   // null = auto (mirror-grown, capped at --dsh-composer-text-max-height).
   const [composerHeight, setComposerHeight] = useState<number | null>(null)
   const resizeRef = useRef<{ startY: number; startHeight: number } | null>(null)
-  // Custom thick caret: the draft index the 2px bar tracks, plus focus visibility.
-  const [caretIndex, setCaretIndex] = useState<number | null>(null)
+  // Custom caret overlay: the selection range the 2px bar tracks (start === end
+  // = a collapsed caret; a range = a selection, which hides the bar). Hidden
+  // while composing, when the native IME underline takes over.
+  const [caretSel, setCaretSel] = useState<{ start: number; end: number } | null>(null)
   const [caretFocused, setCaretFocused] = useState(false)
+  const [composing, setComposing] = useState(false)
   const caretRef = useRef<HTMLDivElement | null>(null)
 
-  // Custom thick caret: read the native caret's index and drive the backdrop bar.
+  // Read the native selection endpoints; the overlay mirrors a collapsed caret.
   const trackCaret = useCallback((): void => {
     const el = inputRef.current
     if (el === null) return
-    setCaretIndex(el.selectionStart)
+    setCaretSel({ start: el.selectionStart ?? 0, end: el.selectionEnd ?? el.selectionStart ?? 0 })
   }, [])
 
-  // Position the 2px caret from the mirror's Range at the caret index. The
-  // mirror renders the exact draft (same font/wrap), so its rect is the caret's
-  // true position in the backdrop's coordinate space.
+  // Position the 2px bar from the mirror's Range at the caret index. The mirror
+  // renders the exact draft (same font/wrap), so its rect is the caret's true
+  // position in the backdrop's coordinate space.
   useLayoutEffect(() => {
     const caret = caretRef.current
     const mirror = mirrorRef.current
     const text = mirror?.firstChild
+    const collapsed = caretSel !== null && caretSel.start === caretSel.end
     if (caret === null) return
-    if (mirror === null || !(text instanceof Text) || caretIndex === null || !caretFocused) {
+    if (mirror === null || !(text instanceof Text) || caretSel === null || !caretFocused || !collapsed || composing) {
       caret.style.visibility = 'hidden'
       return
     }
-    const at = Math.min(caretIndex, text.data.length)
+    const at = Math.min(caretSel.start, text.data.length)
     const range = document.createRange()
     range.setStart(text, at)
     range.collapse(true)
-    const rect = range.getBoundingClientRect()
+    // jsdom has no layout and no Range#getBoundingClientRect: the caret cannot
+    // be positioned without a browser layout, so it stays hidden there.
+    let rect: DOMRect
+    try {
+      rect = range.getBoundingClientRect()
+    } catch {
+      caret.style.visibility = 'hidden'
+      return
+    }
     const box = mirror.getBoundingClientRect()
     caret.style.visibility = 'visible'
     caret.style.transform = `translate(${rect.left - box.left}px, ${rect.top - box.top}px)`
     caret.style.height = `${rect.height}px`
-  }, [caretIndex, draft, caretFocused])
+  }, [caretSel, caretFocused, composing, draft])
+  const safari = useMemo(() => isSafariBrowser(navigator), [])
+  const safariNativeShrinkRef = useRef(false)
   // IME guard: composition Enter picks a candidate, it must not send. The ref outlives renders;
   // clearing is deferred one tick because Safari delivers the closing keydown AFTER compositionend.
   const composingRef = useRef(false)
   const onCompositionStart = (): void => {
     composingRef.current = true
+    setComposing(true)
   }
   const onCompositionEnd = (): void => {
     setTimeout(() => {
       composingRef.current = false
+      setComposing(false)
     }, 10)
   }
 
@@ -195,6 +212,18 @@ export function InputBar({
       inputActions.pruneImages(attachments.map(attachment => attachment.id))
     }
   }, [attachments, input?.imageIds, inputActions])
+
+  // A native Safari edit that shortens the draft may leave the previous
+  // soft-wrap layout behind after the mirror shrinks. The native-change signal
+  // keeps ordinary typing and programmatic draft updates from reading layout;
+  // the helper then repairs only measured overflow before paint while
+  // preserving native editing state. See
+  // .agents/notes/implemented/bug-fix/2026-08-13-safari-textarea-soft-wrap-reflow.md.
+  useLayoutEffect(() => {
+    const nativeShrink = safariNativeShrinkRef.current
+    safariNativeShrinkRef.current = false
+    if (safari && nativeShrink) repairSafariTextareaLayout(inputRef.current)
+  }, [draft, safari])
 
   useEffect(() => {
     if (preview !== null && !attachments.some(attachment => attachment.id === preview.id)) setPreview(null)
@@ -389,6 +418,7 @@ export function InputBar({
     if (keyboard === undefined || locked) return // disabled/read-only states cannot edit the draft
     if (machineBusy) return // submitting is the read-only span; adjudicating holds the pending lock
     const next = e.target.value
+    safariNativeShrinkRef.current = safari && next.length < draft.length
     keyboard.setDraft(next)
     // selectionStart is number|null in lib.dom; the type-aware lint program narrows it.
     // oxlint-disable-next-line typescript/no-unnecessary-condition

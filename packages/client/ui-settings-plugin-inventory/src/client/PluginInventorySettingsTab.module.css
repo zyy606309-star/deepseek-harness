@@ -15,7 +15,7 @@
 
 .status,
 .failure {
-  font-size: 13px;
+  font-size: calc(13px * var(--dsw-font-scale));
   line-height: 20px;
   color: var(--dsw-alias-label-tertiary);
 }
@@ -67,7 +67,7 @@
   background: var(--dsw-alias-bg-layer-1);
   color: var(--dsw-alias-label-primary);
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--dsw-font-scale));
 }
 
 .search input::placeholder {
@@ -87,13 +87,13 @@
 }
 
 .catalogHeading h3 {
-  font-size: 13px;
+  font-size: calc(13px * var(--dsw-font-scale));
   line-height: 20px;
   font-weight: 600;
 }
 
 .catalogHeading span {
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   line-height: 18px;
   color: var(--dsw-alias-label-tertiary);
   font-variant-numeric: tabular-nums;
@@ -152,7 +152,7 @@
 .cardTitle {
   min-width: 0;
   overflow: hidden;
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   line-height: 20px;
   font-weight: 600;
   text-overflow: ellipsis;
@@ -196,7 +196,7 @@
   padding: 1px 6px;
   background: var(--dsw-alias-bg-layer-1);
   color: var(--dsw-alias-label-secondary);
-  font-size: 11px;
+  font-size: calc(11px * var(--dsw-font-scale));
   line-height: 16px;
   white-space: nowrap;
 }
@@ -226,7 +226,7 @@
   overflow-wrap: anywhere;
   color: var(--dsw-alias-label-primary);
   font-family: var(--ds-font-family-code);
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   line-height: 18px;
 }
 
@@ -243,7 +243,7 @@
 
 .details dt {
   color: var(--dsw-alias-label-tertiary);
-  font-size: 11px;
+  font-size: calc(11px * var(--dsw-font-scale));
   line-height: 17px;
 }
 
@@ -252,7 +252,7 @@
   margin: 0;
   overflow-wrap: anywhere;
   color: var(--dsw-alias-label-secondary);
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   line-height: 17px;
 }
 

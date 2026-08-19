@@ -116,13 +116,13 @@
 
 .hint {
   color: var(--dsw-alias-label-tertiary);
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   line-height: 18px;
 }
 
 .openError {
   color: var(--dsw-alias-state-error-primary);
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   line-height: 18px;
 }
 
@@ -135,7 +135,7 @@
   border: none;
   border-radius: 14px;
   padding: 4px 12px;
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   color: var(--dsw-alias-label-secondary);
   background: var(--dsw-alias-interactive-bg-hover-solid);
   cursor: pointer;
@@ -243,7 +243,7 @@
   background: var(--dsw-alias-button-floating-fill);
   box-shadow: var(--dsw-shadow-lv2);
   color: var(--dsw-alias-label-primary);
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   line-height: 18px;
   white-space: pre-wrap;
   word-break: break-word;

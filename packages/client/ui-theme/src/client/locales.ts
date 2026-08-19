@@ -10,6 +10,7 @@ export const zh = {
   'appearance.backgroundPick': '选择图片',
   'appearance.backgroundClear': '清除',
   'appearance.fontSize': '字体大小',
+  'appearance.fontSizeAuto': '自动',
 } satisfies Record<string, string>
 
 /** The settings.theme namespace key union. */
@@ -25,4 +26,5 @@ export const en = {
   'appearance.backgroundPick': 'Choose image',
   'appearance.backgroundClear': 'Clear',
   'appearance.fontSize': 'Font size',
+  'appearance.fontSizeAuto': 'Auto',
 } satisfies Record<ThemeKey, string>

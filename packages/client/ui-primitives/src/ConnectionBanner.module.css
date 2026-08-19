@@ -6,7 +6,7 @@
   z-index: 100;
   padding: 4px 12px;
   text-align: center;
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   line-height: 18px;
   background: var(--dsw-alias-state-error-primary);
   color: var(--dsw-alias-label-primary-foreground);

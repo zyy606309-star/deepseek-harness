@@ -23,7 +23,7 @@
 
 import * as React from 'react'
 
-const SETTINGS_KEY = 'dsh-wallpaper-engine:selection'
+const SETTINGS_NS = 'wallpaper-engine'
 const INVENTORY_URL = '/wallpaper-engine/inventory'
 // Body attribute set while a wallpaper is active; CSS uses it to make the frame
 // background transparent so the behind-body layer shows through.
@@ -37,31 +37,18 @@ const SCRIM_ID = 'dsh-wallpaper-engine-scrim'
 // scrim. Users can raise it back via the 暗化 slider for busy wallpapers.
 const DEFAULTS = { scrim: 0.25, border: 0.35, blur: 24, wallpaperBlur: 0 }
 
-// ── Persisted selection ─────────────────────────────────────────────────────
+// ── Persisted selection (durable settings scope) ────────────────────────────
 function clampNum(v, lo, hi, fallback) {
   return typeof v === 'number' && v >= lo && v <= hi ? v : fallback
 }
 
-function readPersisted() {
-  try {
-    const raw = localStorage.getItem(SETTINGS_KEY)
-    if (!raw) return { id: '', ...DEFAULTS }
-    const o = JSON.parse(raw)
-    return {
-      id: typeof o.id === 'string' ? o.id : '',
-      scrim: clampNum(o.scrim, 0, 1, DEFAULTS.scrim),
-      border: clampNum(o.border, 0, 1, DEFAULTS.border),
-      blur: clampNum(o.blur, 0, 40, DEFAULTS.blur),
-      wallpaperBlur: clampNum(o.wallpaperBlur, 0, 60, DEFAULTS.wallpaperBlur),
-    }
-  } catch {
-    return { id: '', ...DEFAULTS }
-  }
-}
-
 // ── Shared selection store (React + DOM layer share it) ────────────────────
 const selection = {
-  ...readPersisted(),
+  id: '',
+  scrim: DEFAULTS.scrim,
+  border: DEFAULTS.border,
+  blur: DEFAULTS.blur,
+  wallpaperBlur: DEFAULTS.wallpaperBlur,
   url: null,
   type: null,
   playing: true,
@@ -81,16 +68,31 @@ function useStore() {
   return selection
 }
 
-function persistSelection() {
-  try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify({
-      id: selection.id,
-      scrim: selection.scrim,
-      border: selection.border,
-      blur: selection.blur,
-      wallpaperBlur: selection.wallpaperBlur,
-    }))
-  } catch { /* ignore */ }
+// Bound settings scope (assigned in apply); writes go through the durable
+// settings RPC so the selection survives restarts and origin changes.
+let scope = null
+
+/** Write one selection field through the durable settings scope. */
+function writeField(field, value) {
+  if (scope) void scope.set(field, value)
+}
+
+/** Adopt the durable selection once the scope is ready, clamping each field. */
+function adoptPersisted() {
+  if (!scope) return
+  const snap = scope.getSnapshot()
+  if (snap.status !== 'ready' || !snap.value) return
+  const v = snap.value
+  selection.id = typeof v.id === 'string' ? v.id : ''
+  selection.scrim = clampNum(v.scrim, 0, 1, DEFAULTS.scrim)
+  selection.border = clampNum(v.border, 0, 1, DEFAULTS.border)
+  selection.blur = clampNum(v.blur, 0, 40, DEFAULTS.blur)
+  selection.wallpaperBlur = clampNum(v.wallpaperBlur, 0, 60, DEFAULTS.wallpaperBlur)
+  // Apply the adopted value WITHOUT writing back: writing here would re-enter
+  // the scope subscriber and loop.
+  applySelectionUrl()
+  applyEffects()
+  emit()
 }
 
 async function loadInventory() {
@@ -119,34 +121,43 @@ async function loadInventory() {
   selection.loading = false
   selection.loaded = true
 
-  // After a refresh, drop the selection if the chosen wallpaper vanished or is
-  // no longer playable (avoids a dangling media URL).
-  if (selection.id && !selection.inventory.wallpapers.some(w => w.id === selection.id && w.playable)) {
+  // After a refresh, drop the selection only when the inventory actually loaded
+  // and the chosen wallpaper is missing/not playable. An empty inventory means
+  // Wallpaper Engine was not detected, NOT that the wallpaper vanished — keep
+  // the persisted id so a later successful scan re-applies it.
+  if (selection.id && selection.inventory.wallpapers.length > 0
+    && !selection.inventory.wallpapers.some(w => w.id === selection.id && w.playable)) {
     selection.id = ''
-    persistSelection()
+    writeField('id', '')
   }
-  applySelection(selection.id)
+  // Apply only the URL, never write the id: on first load the inventory can
+  // resolve before the settings scope, and writing the still-empty id here
+  // would overwrite the persisted selection with ''.
+  applySelectionUrl()
   emit()
 }
 
-function applySelection(id) {
-  selection.id = id || ''
-  persistSelection()
+/** Resolve the current id to its media URL (no persistence, no id mutation). */
+function applySelectionUrl() {
   if (!selection.id) {
     selection.url = null
     selection.type = null
-    emit()
     return
   }
   const w = selection.inventory.wallpapers.find(x => x.id === selection.id)
   if (!w || !w.playable) {
     selection.url = null
     selection.type = null
-    emit()
     return
   }
   selection.url = w.media
   selection.type = w.type
+}
+
+function applySelection(id) {
+  selection.id = id || ''
+  writeField('id', selection.id)
+  applySelectionUrl()
   emit()
 }
 
@@ -283,10 +294,10 @@ function WallpaperPicker() {
   // the effect IMMEDIATELY (applyEffects writes the CSS var synchronously) so
   // the visual feedback is instant even if a listener/emit path is lagging;
   // emit() additionally re-renders the picker's numeric readouts.
-  const onScrim = (pct) => { selection.scrim = pct / 100; persistSelection(); applyEffects(); emit() }
-  const onBorder = (pct) => { selection.border = pct / 100; persistSelection(); applyEffects(); emit() }
-  const onBlur = (px) => { selection.blur = px; persistSelection(); applyEffects(); emit() }
-  const onWallpaperBlur = (px) => { selection.wallpaperBlur = px; persistSelection(); applyEffects(); emit() }
+  const onScrim = (pct) => { selection.scrim = pct / 100; writeField('scrim', selection.scrim); applyEffects(); emit() }
+  const onBorder = (pct) => { selection.border = pct / 100; writeField('border', selection.border); applyEffects(); emit() }
+  const onBlur = (px) => { selection.blur = px; writeField('blur', selection.blur); applyEffects(); emit() }
+  const onWallpaperBlur = (px) => { selection.wallpaperBlur = px; writeField('wallpaperBlur', selection.wallpaperBlur); applyEffects(); emit() }
 
   if (!sel.loaded) {
     return React.createElement('div', { className: 'we-picker' },
@@ -448,9 +459,16 @@ if (typeof document !== 'undefined' &&
 }
 
 // ── Plugin exports ──────────────────────────────────────────────────────────
-export const inject = ['slots']
+export const inject = ['slots', 'settingsScope']
 
 export function apply(ctx) {
+  // Bind the durable selection scope and adopt its persisted value once ready.
+  scope = ctx.settingsScope ? ctx.settingsScope.bind({ namespace: SETTINGS_NS }) : null
+  if (scope) {
+    scope.subscribe(adoptPersisted)
+    adoptPersisted()
+  }
+
   // 1. Mount the behind-body wallpaper + scrim layers and keep them in sync
   //    with the selection store. ctx.effect gives fiber-lifetime cleanup.
   if (ctx.effect) {

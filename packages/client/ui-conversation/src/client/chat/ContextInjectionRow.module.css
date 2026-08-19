@@ -28,7 +28,7 @@
   min-width: 0;
   overflow: hidden;
   color: var(--dsw-alias-label-tertiary);
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   line-height: 24px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -40,7 +40,7 @@
   min-width: 0;
   overflow: hidden;
   color: var(--dsw-alias-label-tertiary);
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   line-height: 24px;
   text-overflow: ellipsis;
   white-space: nowrap;

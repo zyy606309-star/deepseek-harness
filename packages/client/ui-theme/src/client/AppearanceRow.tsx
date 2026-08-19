@@ -12,7 +12,7 @@ import {
   IconDarkOutline16, IconFollowsystemOutline16, IconLightOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsLocale, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
-import { FONT_SCALE_MAX, FONT_SCALE_MIN, FONT_SCALE_STEP } from '../theme-settings.ts'
+import { AUTO_FONT_SCALE, FONT_SCALE_MAX, FONT_SCALE_MIN, FONT_SCALE_STEP } from '../theme-settings.ts'
 import type { ThemePreference } from '../theme-settings.ts'
 import type { ThemeKey } from './locales.ts'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
@@ -25,7 +25,7 @@ export interface AppearanceRowInjected {
   setTheme: (id: ThemePreference) => void
   /** Set the whole-page background image (a URL or data URL). */
   setBackgroundImage: (image: string) => void
-  /** Set the UI font-size scale. */
+  /** Set the UI font-size scale; `0` returns to auto (viewport-derived). */
   setFontScale: (scale: number) => void
 }
 
@@ -79,6 +79,7 @@ export function AppearanceRow({ t, setTheme, setBackgroundImage, setFontScale, u
   const preference = useStore(s => s.preference)
   const backgroundImage = useStore(s => s.backgroundImage)
   const fontScale = useStore(s => s.fontScale)
+  const effectiveFontScale = useStore(s => s.effectiveFontScale)
   const fileInput = useRef<HTMLInputElement>(null)
 
   /** Read the picked image, compress it, and apply it as the background. */
@@ -133,11 +134,18 @@ export function AppearanceRow({ t, setTheme, setBackgroundImage, setFontScale, u
           min={FONT_SCALE_MIN}
           max={FONT_SCALE_MAX}
           step={FONT_SCALE_STEP}
-          value={fontScale}
+          value={fontScale === AUTO_FONT_SCALE ? effectiveFontScale : fontScale}
           aria-label={t('appearance.fontSize')}
           onChange={(event) => { setFontScale(Number(event.target.value)) }}
         />
-        <span className={css.fontSizeValue}>{Math.round(fontScale * 100)}%</span>
+        <span className={css.fontSizeValue}>
+          {fontScale === AUTO_FONT_SCALE ? t('appearance.fontSizeAuto') : `${Math.round(fontScale * 100)}%`}
+        </span>
+        {fontScale !== AUTO_FONT_SCALE && (
+          <button type="button" className={css.autoButton} onClick={() => { setFontScale(AUTO_FONT_SCALE) }}>
+            {t('appearance.fontSizeAuto')}
+          </button>
+        )}
       </div>
       <input
         ref={fileInput}

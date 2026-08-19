@@ -467,7 +467,7 @@
   padding: 0 5px;
   border: 1px solid transparent;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: calc(10px * var(--dsw-font-scale));
   line-height: 16px;
   font-weight: 650;
   letter-spacing: 0.035em;
@@ -753,7 +753,7 @@
   align-items: center;
   min-width: 0;
   color: var(--dsw-alias-label-secondary);
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   line-height: 16px;
 }
 
@@ -811,7 +811,7 @@
 .table tbody tr[data-kind='tool'] .resultPreview,
 .table tbody tr[data-kind='subtool'] .resultPreview {
   font-family: var(--ds-font-family-code);
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
 }
 
 .table tbody tr[data-kind='subtool'] .content {
@@ -947,7 +947,7 @@
   color: var(--dsw-alias-label-secondary);
   background: transparent;
   cursor: pointer;
-  font-size: 18px;
+  font-size: calc(18px * var(--dsw-font-scale));
   line-height: 18px;
 }
 

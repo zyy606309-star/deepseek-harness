@@ -37,7 +37,7 @@
   flex: none;
   max-width: 42%;
   color: var(--dsw-alias-label-secondary);
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   font-weight: 510;
   line-height: 24px;
   text-overflow: ellipsis;
@@ -49,7 +49,7 @@
   flex: 1;
   min-width: 0;
   color: var(--dsw-alias-label-tertiary);
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   line-height: 18px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -62,7 +62,7 @@
   align-items: center;
   gap: 4px;
   overflow: hidden;
-  font-size: 11px;
+  font-size: calc(11px * var(--dsw-font-scale));
   font-weight: 510;
   line-height: 16px;
   color: var(--dsw-alias-label-secondary);
@@ -102,7 +102,7 @@
   min-width: 0;
   max-width: 42%;
   color: var(--dsw-alias-label-secondary);
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   line-height: 24px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -113,7 +113,7 @@
   flex: 1;
   min-width: 0;
   color: var(--dsw-alias-label-tertiary);
-  font-size: 13px;
+  font-size: calc(13px * var(--dsw-font-scale));
   line-height: 20px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -124,7 +124,7 @@
   flex: none;
   width: 132px;
   color: var(--dsw-alias-label-secondary);
-  font-size: 13px;
+  font-size: calc(13px * var(--dsw-font-scale));
   line-height: 20px;
   text-align: right;
   text-overflow: ellipsis;
@@ -221,7 +221,7 @@
   flex: 1;
   min-width: 0;
   color: var(--dsw-alias-label-secondary);
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   line-height: 24px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -232,7 +232,7 @@
   overflow: hidden;
   width: 64px;
   color: var(--dsw-alias-label-secondary);
-  font-size: 13px;
+  font-size: calc(13px * var(--dsw-font-scale));
   line-height: 20px;
   text-align: right;
   text-overflow: ellipsis;
@@ -241,7 +241,7 @@
 
 .empty {
   color: var(--dsw-alias-label-tertiary);
-  font-size: 13px;
+  font-size: calc(13px * var(--dsw-font-scale));
   line-height: 20px;
   padding: 0;
 }

@@ -18,7 +18,7 @@
 }
 
 .wordmark {
-  font-size: 16px;
+  font-size: calc(16px * var(--dsw-font-scale));
   line-height: 24px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -26,7 +26,7 @@
 }
 
 .hint {
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   line-height: 18px;
   color: var(--dsw-alias-label-tertiary, #81858c);
 }
@@ -52,7 +52,7 @@
 }
 
 .failedTitle {
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   line-height: 22px;
   font-weight: 600;
   color: var(--dsw-alias-label-primary, #0f1115);
@@ -60,7 +60,7 @@
 
 .failedItem {
   font-family: var(--ds-font-family-code, ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New');
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   line-height: 18px;
   color: var(--dsw-alias-label-secondary, #61666b);
 }

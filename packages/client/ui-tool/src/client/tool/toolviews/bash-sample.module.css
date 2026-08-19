@@ -158,7 +158,7 @@
 
 .title {
   flex: none;
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   line-height: 24px;
   color: var(--dsw-alias-label-secondary);
 }
@@ -178,7 +178,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   line-height: 24px;
   color: var(--dsw-alias-label-tertiary);
 }
@@ -209,7 +209,7 @@
   /* Base background, not bg-overlay: the overlay token reads too heavy. */
   background: var(--dsw-alias-bg-base);
   color: var(--dsw-alias-label-secondary);
-  font-size: 11px;
+  font-size: calc(11px * var(--dsw-font-scale));
   line-height: 16px;
   cursor: pointer;
   opacity: 0;

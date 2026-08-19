@@ -59,7 +59,7 @@
 
 .sourceLink {
   color: var(--dsw-alias-state-business-primary);
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   line-height: 20px;
   word-break: break-word;
 }
@@ -71,7 +71,7 @@
 .snippet {
   margin-top: 2px;
   color: var(--dsw-alias-label-secondary);
-  font-size: 13px;
+  font-size: calc(13px * var(--dsw-font-scale));
   line-height: 19px;
   word-break: break-word;
 }
@@ -103,7 +103,7 @@
 .fetchUrl {
   color: var(--dsw-alias-state-business-primary);
   font-family: var(--ds-font-family-code);
-  font-size: 13px;
+  font-size: calc(13px * var(--dsw-font-scale));
   line-height: 19px;
   word-break: break-all;
 }

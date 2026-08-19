@@ -17,7 +17,7 @@
   border-radius: 8px;
   background: var(--dsw-alias-tooltip-bg);
   color: var(--dsw-static-neutral-bluish-00);
-  font-size: 13px;
+  font-size: calc(13px * var(--dsw-font-scale));
   line-height: 20px;
   white-space: pre-line;
   /* Unbreakable tokens (URLs, paths) must not push past max-width. */
