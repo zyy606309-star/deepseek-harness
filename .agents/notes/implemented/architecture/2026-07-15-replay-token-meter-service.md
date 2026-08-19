@@ -16,7 +16,7 @@ Provider usage is not a complete answer. It describes one successful call under 
 
 `@deepseek-ai/dsh-token-meter` is one concrete package under `packages/llm/` and registers `ctx.tokenMeter`. It is not split into an interface and backend before a second implementation exists. `TokenMeter` itself exposes `measure(session, requestHeader?)` and `estimateMessage(message)`; consumers call the singleton service directly.
 
-The service has no configuration. Estimation uses a fixed four-characters-per-token heuristic plus structural overhead. There are no model profiles, capacity settings, density settings, tokenizer backends, or language-specific strategies. Exact provider/model capacity is a separate adapter-owned query, as specified by the [routed model context and compaction policy Agent Note](2026-07-20-routed-model-context-and-compaction-policy.md).
+The service has no configuration. Estimation uses a fixed four-characters-per-token heuristic plus structural overhead, with CJK scripts (unified ideographs, kana, hangul, and compatibility ideographs) priced at one token per character. There are no model profiles, capacity settings, density settings, tokenizer backends, or language-specific strategies. Exact provider/model capacity is a separate adapter-owned query, as specified by the [routed model context and compaction policy Agent Note](2026-07-20-routed-model-context-and-compaction-policy.md).
 
 ### Per-session replay folds
 
@@ -54,7 +54,7 @@ Unit tests cover fixed estimation, envelope invalidation and anchor replacement,
 
 - Token pressure has one replay-aware owner that compaction and future plugins can share.
 - The default makes the meter a zero-config composition entry; deployments configure capacity on each route-owning adapter and optional policy overrides on compaction-basic.
-- Fixed heuristic pricing remains an estimate of provider behavior and is not an exact tokenizer or request serializer.
+- Fixed heuristic pricing remains an estimate of provider behavior and is not an exact tokenizer or request serializer; CJK runs price at one token per character to avoid the ~4x undercount that otherwise lets long Chinese sessions cross a provider's real limit before threshold.
 - Every measurement clones the current positional surface and therefore costs O(surface), including pressure checks that finish below threshold.
 - Measurements fail loudly on malformed durable boundaries. This turns corrupted replay into a named integration failure instead of silently drifting pressure.
 - Post-step pressure reads the exact logged routing/tools/prefix boundary; provider overflow classification remains the adapter-maintained backstop for requests rejected before a successful usage anchor.

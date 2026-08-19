@@ -8,7 +8,7 @@
  * @module dsh-llm-deepseek/translate
  */
 
-import { CallId, EMPTY_RESPONSE_CODE, LlmError } from '@deepseek-ai/dsh-llm'
+import { CallId, CONTEXT_WINDOW_EXCEEDED_CODE, EMPTY_RESPONSE_CODE, LlmError } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock, FinishReason, StreamChunk, TokenUsage } from '@deepseek-ai/dsh-llm'
 import { DONE } from './sse.ts'
 import type { WireChunk, WireUsage } from './types.ts'
@@ -77,7 +77,8 @@ function closeBlock(block: OpenBlock): ContentBlock {
 
 /**
  * Consume SSE data payloads (ending with `[DONE]`) and yield StreamChunks.
- * Malformed JSON payloads abort the stream with `MALFORMED_RESPONSE`.
+ * An empty payload aborts with `CONTEXT_WINDOW_EXCEEDED`; other malformed JSON
+ * payloads abort with `MALFORMED_RESPONSE`.
  * @param payloads - SSE data payloads from {@link parseSse}, `[DONE]`-terminated.
  * @returns deltas as they arrive; `block-end`s, `usage`, and `finish` are all deferred to the `[DONE]` sentinel.
  *   A `stop` (or absent) finish with no opened blocks is a degenerate provider completion and maps to an
@@ -121,6 +122,18 @@ export async function* translate(payloads: AsyncIterable<string>): AsyncGenerato
     try {
       chunk = JSON.parse(payload) as WireChunk
     } catch {
+      // An empty `data:` field is the provider's in-band overflow signal: the
+      // request was too large and the stream ended with no JSON at all. Route it
+      // as CONTEXT_WINDOW_EXCEEDED so the compaction overflow-recovery listener
+      // can force a reduction and retry, instead of a dead turn. A non-empty,
+      // non-JSON payload stays a MALFORMED_RESPONSE (a gateway/proxy or other
+      // protocol violation, not an overflow).
+      if (payload.trim().length === 0) {
+        throw new LlmError(
+          'provider returned an empty SSE payload (context window exceeded)',
+          CONTEXT_WINDOW_EXCEEDED_CODE,
+        )
+      }
       throw new LlmError(`malformed SSE payload: ${payload.slice(0, 120)}`, 'MALFORMED_RESPONSE')
     }
 

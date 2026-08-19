@@ -12,11 +12,30 @@ import type { EpochHeader } from '@deepseek-ai/dsh-session'
 /** Fixed text-density estimate used until exact tokenization is needed. */
 const CHARS_PER_TOKEN = 4
 
+/** CJK scripts whose tokenizers split roughly one token per character. */
+const CJK_CHAR = /[\u3400-\u9fff\u3040-\u30ff\uac00-\ud7af\uf900-\ufaff]/g
+
 /** Per-block structural overhead for JSON framing and type tags. */
 const BLOCK_OVERHEAD = 4
 
 /** Role-field framing overhead added to every priced message. */
 export const ROLE_OVERHEAD = 4
+
+/**
+ * Price one text run under the fixed density heuristic, splitting CJK
+ * characters at one token each. The flat 4-chars-per-token density otherwise
+ * underprices CJK reasoning by roughly 4x, which lets long Chinese sessions
+ * cross a provider's real limit while the meter reports them far below
+ * threshold — the defect behind repeated context-overflow bursts. Non-CJK
+ * characters keep the flat 4-chars-per-token estimate.
+ * @param text - text to price without mutation.
+ * @returns heuristic token count for the raw text, excluding block framing.
+ */
+export function estimateTextTokens(text: string): number {
+  if (text.length === 0) return 0
+  const cjkCount = text.match(CJK_CHAR)?.length ?? 0
+  return cjkCount + Math.ceil((text.length - cjkCount) / CHARS_PER_TOKEN)
+}
 
 /**
  * Price content blocks recursively under the fixed density heuristic.
@@ -29,11 +48,11 @@ export function estimateContent(blocks: readonly ContentBlock[]): number {
     switch (block.type) {
       case 'text':
       case 'reasoning':
-        tokens += Math.ceil(block.text.length / CHARS_PER_TOKEN) + BLOCK_OVERHEAD
+        tokens += estimateTextTokens(block.text) + BLOCK_OVERHEAD
         break
       case 'tool-call':
-        tokens += Math.ceil(block.name.length / CHARS_PER_TOKEN)
-          + Math.ceil(block.arguments.length / CHARS_PER_TOKEN)
+        tokens += estimateTextTokens(block.name)
+          + estimateTextTokens(block.arguments)
           + BLOCK_OVERHEAD
         break
       case 'tool-result':
@@ -42,7 +61,7 @@ export function estimateContent(blocks: readonly ContentBlock[]): number {
       default:
         // ContentBlockMap is merge-extensible; unknown blocks retain a
         // conservative structural JSON price under the fixed heuristic.
-        tokens += BLOCK_OVERHEAD + Math.ceil(JSON.stringify(block).length / CHARS_PER_TOKEN)
+        tokens += BLOCK_OVERHEAD + estimateTextTokens(JSON.stringify(block))
     }
   }
   return tokens
@@ -64,7 +83,7 @@ export function estimateMessage(message: Message): number {
  */
 export function estimateSystemTokens(header: EpochHeader | undefined): number {
   if (header?.system === undefined) return 0
-  return Math.ceil(header.system.length / CHARS_PER_TOKEN) + ROLE_OVERHEAD
+  return estimateTextTokens(header.system) + ROLE_OVERHEAD
 }
 
 /**
@@ -74,7 +93,7 @@ export function estimateSystemTokens(header: EpochHeader | undefined): number {
  */
 export function estimateToolsTokens(header: EpochHeader | undefined): number {
   if (header?.tools === undefined || header.tools.length === 0) return 0
-  return Math.ceil(JSON.stringify(header.tools).length / CHARS_PER_TOKEN) + BLOCK_OVERHEAD
+  return estimateTextTokens(JSON.stringify(header.tools)) + BLOCK_OVERHEAD
 }
 
 /**

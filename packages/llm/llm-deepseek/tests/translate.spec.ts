@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BlockAssembler, EMPTY_RESPONSE_CODE, LlmError } from '@deepseek-ai/dsh-llm'
+import { BlockAssembler, CONTEXT_WINDOW_EXCEEDED_CODE, EMPTY_RESPONSE_CODE, LlmError } from '@deepseek-ai/dsh-llm'
 import type { StreamChunk } from '@deepseek-ai/dsh-llm'
 import { DONE } from '../src/sse.ts'
 import { mapFinishReason, mapUsage, translate } from '../src/translate.ts'
@@ -254,6 +254,14 @@ describe('translate: errors', () => {
   it('throws MALFORMED_RESPONSE for invalid JSON payloads', async () => {
     await expect(collect(translate(feed('{bad json')))).rejects.toThrow(LlmError)
     await expect(collect(translate(feed('{bad json')))).rejects.toThrow(/malformed SSE payload/)
+  })
+
+  it('throws CONTEXT_WINDOW_EXCEEDED for an empty payload', async () => {
+    await expect(collect(translate(feed('')))).rejects.toMatchObject({ code: CONTEXT_WINDOW_EXCEEDED_CODE })
+  })
+
+  it('treats a whitespace-only payload as an empty overflow signal', async () => {
+    await expect(collect(translate(feed('   \n')))).rejects.toMatchObject({ code: CONTEXT_WINDOW_EXCEEDED_CODE })
   })
 
   it('throws STREAM_CLOSED when the payload source ends without DONE', async () => {

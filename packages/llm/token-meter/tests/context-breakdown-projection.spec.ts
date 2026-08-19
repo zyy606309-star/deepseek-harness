@@ -17,6 +17,7 @@ import {
   estimateHeader,
   estimateMessage,
   estimateSystemTokens,
+  estimateTextTokens,
   estimateToolsTokens,
 } from '../src/estimate.ts'
 
@@ -303,9 +304,19 @@ describe('shared estimator', () => {
     expect(estimateToolsTokens(undefined)).toBe(0)
     expect(estimateToolsTokens({ config: CONFIG, tools: [] })).toBe(0)
     expect(estimateToolsTokens({ config: CONFIG, tools: TOOLS }))
-      .toBe(Math.ceil(JSON.stringify(TOOLS).length / 4) + 4)
+      .toBe(estimateTextTokens(JSON.stringify(TOOLS)) + 4)
     expect(estimateHeader(undefined)).toBe(0)
     expect(estimateHeader({ config: CONFIG, system: 'abcdefgh', tools: TOOLS }))
-      .toBe(6 + Math.ceil(JSON.stringify(TOOLS).length / 4) + 4)
+      .toBe(6 + estimateTextTokens(JSON.stringify(TOOLS)) + 4)
+  })
+
+  it('prices CJK text at one token per character instead of 4 chars per token', () => {
+    expect(estimateTextTokens('')).toBe(0)
+    // 4 non-CJK characters keep the flat density.
+    expect(estimateTextTokens('abcd')).toBe(1)
+    // 4 CJK characters price at 4 tokens, not 1.
+    expect(estimateTextTokens('甲乙丙丁')).toBe(4)
+    // Mixed runs split into CJK tokens plus the flat remainder.
+    expect(estimateTextTokens('a中b文')).toBe(2 + 1)
   })
 })
