@@ -500,5 +500,5 @@ export function apply(ctx) {
     )
   }
 
-  loadInventory()
+  void loadInventory()
 }

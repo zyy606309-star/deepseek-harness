@@ -127,7 +127,7 @@ export function InputBar({
   const trackCaret = useCallback((): void => {
     const el = inputRef.current
     if (el === null) return
-    setCaretSel({ start: el.selectionStart ?? 0, end: el.selectionEnd ?? el.selectionStart ?? 0 })
+    setCaretSel({ start: el.selectionStart, end: el.selectionEnd })
   }, [])
 
   // Position the 2px bar from the mirror's Range at the caret index. The mirror
