@@ -253,3 +253,8 @@
   overflow: hidden;
   pointer-events: none;
 }
+
+/* Host open-path refusal: same dialog family as the workspace folder error. */
+.modalAction {
+  min-width: 72px;
+}
