@@ -373,15 +373,20 @@ const CSS = `
 
   /* While a wallpaper is active: make the app frame AND sidebar transparent so
      all columns share the same wallpaper+scrim background, raise border alpha
-     for visibility, and apply the frosted-glass effect to opaque surfaces. */
+     for visibility, and apply the frosted-glass effect to opaque surfaces.
+
+     Every --dsw-* override below is !important: rc.8 injects design-platform.css
+     at runtime (ui-theme apply) AFTER this sheet, and its body[data-ds-dark-theme]
+     rules carry the same (0,1,1) specificity — later-declared wins, which silently
+     repaints the frame opaque over the wallpaper. !important pins our layer. */
   body[data-we-wallpaper] {
-    --dsw-alias-bg-base: transparent;
-    --dsw-specific-sidebar-fill: transparent;
+    --dsw-alias-bg-base: transparent !important;
+    --dsw-specific-sidebar-fill: transparent !important;
     /* Border emphasis: neutral gray so it reads on both light and dark themes;
        alpha is driven by the "边框" slider through --we-border-alpha. */
-    --dsw-alias-border-l1: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
-    --dsw-alias-border-l2: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
-    --dsw-alias-border-l2-darkmode-thin: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
+    --dsw-alias-border-l1: rgba(180, 180, 180, var(--we-border-alpha, 0.35)) !important;
+    --dsw-alias-border-l2: rgba(180, 180, 180, var(--we-border-alpha, 0.35)) !important;
+    --dsw-alias-border-l2-darkmode-thin: rgba(180, 180, 180, var(--we-border-alpha, 0.35)) !important;
   }
 
   /* ── Light-scheme text contrast boost ──────────────────────────────────────
@@ -391,12 +396,12 @@ const CSS = `
      is already near-black; we still pin it to pure black for max legibility.
      (Dark mode is untouched: its white-on-dark text already reads fine.) */
   body[data-we-wallpaper]:not([data-ds-dark-theme]) {
-    --dsw-alias-label-primary: rgb(0, 0, 0);
-    --dsw-alias-label-primary-dimmed: rgb(10, 10, 12);
-    --dsw-alias-label-secondary: rgb(40, 42, 46);
-    --dsw-alias-label-tertiary: rgb(70, 73, 79);
-    --dsw-alias-label-caption: rgb(110, 114, 120);
-    --dsw-alias-label-dimmed: rgb(50, 52, 56);
+    --dsw-alias-label-primary: rgb(0, 0, 0) !important;
+    --dsw-alias-label-primary-dimmed: rgb(10, 10, 12) !important;
+    --dsw-alias-label-secondary: rgb(40, 42, 46) !important;
+    --dsw-alias-label-tertiary: rgb(70, 73, 79) !important;
+    --dsw-alias-label-caption: rgb(110, 114, 120) !important;
+    --dsw-alias-label-dimmed: rgb(50, 52, 56) !important;
   }
 
   /* ── iOS liquid glass ──────────────────────────────────────────────────────
@@ -418,12 +423,12 @@ const CSS = `
      attribute, so they fall back to the module-CSS suffix convention; if that
      ever stops matching the bubble stays translucent, just without the blur. */
   body[data-we-wallpaper] {
-    --dsw-specific-input-major: rgba(255, 255, 255, 0.18);
-    --dsw-specific-bubble: rgba(255, 255, 255, 0.14);
+    --dsw-specific-input-major: rgba(255, 255, 255, 0.18) !important;
+    --dsw-specific-bubble: rgba(255, 255, 255, 0.14) !important;
   }
   body[data-ds-dark-theme][data-we-wallpaper] {
-    --dsw-specific-input-major: rgba(255, 255, 255, 0.07);
-    --dsw-specific-bubble: rgba(255, 255, 255, 0.06);
+    --dsw-specific-input-major: rgba(255, 255, 255, 0.07) !important;
+    --dsw-specific-bubble: rgba(255, 255, 255, 0.06) !important;
   }
   body[data-we-wallpaper] [data-composer-card],
   body[data-we-wallpaper] [class*="_bubble"] {
