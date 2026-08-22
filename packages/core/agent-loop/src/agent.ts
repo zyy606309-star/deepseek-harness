@@ -231,8 +231,15 @@ export class ReactLoopAgent implements Agent {
     signal.throwIfAborted()
     const sections = renderContextSections(assembly)
     const context = this.runtimeContext.project(joinContextSections(sections), sections)
+    // model-selection declares the incoming route under its own variable names
+    // (selectedProvider/selectedModel); absent a selection, pre-step listeners
+    // budget against the durable header instead. The bare provider/model
+    // variables stay the system-prompt surface and are not a route signal.
+    const route = assembly.variables.selectedProvider !== undefined && assembly.variables.selectedModel !== undefined
+      ? { provider: assembly.variables.selectedProvider, model: assembly.variables.selectedModel }
+      : undefined
     const decision = await this.dispatch.waterfall(
-      'agent/pre-step', { messages: claimed, ...position, signal },
+      'agent/pre-step', { messages: claimed, ...position, signal, ...route === undefined ? {} : { route } },
       (): Promise<PreStepDecision> => Promise.resolve<PreStepDecision>({
         kind: 'enter',
         messages: context === undefined ? claimed : [...claimed, context],

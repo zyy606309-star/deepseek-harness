@@ -29,7 +29,9 @@ describe('installModelSelection()', () => {
       model: 'a1',
       reasoningEffort: ReasoningEffortId('high'),
     }
-    expect((await ctx.systemPrompt.assemble()).variables).toMatchObject({ provider: 'alpha', model: 'a1' })
+    expect((await ctx.systemPrompt.assemble()).variables).toMatchObject({
+      provider: 'alpha', model: 'a1', selectedProvider: 'alpha', selectedModel: 'a1',
+    })
     selection.current = { provider: 'beta', model: 'b1' }
     await expect(agentEvents(ctx, agent).waterfall(
       'agent/request', { turn: 1, step: 0, signal }, () => Promise.resolve(seed),
@@ -40,7 +42,9 @@ describe('installModelSelection()', () => {
       temperature: 0.2,
     })
 
-    expect((await ctx.systemPrompt.assemble()).variables).toMatchObject({ provider: 'beta', model: 'b1' })
+    expect((await ctx.systemPrompt.assemble()).variables).toMatchObject({
+      provider: 'beta', model: 'b1', selectedProvider: 'beta', selectedModel: 'b1',
+    })
     const inherited: LlmCallConfig = {
       provider: 'alpha',
       model: 'a1',

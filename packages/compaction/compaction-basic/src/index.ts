@@ -145,12 +145,12 @@ export class BasicCompactionEngine extends CompactionEngine {
     }
 
     ctx.on('agent/pre-step', async (
-      { agent, signal },
+      { agent, signal, route },
       next,
     ): Promise<PreStepDecision> => {
       if (!signal.aborted) {
         try {
-          const result = await this.compactIfNeeded(agent, 'pressure', signal)
+          const result = await this.compactIfNeeded(agent, 'pressure', signal, route)
           if (result !== null) logResult(result, 'step pressure')
         } catch (error: unknown) {
           if (error instanceof TargetPressureConfigError) {
@@ -247,20 +247,27 @@ export class BasicCompactionEngine extends CompactionEngine {
 
   /**
    * Compact for replayed step-boundary pressure or one provider-confirmed context
-   * overflow. Both triggers price the latest durable routed request envelope;
-   * overflow bypasses the normal threshold and retained-tail policy so it can
-   * force one useful balanced reduction.
+   * overflow. Pressure prices the incoming route when one is supplied, otherwise
+   * the latest durable routed request envelope; overflow bypasses the normal
+   * threshold and retained-tail policy so it can force one useful balanced reduction.
    * @param agent - agent whose latest durable routed request is measured.
    * @param trigger - normal step-boundary pressure or context-overflow recovery.
    * @param signal - live turn cancellation signal forwarded to summarization.
+   * @param route - explicit provider/model selected for the incoming step, overriding the durable header for pressure pricing.
    * @returns the latest summary compaction result, or `null` when no summary ran.
    */
   override async compactIfNeeded(
     agent: Agent,
     trigger: CompactionTrigger,
     signal: AbortSignal,
+    route?: { provider: string; model: string },
   ): Promise<CompactionResult | null> {
-    const target = routedTarget(agent.session)
+    // An explicit pre-step route (the model selected for the incoming step)
+    // wins over the durable header, so a model switch budgets pressure against
+    // the model about to serve the request rather than the one that served it
+    // last. Context-overflow recovery still reads the header, which has the
+    // failed request's route by then.
+    const target = route ?? routedTarget(agent.session)
     if (target === undefined) return null
     const policy = resolveTargetPolicy(this.config, target)
     const meter = this.ctx.tokenMeter

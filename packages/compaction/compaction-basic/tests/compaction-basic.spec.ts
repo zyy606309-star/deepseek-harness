@@ -542,6 +542,36 @@ describe('pressure measurement and retention', () => {
     await expect(compactIfNeeded(compact, session)).resolves.not.toBeNull()
   })
 
+  it('budgets pressure against an explicit incoming route over the durable header', async () => {
+    const ctx = new Context()
+    void new LlmRuntime(ctx)
+    void new TokenMeter(ctx)
+    ctx.llm.registerAdapter(['large', 'small'], new RoutedContextAdapter({
+      large: 10_000,
+      small: 1_000,
+    }))
+    const compact = service({
+      auto: false,
+      thresholdRatio: 0.5,
+      retainRatio: 0.1,
+    }, ctx)
+    const session = conversation(4)
+    // The durable header still names the previous large-capacity model, so
+    // header-only pressure stays under threshold.
+    session.append('request/header', {
+      header: { config: { provider: 'large', model: 'shared-id' } },
+      reason: 'resume',
+    })
+    await expect(compactIfNeeded(compact, session)).resolves.toBeNull()
+
+    // A pre-step route names the incoming small-capacity model; the same
+    // surface now exceeds its threshold and compacts, without waiting for the
+    // next request to persist the switch.
+    await expect(compact.compactIfNeeded(
+      agent(session, MODEL), 'pressure', SIGNAL, { provider: 'small', model: 'shared-id' },
+    )).resolves.not.toBeNull()
+  })
+
   it('requires capacity only for proactive pressure, not provider-confirmed overflow', async () => {
     const ctx = new Context()
     void new LlmRuntime(ctx)

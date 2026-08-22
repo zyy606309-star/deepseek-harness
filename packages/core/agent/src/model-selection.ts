@@ -48,6 +48,11 @@ export function installModelSelection(agentCtx: Context, selection: ModelSelecti
         ...assembled.variables,
         provider: selected.provider,
         model: selected.model,
+        // The route-signal pair: the loop reads these to tell pre-step
+        // listeners which model serves the incoming request, distinct from the
+        // agent-options defaults the bare provider/model variables fall back to.
+        selectedProvider: selected.provider,
+        selectedModel: selected.model,
       },
     }
   })
