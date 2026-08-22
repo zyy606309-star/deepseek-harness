@@ -17,7 +17,7 @@ export const BACKGROUND_IMAGE_FIELD = 'backgroundImage'
 /** Field carrying the whole-page background image opacity (0..1). */
 export const BACKGROUND_OPACITY_FIELD = 'backgroundOpacity'
 
-/** Field carrying the UI font-size scale (`0` = auto, else 0.8..1.25). */
+/** Field carrying the UI font-size scale (`0` = auto, else 0.8..2.0). */
 export const FONT_SCALE_FIELD = 'fontScale'
 
 /** Theme preference persisted by the product Appearance row. */
@@ -34,7 +34,7 @@ export const DEFAULT_BACKGROUND_OPACITY = 0.58
 
 /** Font-size scale bounds (1 = the design-system default size). */
 export const FONT_SCALE_MIN = 0.8
-export const FONT_SCALE_MAX = 1.25
+export const FONT_SCALE_MAX = 2.0
 export const FONT_SCALE_STEP = 0.05
 
 /** Auto-scale bounds: gentler than the manual range so auto never over-scales. */
@@ -55,7 +55,7 @@ export interface ThemeSettings {
   backgroundImage: string
   /** Whole-page background visibility (0 hides the image, 1 shows it fully). */
   backgroundOpacity: number
-  /** UI font-size scale (`0` = auto-derived from the viewport; else explicit 0.8..1.25). */
+  /** UI font-size scale (`0` = auto-derived from the viewport; else explicit 0.8..2.0). */
   fontScale: number
 }
 
