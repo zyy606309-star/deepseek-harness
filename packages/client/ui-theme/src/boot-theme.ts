@@ -1,11 +1,12 @@
 /**
- * Host-rendered theme bootstrap for the browser's pre-plugin interval. Each
- * index response embeds the current durable theme settings (preference plus
- * whole-page background); the browser resolves only `system`, then writes the
- * same DOM fields ui-layout's ThemePresenter owns after the client plugin tree
- * activates.
+ * Theme bootstrap row for the browser's pre-plugin interval. Each index
+ * render embeds the current durable theme settings (preference plus
+ * whole-page background and font scale); the browser resolves only `system`,
+ * then writes the same DOM fields ui-layout's ThemePresenter owns after the
+ * client plugin tree activates.
  */
 
+import type { IndexInjection } from '@deepseek-ai/dsh-host-webserver'
 import {
   backgroundImageCssValue,
   DEFAULT_BACKGROUND_IMAGE, DEFAULT_BACKGROUND_OPACITY, DEFAULT_FONT_SCALE,
@@ -21,7 +22,7 @@ export const DEFAULT_THEME_SETTINGS: ThemeSettings = Object.freeze({
   fontScale: DEFAULT_FONT_SCALE,
 })
 
-/** Build the inline script for one theme settings section. */
+/** Build the inline script body for one theme settings section. */
 function bootThemeScript(settings: ThemeSettings): string {
   const clamped = Math.min(1, Math.max(0, settings.backgroundOpacity))
   const storedFontScale = settings.fontScale
@@ -30,7 +31,7 @@ function bootThemeScript(settings: ThemeSettings): string {
     : `${Math.round((1 - clamped) * 100)}%`
   // The auto formula must match `autoFontScale` in theme-settings.ts; the
   // bootstrap runs before the client plugin tree, so it cannot import it.
-  return `<script>(() => {
+  return `(() => {
   const preference = ${JSON.stringify(settings.preference)}
   const systemDark = preference === 'system'
     && typeof matchMedia !== 'undefined'
@@ -45,24 +46,17 @@ function bootThemeScript(settings: ThemeSettings): string {
   const auto = Math.min(1.2, Math.max(0.9, 1 + ((viewport - 1440) / 480) * 0.05))
   const fontScale = ${JSON.stringify(storedFontScale)} === 0 ? auto : ${JSON.stringify(storedFontScale)}
   document.body.style.setProperty('--dsw-font-scale', String(fontScale))
-})()</script>`
+})()`
 }
 
 /**
- * Insert the theme bootstrap immediately after the opening body tag, before
- * the shell mount and module script. Body-less fragments receive it at the
- * end, where the HTML parser has already synthesized a body.
- * @param html - Raw application index HTML.
+ * The theme bootstrap as an injection row: an inline script immediately after
+ * the opening body tag, before the shell mount and module script.
  * @param settings - Current Host-backed theme settings.
- * @returns HTML containing the theme bootstrap.
+ * @returns the body script row.
  */
-export function injectBootTheme(
-  html: string,
+export function bootThemeInjection(
   settings: ThemeSettings = DEFAULT_THEME_SETTINGS,
-): string {
-  const script = bootThemeScript(settings)
-  const body = /<body(?:\s[^>]*)?>/i.exec(html)
-  if (body === null) return `${html}${script}`
-  const at = body.index + body[0].length
-  return `${html.slice(0, at)}${script}${html.slice(at)}`
+): IndexInjection {
+  return { kind: 'script', placement: 'body', text: bootThemeScript(settings) }
 }

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-/** Host index injection and the resulting pre-plugin browser theme. */
+/** The theme bootstrap injection row and the resulting pre-plugin browser theme. */
 import { runInNewContext } from 'node:vm'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { injectBootTheme } from '../src/boot-theme.ts'
+import { bootThemeInjection } from '../src/boot-theme.ts'
 import type { ThemePreference, ThemeSettings } from '../src/theme-settings.ts'
 
 const DARK_ATTRIBUTE = 'data-ds-dark-theme'
@@ -15,15 +15,10 @@ function mockSystemDark(matches: boolean): void {
   vi.stubGlobal('matchMedia', vi.fn(() => ({ matches }) as MediaQueryList))
 }
 
-function executeBootstrap(
-  input: ThemeSettings = settings(),
-  html = '<html><body><div id="root"></div><script type="module"></script></body></html>',
-): string {
-  const injected = injectBootTheme(html, input)
-  const source = /<script>([\s\S]*?)<\/script>/.exec(injected)?.[1]
-  if (source === undefined) throw new Error('theme bootstrap script missing')
-  runInNewContext(source, { document, matchMedia: globalThis.matchMedia })
-  return injected
+function executeBootstrap(input: ThemeSettings = settings()): void {
+  const row = bootThemeInjection(input)
+  if (row.kind !== 'script') throw new Error('theme bootstrap row is not a script')
+  runInNewContext(row.text, { document, matchMedia: globalThis.matchMedia })
 }
 
 afterEach(() => {
@@ -33,15 +28,16 @@ afterEach(() => {
   document.body.removeAttribute(DARK_ATTRIBUTE)
   document.body.style.removeProperty('--dsw-bg-image')
   document.body.style.removeProperty('--dsw-surface-opacity')
+  document.body.style.removeProperty('--dsw-bg-opacity')
   document.body.style.removeProperty('--dsw-font-scale')
 })
 
-describe('theme boot index transform', () => {
-  it('runs immediately inside the body before the shell mount', () => {
+describe('theme bootstrap row', () => {
+  it('is a body script row, so it runs before the shell mount', () => {
     mockSystemDark(false)
-    const html = executeBootstrap(settings('dark'), '<html><body class="app"><div id="root"></div></body></html>')
-    expect(html.indexOf('<script>')).toBeGreaterThan(html.indexOf('<body class="app">'))
-    expect(html.indexOf('<script>')).toBeLessThan(html.indexOf('<div id="root">'))
+    const row = bootThemeInjection(settings('dark'))
+    expect(row).toMatchObject({ kind: 'script', placement: 'body' })
+    executeBootstrap(settings('dark'))
     expect(document.documentElement.style.colorScheme).toBe('dark')
     expect(document.body.hasAttribute(DARK_ATTRIBUTE)).toBe(true)
   })
@@ -76,10 +72,5 @@ describe('theme boot index transform', () => {
     executeBootstrap({ preference: 'system', backgroundImage: 'https://example.com/bg.png', backgroundOpacity: 0.5, fontScale: 1.1 })
     expect(document.body.style.getPropertyValue('--dsw-bg-image')).toBe('url("https://example.com/bg.png")')
     expect(document.body.style.getPropertyValue('--dsw-surface-opacity')).toBe('50%')
-  })
-
-  it('appends the script to a body-less fragment', () => {
-    const html = injectBootTheme('<main>loading</main>', settings('dark'))
-    expect(html.startsWith('<main>loading</main><script>')).toBe(true)
   })
 })
