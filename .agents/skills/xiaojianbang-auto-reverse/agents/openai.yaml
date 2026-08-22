@@ -1,0 +1,6 @@
+interface:
+  display_name: "小肩膀自动逆向"
+  short_description: "Android Native 授权检测链分析、dump/IDA/OLLVM、内核无痕验证"
+  default_prompt: "使用 $xiaojianbang-auto-reverse 继续授权 Android Native 检测链分析。全程中文；实验记录写简表；按需检查工具前置；定制系统能力先确认；加密/壳化 so 必须先 dump/fix，闪退静态分析先看 .init/.init_array/JNI_OnLoad，再查匿名映射、CRC 和崩溃函数，未完成前禁止动态验证。"
+policy:
+  allow_implicit_invocation: true
