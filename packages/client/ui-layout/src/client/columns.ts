@@ -22,11 +22,30 @@ export const CENTER_MIN = 640
 /** Sidebar drag clamp floor. */
 export const SIDEBAR_MIN = 264
 /** Sidebar drag clamp ceiling. */
-export const SIDEBAR_MAX = 420
-/** Sidebar width before any user drag. */
-export const SIDEBAR_DEFAULT = 280
-/** Closed-sidebar rail: a 24px icon column between 16px horizontal paddings. */
-export const SIDEBAR_COLLAPSED = 56
+export const SIDEBAR_MAX = 460
+/** Contract default sidebar width; the floor of the viewport-scaled default
+ * (a large display opens wider, never narrower than this). Raised so the
+ * default opens notably wider than a 280px rail on every desktop. */
+export const SIDEBAR_DEFAULT = 320
+/** Width above the auto-collapse breakpoint at which the scaled default reaches
+ * SIDEBAR_MAX; the default grows linearly across the desktop range instead of
+ * a flat 280 that a small fraction would only beat on an ultrawide. */
+export const SIDEBAR_DEFAULT_CEILING_AT = 2100
+/** Sidebar width before any user drag. Scales linearly from the contract
+ * default at SIDEBAR_AUTO_COLLAPSE up to SIDEBAR_MAX at
+ * SIDEBAR_DEFAULT_CEILING_AT, so a 1440px desktop opens a clearly wider pane
+ * than the old fixed 280 while a narrow viewport keeps the shipped width and
+ * an ultrawide caps at the drag ceiling. */
+export function sidebarDefault(viewport: number): number {
+  const span = SIDEBAR_DEFAULT_CEILING_AT - SIDEBAR_AUTO_COLLAPSE
+  const w = SIDEBAR_DEFAULT + (SIDEBAR_MAX - SIDEBAR_DEFAULT) * ((viewport - SIDEBAR_AUTO_COLLAPSE) / span)
+  return clampWidth(w, SIDEBAR_DEFAULT, SIDEBAR_MAX)
+}
+/** Closed-sidebar rail: the 56px control column (36px icon + 2×10px padding)
+ * plus a 24px left margin so the folded pill keeps the same floating inset as
+ * the expanded pane (both recess 24px from the viewport's left edge) instead
+ * of abutting the rail flush against it. */
+export const SIDEBAR_COLLAPSED = 56 + 24
 /** Viewport width below which the sidebar auto-collapses to the rail (deepsuite
  * LG breakpoint); a manual toggle below it re-expands over the squeezed center
  * (stores.ts narrowExpanded). */

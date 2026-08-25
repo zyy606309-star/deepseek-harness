@@ -25,6 +25,16 @@ import css from './SidebarRoot.module.css'
 
 /** Wide-content unmount delay; matches the 150ms wide-content fade-out. */
 const COLLAPSE_SETTLE_MS = 150
+/** The floating-pane insets (match .root margin in SidebarRoot.module.css): the
+    pane hangs off BOTH sides of the .sidebarCol grid track, with a wider gap on
+    the LEFT (24px) than the RIGHT (14px). The inline width must shrink by the
+    sum of the two insets so the pane — and its -3px glass bleed — stays inside
+    the track and clear of overflow:hidden on every edge, keeping all four
+    rounded corners intact (an asymmetric inset that only shrank the left
+    clipped the right bleed). */
+const SIDEBAR_INSET_LEFT = 24
+const SIDEBAR_INSET_RIGHT = 14
+const SIDEBAR_INSET = SIDEBAR_INSET_LEFT + SIDEBAR_INSET_RIGHT
 
 /**
  * How long the column's scrollbars stay drawn after the pointer leaves it.
@@ -59,9 +69,10 @@ export function SidebarRoot({
 
   // Freeze the content at its expanded width while it fades out (collapsed
   // && wide): the sliding column then clips it instead of reflowing it. The
-  // rail layout (.collapsed styles) only applies once the fade settles.
+  // rail layout (.collapsed styles) only applies once the fade settles. The
+  // frozen/expanded width is the pane width (track width minus both insets).
   const lastWideWidth = useRef(width)
-  if (!collapsed) lastWideWidth.current = width
+  if (!collapsed) lastWideWidth.current = Math.max(width - SIDEBAR_INSET, 0)
 
   // Rail-in only crossfades a live collapse: a refresh straight into the
   // collapsed state renders the rail statically (no delay-hidden icons).
@@ -118,7 +129,7 @@ export function SidebarRoot({
         css.root, !wide && css.collapsed, !wide && everWide.current && css.railIn,
         collapsed && wide && css.fading, !pointerInside && css.quietBars,
       )}
-      style={wide ? { width: collapsed ? lastWideWidth.current : width } : undefined}
+      style={wide ? { width: collapsed ? lastWideWidth.current : Math.max(width - SIDEBAR_INSET, 0) } : undefined}
       onPointerEnter={() => {
         cancelLinger()
         setPointerInside(true)
@@ -143,7 +154,7 @@ export function SidebarRoot({
                 {renderSlot('sidebar.brand.name', {}, {
                   fallback: (
                     <>
-                      <span className={css.fallbackBrandName}>DSH Local Build</span>
+                      <span className={css.fallbackBrandName}>DeepSeek Harness</span>
                       {process.env.DSH_CLIENT_COMMIT_HASH
                         ? <span className={css.buildRevision}>{process.env.DSH_CLIENT_COMMIT_HASH}</span>
                         : null}

@@ -12,6 +12,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
 import type { PanelActions } from './service.ts'
 import { AppFrame } from './AppFrame.tsx'
 import { createLayoutStore } from './stores.ts'
+import { sidebarDefault } from './columns.ts'
 import { LayoutController } from './service.ts'
 import { ThemePresenter } from './theme-presenter.ts'
 
@@ -127,7 +128,10 @@ export function apply(ctx: ClientContext): void {
       },
       // Exclusive store: the factory itself — the framework instantiates per
       // entry and delivers useStore/actions to AppFrame as standard props.
-      store: createLayoutStore,
+      // The initial sidebar width is seeded to the display rather than the
+      // fixed contract default, so a large screen opens a proportionally wider
+      // pane (window is available: client bundle, browser context).
+      store: () => createLayoutStore(sidebarDefault(window.innerWidth)),
       // The hook's only side effect connects the root store to ctx.layout;
       // conversation business actions belong to their registrants.
       inject: (actions: PanelActions) => {

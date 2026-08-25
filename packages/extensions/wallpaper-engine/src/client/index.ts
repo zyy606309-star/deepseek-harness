@@ -423,8 +423,21 @@ const CSS = `
      attribute, so they fall back to the module-CSS suffix convention; if that
      ever stops matching the bubble stays translucent, just without the blur. */
   body[data-we-wallpaper] {
-    --dsw-specific-input-major: rgba(255, 255, 255, 0.18) !important;
-    --dsw-specific-bubble: rgba(255, 255, 255, 0.14) !important;
+    /* Neutral-grey, ~50% opaque surface for the composer card and message
+       bubbles: over a bright/washed wallpaper the former near-white (0.14-0.18)
+       base let the bright backdrop bleed straight under dark text, so reading
+       washed out. A neutral grey base firms up the surface so dark ink stays
+       legible while still letting a little of the wallpaper colour through.
+       The markdown CODE surfaces are the exception: they need an OPAQUE base,
+       not a translucent one, so the code stays crisp and readable against any
+       wallpaper (a translucent code block lets the background bleed through
+       the glyphs). Their theme default is a solid near-white (#f9fafb); we
+       keep that an opaque near-white slab. */
+    --dsw-specific-input-major: rgba(120, 122, 130, 0.5) !important;
+    --dsw-specific-bubble: rgba(120, 122, 130, 0.5) !important;
+    --dsw-alias-markdown-code-block: rgb(245, 246, 248) !important;
+    --dsw-alias-markdown-code-block-banner: rgb(235, 236, 239) !important;
+    --dsw-alias-markdown-inline-code: rgb(235, 236, 239) !important;
   }
   body[data-ds-dark-theme][data-we-wallpaper] {
     --dsw-specific-input-major: rgba(255, 255, 255, 0.07) !important;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   CENTER_MIN, clampWidth, computeColumns,
-  DETAILS_DEFAULT, DETAILS_MIN, SIDEBAR_COLLAPSED, SIDEBAR_DEFAULT, SIDEBAR_MIN,
+  DETAILS_DEFAULT, DETAILS_MIN, SIDEBAR_COLLAPSED, SIDEBAR_DEFAULT, SIDEBAR_MAX, SIDEBAR_MIN, sidebarDefault,
 } from '@deepseek-ai/dsh-client-ui-layout/src/client/columns.ts'
 
 // Numeric preference form (0 = closed); helpers keep the scenario names readable.
@@ -16,10 +16,31 @@ describe('clampWidth', () => {
   })
 })
 
+describe('sidebarDefault', () => {
+  it('holds the contract default at and below the auto-collapse breakpoint', () => {
+    expect(sidebarDefault(1024)).toBe(SIDEBAR_DEFAULT)
+    expect(sidebarDefault(800)).toBe(SIDEBAR_DEFAULT)
+  })
+
+  it('grows linearly across the desktop range, wider than the fixed floor', () => {
+    // 1440px desktop opens a clearly wider pane than the default floor.
+    const d1440 = sidebarDefault(1440)
+    expect(d1440).toBeGreaterThan(SIDEBAR_DEFAULT)
+    expect(d1440).toBe(374)
+    // Increasing width never shrinks the default.
+    expect(sidebarDefault(1600)).toBeGreaterThan(d1440)
+  })
+
+  it('caps at the drag ceiling on an ultrawide', () => {
+    expect(sidebarDefault(2100)).toBe(460)
+    expect(sidebarDefault(2560)).toBe(460)
+  })
+})
+
 describe('computeColumns', () => {
   it('step 1: everything fits at preferred widths', () => {
     const cols = computeColumns(1920, open(SIDEBAR_DEFAULT), open(DETAILS_DEFAULT))
-    expect(cols).toEqual({ sidebar: 280, center: 1920 - 280 - 360, details: 360 })
+    expect(cols).toEqual({ sidebar: SIDEBAR_DEFAULT, center: 1920 - SIDEBAR_DEFAULT - 360, details: 360 })
   })
 
   it('closed sidebar keeps its compact rail while closed details contribute zero width', () => {
@@ -29,15 +50,15 @@ describe('computeColumns', () => {
 
   it('preferences beyond the clamp range are clamped before solving', () => {
     const cols = computeColumns(1920, open(9999), open(1))
-    expect(cols.sidebar).toBe(420)
+    expect(cols.sidebar).toBe(SIDEBAR_MAX)
     expect(cols.details).toBe(300)
     expect(computeColumns(1920, open(1), open(DETAILS_DEFAULT)).sidebar).toBe(SIDEBAR_MIN)
   })
 
   it('step 2: details shrinks first, center pinned at min', () => {
-    // 280 + 360 + 640 = 1280 > 1250; details concedes to 1250-280-640 = 330.
-    const cols = computeColumns(1250, open(SIDEBAR_DEFAULT), open(DETAILS_DEFAULT))
-    expect(cols).toEqual({ sidebar: 280, center: CENTER_MIN, details: 330 })
+    // 320 + 360 + 640 = 1320 > 1280; details concedes to 1280-320-640 = 320.
+    const cols = computeColumns(1280, open(SIDEBAR_DEFAULT), open(DETAILS_DEFAULT))
+    expect(cols).toEqual({ sidebar: SIDEBAR_DEFAULT, center: CENTER_MIN, details: 320 })
   })
 
   it('boundary: exactly at the step-1/step-2 seam', () => {
@@ -48,15 +69,14 @@ describe('computeColumns', () => {
   })
 
   it('step 3: details auto-closes when its min still starves center — sidebar holds its preference', () => {
-    // 280 + 300 + 640 = 1220 > 1210 → details 0; sidebar untouched: center = 1210-280 = 930.
+    // 320 + 300 + 640 = 1260 > 1210 → details 0; sidebar untouched: center = 1210-320 = 890.
     const cols = computeColumns(1210, open(SIDEBAR_DEFAULT), open(DETAILS_DEFAULT))
-    expect(cols).toEqual({ sidebar: 280, center: 930, details: 0 })
+    expect(cols).toEqual({ sidebar: SIDEBAR_DEFAULT, center: 890, details: 0 })
   })
 
   it('the sidebar never concedes: center absorbs the deficit below CENTER_MIN', () => {
-    // 700 < 280+640: sidebar keeps 280, center takes 420 < CENTER_MIN.
     const cols = computeColumns(700, open(SIDEBAR_DEFAULT), closed(DETAILS_DEFAULT))
-    expect(cols).toEqual({ sidebar: SIDEBAR_DEFAULT, center: 420, details: 0 })
+    expect(cols).toEqual({ sidebar: SIDEBAR_DEFAULT, center: 700 - SIDEBAR_DEFAULT, details: 0 })
   })
 
   it('sidebar-closed narrow window: details concedes then auto-closes', () => {

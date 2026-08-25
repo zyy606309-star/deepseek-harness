@@ -10,9 +10,23 @@
   --dsh-sidebar-inline-padding: 12px;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: calc(100% - 28px);
   padding: 6px var(--dsh-sidebar-inline-padding);
   box-sizing: border-box;
+  /* The sidebar floats as a rounded pane inset from the viewport edges — the
+     reference look: a detached card, not a full-bleed rail. It hangs off BOTH
+     sides, with a WIDER gap on the left (24px) than the right (14px), and the
+     .sidebarCol grid track is strictly wider than the pane (the inline width
+     shrinks by the left+right inset in SidebarRoot.tsx). This means the glass
+     edge never abuts the column's overflow:hidden boundary, so all four
+     rounded corners render intact — when the pane touched the column edge on
+     the right, the outer -3px glass bleed was clipped flat there and the
+     right corners read square. */
+  margin: 14px 14px 14px 24px;
+  /* Larger radius so the pane reads clearly rounded on the tall (>=600px)
+     surface — the earlier 18px was too tight on such a tall box and the
+     corners looked nearly square. */
+  border-radius: 26px;
   /* One-fifth black over the sidebar fill: the column reads 20% darker than the
      conversation surface so it recedes behind the active content. The outer mix
      keeps the theme background's surface-opacity transparency underneath. */
@@ -23,17 +37,93 @@
   );
   color: var(--dsw-alias-label-primary);
   font-size: calc(14px * var(--dsw-font-scale));
+  /* The glass blur lives on .root::before, not this column: a backdrop-filter
+     here would make the column the containing block for the full-viewport
+     settings panel (a fixed-position descendant), trapping the panel inside
+     the sidebar. position:relative anchors the glass layer without becoming
+     that containing block. */
+  position: relative;
   /* The sidebar is elevated above the conversation surface, so a revealed
      scrollbar uses the l2 pair. .quietBars hides it without changing layout. */
   --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
   --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
 }
 
+/* Frosted-glass base, BELOW the content (z-index:-1): the blur stays on the
+   pseudo-element so the .root column itself gets no backdrop-filter, which
+   would otherwise make it the containing block of the full-viewport settings
+   panel and trap the panel inside the sidebar. The pane is inert until a
+   wallpaper activates. */
+.root::before {
+  content: '';
+  position: absolute;
+  /* Extend a little past the pane so the band of gap immediately at the pane
+     edge is frosted too — the pane melts into its own soft rim instead of a
+     raw wallpaper seam — while the outer gap still shows wallpaper, keeping
+     the floating hierarchy. */
+  inset: -3px;
+  z-index: -1;
+  pointer-events: none;
+  /* Explicit radius, not inherit: the box is 6px larger (+3px each side), so a
+     matching outer radius (pane radius + 3) keeps the glass rim concentric with
+     the pane edge instead of a tighter curve. */
+  border-radius: 29px;
+}
+
+.root.collapsed::before {
+  inset: -3px;
+  border-radius: 23px;
+}
+
+/* While a wallpaper is active, the sidebar reads as a rounded frosted-glass
+   pane instead of a raw image: a light translucent base over the shared
+   blur/saturate/brightness glass so the wallpaper melts through softly. The
+   dark theme drops the base alpha (the same drops as the composer/bubble
+   surfaces). Without the wallpaper the attribute never matches, so the
+   glass layer stays transparent and the sidebar keeps its theme fill. */
+:global(body[data-we-wallpaper]) .root {
+  background: transparent !important;
+  /* Dark ink over the opaque light card (the reference look): the sidebar text
+     and icons go dark so they stay readable on the fixed pale surface, instead
+     of riding the theme's light-on-dark labels. */
+  color: rgb(32, 32, 38) !important;
+  --dsw-alias-label-primary: rgb(32, 32, 38) !important;
+  --dsw-alias-label-secondary: rgb(78, 80, 88) !important;
+  --dsw-alias-label-tertiary: rgb(120, 122, 130) !important;
+}
+:global(body[data-we-wallpaper]) .root::before {
+  /* A frosted-glass pane that reads bright and clean (whiter, brighter, higher
+     sat) but stays a translucent glass — not an opaque card: no drop shadow and
+     only a moderate blur, so the pane edges still blend rather than forming a
+     hard bright-glass vs raw-wallpaper seam. The brightness lift washes the
+     blurred wallpaper into a pale glow (the reference look) more effectively
+     than piling white base, which would quickly go opaque; the saturate lift
+     keeps the bled colour crisp. */
+  background: rgba(255, 255, 255, 0.56);
+  -webkit-backdrop-filter: blur(var(--we-blur, 24px)) saturate(2.2) brightness(1.65);
+  backdrop-filter: blur(var(--we-blur, 24px)) saturate(2.2) brightness(1.65);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+}
 /* Rail geometry (figma rail spec): 36x36 control boxes centered in the 56px
    rail (10px side padding), 12px vertical rhythm, 18px from the rail top to
    the whale's box (24px to the 24-wide whale glyph itself). */
 .root.collapsed {
   padding: 18px 10px 6px;
+  /* The collapsed rail keeps a slimmer inset and radius so the narrow strip
+     reads as a small floating pill rather than a full-width pane. Its width is
+     the 56px control column (36px control + 2×10px side padding); the SIDEBAR_COLLAPSED
+     grid track owns a 24px left margin so the pill recesses from the viewport's
+     left edge just like the expanded pane, instead of sitting flush against it. */
+  height: calc(100% - 20px);
+  margin: 10px 0 10px 24px;
+  border-radius: 20px;
+}
+
+.root.collapsed::before {
+  inset: -3px;
+  border-radius: 23px;
 }
 
 /* Scrollbars in the column are a pointer affordance: the shell adds this

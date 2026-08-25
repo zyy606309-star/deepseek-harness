@@ -55,6 +55,30 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* The modal mounts inside the sidebar's .root (the Settings trigger sits in
+     the foot). While a wallpaper is active the sidebar re-inks its subtree to
+     dark "ink on bright glass" by overriding --dsw-alias-label-* with
+     !important, and those custom properties inherit here — so on a dark modal
+     card the text came out dark (unreadable). The modal is its own opaque
+     surface that follows the active theme, so re-bind its label tokens to the
+     theme values instead of inheriting the sidebar's local ink. The dark-theme
+     selector below stays more specific than .overlay and wins the cascade. */
+  --dsw-alias-label-primary: var(--dsw-static-neutral-bluish-1000);
+  --dsw-alias-label-secondary: var(--dsw-static-neutral-bluish-700);
+  --dsw-alias-label-tertiary: var(--dsw-static-neutral-bluish-600);
+  --dsw-alias-label-caption: var(--dsw-static-neutral-bluish-400);
+  --dsw-alias-label-dimmed: var(--dsw-static-neutral-bluish-200);
+  /* The sidebar also sets a plain color:inherit override; rebind it so text
+     that falls through to inherited color (rather than an explicit label
+     token) still reads on the modal surface. */
+  color: var(--dsw-alias-label-primary);
+}
+:global(body[data-ds-dark-theme]) .overlay {
+  --dsw-alias-label-primary: var(--dsw-static-neutral-bluish-50);
+  --dsw-alias-label-secondary: var(--dsw-static-neutral-bluish-300);
+  --dsw-alias-label-tertiary: var(--dsw-static-neutral-bluish-400);
+  --dsw-alias-label-caption: var(--dsw-static-neutral-bluish-600);
+  --dsw-alias-label-dimmed: var(--dsw-static-neutral-bluish-750);
 }
 
 .mask {

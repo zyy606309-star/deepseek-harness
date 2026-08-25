@@ -316,12 +316,19 @@
 .mirror {
   visibility: hidden;
   pointer-events: none;
+  /* Viewport-scaled floor so the empty composer starts taller on a large
+     display instead of a fixed single line (~2 lines on a short viewport,
+     growing toward 6 on a tall one). Both the hero landing and the docked
+     composer share it; this is the empty-state height, and it still auto-grows
+     with the draft once the floor is exceeded. */
+  min-height: clamp(52px, 7vh, 128px);
 }
 
-/* Hero (centered empty-state) keeps the 2-line floor (figma min-h 52 = ~2 × 24
-   line + 4pt); the docked composer collapses to the content height. */
+/* Hero (centered empty-state) keeps a viewport-scaled floor so a large display
+   opens a taller composer instead of a fixed 2-line box; slightly lower than
+   the docked floor so the landing input reads compact. */
 .hero .mirror {
-  min-height: 52px;
+  min-height: clamp(52px, 8vh, 148px);
 }
 
 /* Toolbar: attach + Plan + Read-only on the left; model + send on the right

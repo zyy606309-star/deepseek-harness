@@ -25,6 +25,16 @@
   --dsh-composer-dock-inset: 8px;
 }
 
+/* While a wallpaper is active the theme base is transparent, so the busy
+   wallpaper shows straight under the flowing narration and dark ink competes
+   with it. A light neutral-grey wash firms up the whole surface — enough to
+   keep all prose readable, without turning the panel opaque, so the wallpaper
+   still glows through. The per-message surfaces (bubble/composer/code) keep
+   their own firmer grey via their tokens. */
+:global([data-we-wallpaper]) :local(.root) {
+  background: rgba(120, 122, 130, 0.18);
+}
+
 .header {
   position: relative;
   flex: none;

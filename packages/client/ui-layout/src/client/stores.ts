@@ -37,17 +37,20 @@ type LayoutActions = {
 
 /**
  * Create the layout panel store handle. The preference IS the width, so
- * closing a panel forgets its drag width — reopening restores the contract
- * default. Actions are the complete write set: drag writes clamp
+ * closing a panel forgets its drag width — reopening restores the initial
+ * width. Actions are the complete write set: drag writes clamp
  * into the panel's contract range and never cross the open/closed line;
  * open/close transitions write 0 / the default explicitly. Below the
  * auto-collapse breakpoint (AppFrame feeds setNarrow) the sidebar toggle
  * flips the narrowExpanded override instead of the preference.
+ * @param initialSidebar - width before any user drag; defaulted to the
+ * contract default, overridden by the caller with a viewport-scaled width so
+ * the sidebar opens proportionally to the display.
  * @returns the store handle (spec + type + identity + factory in one).
  */
-export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutActions>  {
+export function createLayoutStore(initialSidebar: number = SIDEBAR_DEFAULT): EngineStoreHandle<LayoutState, LayoutActions>  {
   const handle = defineStore({
-    init: (): LayoutState => ({ sidebar: SIDEBAR_DEFAULT, details: 0, narrow: false, narrowExpanded: false }),
+    init: (): LayoutState => ({ sidebar: initialSidebar, details: 0, narrow: false, narrowExpanded: false }),
     actions: {
       setSidebar: (d, px: number) => { d.sidebar = clampWidth(px, SIDEBAR_MIN, SIDEBAR_MAX) },
       setDetails: (d, px: number) => { d.details = clampWidth(px, DETAILS_MIN, DETAILS_MAX) },
@@ -55,7 +58,7 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
       // untouched, so re-widening restores the pre-squeeze layout.
       toggleSidebar: (d) => {
         if (d.narrow) d.narrowExpanded = !d.narrowExpanded
-        else d.sidebar = d.sidebar === 0 ? SIDEBAR_DEFAULT : 0
+        else d.sidebar = d.sidebar === 0 ? initialSidebar : 0
       },
       // Crossing the breakpoint in either direction drops the override: the
       // narrow default is auto-collapsed, the wide state is the preference.

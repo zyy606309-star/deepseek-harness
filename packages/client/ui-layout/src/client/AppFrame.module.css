@@ -27,8 +27,10 @@
 .sidebarCol {
   min-width: 0;
   overflow: hidden;
+  /* The sidebar floats as a detached rounded pane, so the column paints no
+     border-right: the inset gap + the pane's own radius carry the separation
+     from the conversation surface. */
   background: color-mix(in srgb, var(--dsw-specific-sidebar-fill) var(--dsw-surface-opacity, 100%), transparent);
-  border-right: 1px solid var(--dsw-alias-border-l1);
 }
 
 .centerCol {
@@ -45,7 +47,9 @@
 }
 
 /* The details subtree stays mounted at zero width, so its border must not paint
-   a 1px seam. The collapsed sidebar instead retains a bordered compact rail. */
+   a 1px seam. The sidebar floats as a detached rounded pane (it has no
+   border-right; the inset gap + pane radius carry the separation), so only the
+   details border needs this collapse guard. */
 .frame[data-details-collapsed] .detailsCol {
   border-left: none;
 }
