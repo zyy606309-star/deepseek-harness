@@ -442,6 +442,14 @@ const CSS = `
   body[data-ds-dark-theme][data-we-wallpaper] {
     --dsw-specific-input-major: rgba(255, 255, 255, 0.07) !important;
     --dsw-specific-bubble: rgba(255, 255, 255, 0.06) !important;
+    /* The light-theme block above forces the CODE tokens to an opaque
+       near-white, but that block also matches a dark theme and would leave
+       the dark code slate as white-on-white (the dark label is a near-white
+       ink). Re-pin the code surfaces to the dark theme's opaque tones so a
+       dark code block stays a solid slate with light ink. */
+    --dsw-alias-markdown-code-block: rgb(27, 27, 28) !important;
+    --dsw-alias-markdown-code-block-banner: rgb(44, 44, 46) !important;
+    --dsw-alias-markdown-inline-code: rgb(44, 44, 46) !important;
   }
   body[data-we-wallpaper] [data-composer-card],
   body[data-we-wallpaper] [class*="_bubble"] {
