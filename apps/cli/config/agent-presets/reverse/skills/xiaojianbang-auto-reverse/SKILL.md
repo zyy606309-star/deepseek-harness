@@ -1,15 +1,26 @@
 ---
 name: xiaojianbang-auto-reverse
-description: Android Native 用户明确许可样本/研究环境下的反检测分析与稳定绕过工程（中文工作语言，宿主机 Windows/Linux/macOS）。分析 .so 的反调试、反 Frida(anti-Frida)、Root、模拟器、完整性/CRC、JNI/constructor/dlopen/匿名 RX 检测链并做 patch 绕过；按任务类型分流 Frida、xiaojianbang-syscall-filter、内核无痕 HWBP hook、MemDumper dump/fix、rizin 反汇编（伪代码回退 Ghidra headless）导出、OLLVM 还原、eCapture TLS 抓包，全程中文同步实验记录。
+description: 覆盖从 APK/Java 层到 native 的完整 Android 逆向流程（中文工作语言，宿主机 Windows/Linux/macOS）。先做 APK 信息收集、Java/DEX 静态分析、行为观察、native 库发现，再进入用户明确许可样本/研究环境下的反检测分析与稳定绕过工程。分析 .so 的反调试、反 Frida(anti-Frida)、Root、模拟器、完整性/CRC、JNI/constructor/dlopen/匿名 RX 检测链并做 patch 绕过；按任务类型分流 Frida、xiaojianbang-syscall-filter、内核无痕 HWBP hook、MemDumper dump/fix、rizin 反汇编（伪代码回退 Ghidra headless）导出、OLLVM 还原、eCapture TLS 抓包，全程中文同步实验记录。
 ---
 
 # xiaojianbang-auto-reverse
 
 ## 职责
 
-Android Native 检测链分析与稳定绕过工程。把动态证据、静态反编译、patch、验证和实验记录形成可复现闭环：分析 `.so` 的 JNI、constructor、dlopen、syscall、反调试、Root、Hook、Frida、模拟器、完整性/CRC 检测链，定位 `SIGKILL`/`SIGSEGV`/`SIGTRAP`/`BRK`/匿名 RX/direct syscall/constructor 早期闪退，给出 patch 候选、最终 patch、风险边界和验证结果。helper 与真实检测链分开记录，不把分析结论只留在对话或临时日志里。
+覆盖 Android 逆向完整流程（APK→Java→native）。native 检测链分析与稳定绕过工程：把动态证据、静态反编译、patch、验证和实验记录形成可复现闭环：分析 `.so` 的 JNI、constructor、dlopen、syscall、反调试、Root、Hook、Frida、模拟器、完整性/CRC 检测链，定位 `SIGKILL`/`SIGSEGV`/`SIGTRAP`/`BRK`/匿名 RX/direct syscall/constructor 早期闪退，给出 patch 候选、最终 patch、风险边界和验证结果。helper 与真实检测链分开记录，不把分析结论只留在对话或临时日志里。
 
 仅用于自有或用户明确许可的样本、研究和调试环境；遇到目标边界不清的场景，先说明边界并停止会造成未授权访问、隐蔽控制或数据外传的操作。
+
+## 完整流程（前置 → native）
+
+一个完整逆向任务按此路径推进；前置阶段（进 `.so` 之前）见 `references/apk-java-recon.md`，native 深度分支见 `references/workflow-standards.md` §0-§13 与下方强约束速查第1-24条：
+
+1. 目标与授权确认（`references/safety-and-confirmation-rules.md`）。
+2. APK 信息收集：包名/版本/权限/组件/入口/壳与加固特征。
+3. Java/DEX 静态分析（强制 `jadx`）：入口启动链、native 方法声明与绑定、调用图、"这 App 干什么"。
+4. 行为观察（动态，可选）：启动/崩溃/网络/so 加载序列。
+5. native 库发现：找出真正要逆的 `.so`，初判是否壳化/加密。
+6. 命中 native 检测/壳化/算法/崩溃 → 进入 native 深度分支（第1-24条 + §0-§13）；否则在第3-5步收尾并说明理由。
 
 ## 按需前置门槛
 
@@ -24,6 +35,8 @@ Android Native 检测链分析与稳定绕过工程。把动态证据、静态�
 
 ## 触发场景
 
+- 从 APK 开始做完整逆向：解包、查阅清单/组件、找入口、Java/DEX 层分析，或判断"这 App 要不要逆 native"。
+- 定位 native 库：哪些 `.so`、加载时机、exports、是否壳化/加密。
 - Android App native 反调试、反 Frida、Root、模拟器、Hook、完整性/CRC 检测分析。
 - 定位 `SIGKILL`/`SIGSEGV`/`SIGTRAP`/`BRK`/匿名 RX 崩溃/direct syscall/constructor 早期闪退。
 - 验证新加载 `.so`、dump 修复内存 so、分析 rizin/Ghidra 导出、处理 OLLVM/控制流混淆。
@@ -101,6 +114,7 @@ Android Native 检测链分析与稳定绕过工程。把动态证据、静态�
 
 ## 文档入口
 
+- `references/apk-java-recon.md`：完整流程前置段——APK 信息收集、Java/DEX 静态分析、行为观察、native 库发现，以及如何交给 native 深度分支。
 - `references/overview.md`：版本信息、功能总览、工具依赖和快速安装。
 - `references/workflow-standards.md`：完整执行流程与各强约束详述（§5 匿名内存、§6 函数范围、§7 静态分析顺序、§8 混淆、§9 工具路线与 CRC、§10 patch、§11 验证）。
 - `references/documentation-standards.md`：实验记录详细标准。
@@ -120,6 +134,7 @@ Android Native 检测链分析与稳定绕过工程。把动态证据、静态�
 
 ## 参考文档读取路由
 
+- 从拿到 APK 开始做前置分析，或不确定从哪入手：读 `references/apk-java-recon.md`。
 - 建立流程或遇到闪退闭环：读 `references/workflow-standards.md`。
 - 不确定工具入口或想按任务分流：读 `references/bundled-tools.md`。
 - 需要复制工具、自检、审计、`rizin_export.py`/`INP.py` 安装语义：读 `references/tool-installation.md`。
