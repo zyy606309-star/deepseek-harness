@@ -75,7 +75,7 @@ adb logcat | grep "ArtMethod::RegisterNative"
   - `.dex` —— 脱壳得到的 dex
   - `.txt` —— 记录 dex 里的类名
 
-整体加固脱壳产物是完整 dex，可直接拉回用 jadx 分析，无需 dexfixer 合并。用 jadx 打开脱壳 dex 时必须关闭 checksum 校验（`jadx -Pdex-input.verify-checksum=no <dex>` 或 gui 关闭 checksum 校验），脱壳产物的校验和常与头部不一致。
+整体加固脱壳产物是完整 dex，可直接拉回用 garlic（首选，无需关 checksum）或 jadx 分析，无需 dexfixer 合并。用 jadx 打开脱壳 dex 时必须关闭 checksum 校验（`jadx -Pdex-input.verify-checksum=no <dex>` 或 gui 关闭 checksum 校验），脱壳产物的校验和常与头部不一致。
 
 ## 三、需手动启用功能
 
@@ -179,5 +179,5 @@ python3 scripts/dexfix_runner.py \
 
 - 批量模式输出文件名为 `<stem>.fixed.dex`，并打印 `dex_total / merged / no_bin / failed` 汇总。
 - 只有 `.dex` 没有同名 `.bin` 的，多半不是抽取式脱壳产物（例如整体脱壳的完整 dex），会被跳过并提示，不应强行合并。
-- 合并后用 jadx 复核 dex 是否完整、方法体是否还原；合并失败或方法体仍为空时，回到设备确认脱壳是否完成、`.bin` 是否生成。用 jadx 打开合并/脱壳 dex 时必须关闭 checksum 校验（`jadx -Pdex-input.verify-checksum=no <dex>` 或 gui 关闭 checksum 校验），否则合并改动过的 dex 会因校验和不匹配加载失败。
+- 合并后用 garlic（首选）或 jadx 复核 dex 是否完整、方法体是否还原；合并失败或方法体仍为空时，回到设备确认脱壳是否完成、`.bin` 是否生成。用 jadx 打开合并/脱壳 dex 时必须关闭 checksum 校验（`jadx -Pdex-input.verify-checksum=no <dex>` 或 gui 关闭 checksum 校验），否则合并改动过的 dex 会因校验和不匹配加载失败。
 - 拉取时 wrapper 会先用 `su` 把设备脱壳目录 `/data/data/<package>/xiaojianbang` 复制到 `/sdcard/xjb_dexfix_pull/<package>` 再 `adb pull`，结束后清理该 sdcard 临时目录；原始脱壳目录不动。直接 `adb pull /data/data/...` 会因 app 私有目录权限失败，所以必须经 sdcard 中转。

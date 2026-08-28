@@ -19,17 +19,18 @@
 - frida-server：目标设备上的 server，例如 `/data/local/tmp/fsarm64`。
 - xiaojianbang-syscall-filter：定位 direct syscall、kill、SIGSEGV、faccessat、匿名 RX。
 - xiaojianbang-stealth-hook：Android 内核无痕 HWBP hook，用于强反 Frida/强完整性场景下验证参数、返回值和 patch 候选。
-- jadx：Java/Kotlin 层反编译强制使用。**强约束：调用 jadx 必须关闭 dex checksum 校验**，命令行加 `-Pdex-input.verify-checksum=no`（如 `jadx -Pdex-input.verify-checksum=no app.apk`）。本模式用命令行版 `jadx`/`jadx-cli`，不用 GUI。
+- garlic：Java/Kotlin 层反编译**首选**（C 实现、秒级，反编译 apk/dex/class/jar，无需关 checksum）。用法：`garlic <apk> -o <out>`；`-s` 输出 smali（可选）；`-g` 生成调用图（可选）。**默认不用 `-n`**（ELF 分析，Windows 上 librosemarylib 加载有依赖坑）；仅用户明确要求时才用 `-n` 并记录。路径作为环境事实见 `environment.md`。
+- jadx：Java/Kotlin 层反编译**回退**（garlic 不可用时）。**强约束：调用 jadx 必须关闭 dex checksum 校验**，命令行加 `-Pdex-input.verify-checksum=no`（如 `jadx -Pdex-input.verify-checksum=no app.apk`）。本模式用命令行版 `jadx`/`jadx-cli`，不用 GUI。
 - rizin：`.so` 静态分析默认使用。PATH、项目目录、已有记录和常见安装路径找不到时，必须先做宿主机全盘搜索；全盘仍找不到才询问用户路径。伪代码用 Ghidra headless 回退（`references/rizin-tools.md`）；只有用户明确要求用 IDA 时，才切换到 IDA + `INP.py`，并在实验记录中说明原因。
 - Ghidra headless：伪代码回退（`rizin_export.py --ghidra-support`），不是反汇编主工具。
 - OLLVM_Deobfuscator：处理 OLLVM 或非标准控制流；混淆函数必须在语义分析和 patch 候选前先还原，优先使用并按需修改项目副本 `third_party/OLLVM_Deobfuscator/`。
 - adb/logcat：进程控制、日志采集、重启设备、清理状态。
 
-只有本轮需要使用 `adb`、rizin、`jadx` 等工具且找不到位置时，才检查 `PATH`、项目 `scripts/`、`third_party/`、已有实验记录和常见安装路径；若本轮确实需要 `jadx` 或 rizin 且仍未命中，必须继续做宿主机全盘搜索，不要凭空假设路径。全盘搜索命令、范围、候选和结果写入实验记录；全盘仍找不到时才询问用户路径。用户明确说没有 `jadx` 或 rizin 后，才能切换对应回退工具。
+只有本轮需要使用 `adb`、rizin、`garlic`、`jadx` 等工具且找不到位置时，才检查 `PATH`、项目 `scripts/`、`third_party/`、已有实验记录和常见安装路径；若本轮确实需要 `garlic`、`jadx` 或 rizin 且仍未命中，必须继续做宿主机全盘搜索，不要凭空假设路径。全盘搜索命令、范围、候选和结果写入实验记录；全盘仍找不到时才询问用户路径。用户明确说没有 `garlic`、`jadx` 或 rizin 后，才能切换对应回退工具。
 
-`jadx`/rizin 全盘搜索建议：
-- Windows：枚举本机文件系统盘，搜索 `jadx.bat`、`jadx*.bat`、`rizin.exe`、`rz-bin.exe`；可跳过回收站、系统卷信息、网络盘和无权限目录。
-- Linux/macOS：用 `find` 或 `mdfind/locate` 搜索 `jadx`、`rizin`、`rz-bin`；可跳过 `/proc`、`/sys`、`/dev`、网络挂载和无权限目录。
+`garlic`/`jadx`/rizin 全盘搜索建议：
+- Windows：枚举本机文件系统盘，搜索 `garlic.exe`、`jadx.bat`、`jadx*.bat`、`rizin.exe`、`rz-bin.exe`；可跳过回收站、系统卷信息、网络盘和无权限目录。
+- Linux/macOS：用 `find` 或 `mdfind/locate` 搜索 `garlic`、`jadx`、`rizin`、`rz-bin`；可跳过 `/proc`、`/sys`、`/dev`、网络挂载和无权限目录。
 
 本模式默认用 `rizin_export.py` 导出（需要伪代码时加 `--ghidra-support`），见 `references/rizin-tools.md`。只有用户明确要用 IDA 时，才探测常见 IDA `plugins` 目录并复制/安装 `INP.py`，用 `--install-ida-plugin`、`--ida-root` 或 `--ida-plugin-dir` 控制。
 

@@ -49,4 +49,4 @@ python3 scripts/dexfix_runner.py \
 - wrapper 经 `/sdcard` 中转再 pull，因为 app 私有目录不能直接 `adb pull`。
 - 宿主机需要 `java`；`XJB_JAVA` 可覆盖，`XJB_DEXFIXER_JAR` 可覆盖 jar 路径，`XJB_ADB` 可覆盖 adb。
 - 只有 `.dex` 无同名 `.bin` 的会跳过（多为整体脱壳的完整 dex，无需合并）。
-- 合并后用 jadx 复核 dex 完整性和方法体还原情况；jadx 必须关闭 checksum 校验。
+- 合并后用 garlic（首选）或 jadx 复核 dex 完整性和方法体还原情况；jadx 必须关闭 checksum 校验。

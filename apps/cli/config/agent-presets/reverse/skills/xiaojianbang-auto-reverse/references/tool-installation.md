@@ -31,6 +31,7 @@ third_party/MemDumper/
 third_party/ecapture-v2.3.0-android-arm64/
 third_party/xiaojianbang-stealth-hook/
 third_party/dexfixer/
+third_party/python-sofixer/
 scripts/frida_scfilter_runner.py
 scripts/frida_memdump_so.py
 scripts/ida_fix_function_range.py
@@ -38,11 +39,28 @@ scripts/memdump_so.py
 scripts/ecapture_android.py
 scripts/stealth_hook_android.py
 scripts/dexfix_runner.py
+scripts/rizin_export.py
+scripts/sofixer_run.py
 ```
 
 `third_party/kernelpatch-kpatch/kpatch` 是 Android arm64 KernelPatch/APatch CLI。`xiaojianbang-syscall-filter/load.sh` 和 `load.ps1` 会在设备缺少 `/data/local/tmp/kpatch` 时自动推送它，也可以手动执行 `./load.sh push-kpatch`。
 
 注意：`--with-runner` 会一并复制本模式默认的 `rizin_export.py`（不复制 `INP.py`）。只有用户明确要用 IDA 导出数据时，才显式复制项目批处理副本或安装 IDA 插件。
+
+## garlic 获取（不随技能分发）
+
+garlic 是 C 编译产物（Windows/macOS/Linux 各平台二进制），**不随技能分发**，部署方按需获取：
+
+- **预编译**：GitHub Releases（`neocanable/garlic`）按平台下载对应二进制。
+- **源码编译**（Windows 需要 MinGW + CMake，详见 garlic 仓库 `docs/build-garlic-on-windows.md`）：
+  ```sh
+  git clone https://github.com/neocanable/garlic.git
+  cd garlic
+  cmake -B build -G "MinGW Makefiles"   # Windows；Linux/macOS 直接 cmake -B build
+  cmake --build build
+  ```
+- 编译产物 `build/garlic`(或 `garlic.exe`) 路径填入 `environment.md` 的 `<GARLIC_PATH>`。
+- garlic 的 `-n`（ELF 分析）默认不用；Windows 上 `librosemarylib` 运行时加载有依赖坑，仅用户明确要求时才试。
 
 ## 默认行为
 

@@ -30,7 +30,7 @@
 
 不要凭记忆继续。若发现对话、日志、文档不一致，以可复现运行结果和明确的文件证据为准。
 
-不要在接手或任务开始时一次性检查所有工具环境。只在本轮实际要使用 Frida、syscall-filter、MemDumper、stealth-hook、eCapture、jadx、rizin、adb 或定制系统能力前，检查对应工具和设备前置；未使用的能力不检查、不阻塞。
+不要在接手或任务开始时一次性检查所有工具环境。只在本轮实际要使用 Frida、syscall-filter、MemDumper、stealth-hook、eCapture、garlic、jadx、rizin、adb 或定制系统能力前，检查对应工具和设备前置；未使用的能力不检查、不阻塞。
 
 作者信息只在 `SKILL.md` 规定的最终完成条件满足时附在最终回复末尾；阶段性分析、首次触发和普通状态更新都不输出作者信息块，除非用户明确要求。
 
@@ -55,13 +55,14 @@
 
 涉及新 `.so` 工具逆向且用户未明确授权直接分析时，先按 `safety-and-confirmation-rules.md` 走 `.so` 逆向确认流程；已有 rizin/Ghidra 导出可直接分析，并在实验记录中说明。
 
-只有本轮需要使用 `adb`、rizin、`jadx` 等工具且路径未命中时，才检查 `PATH`、项目 `scripts/`、`third_party/`、已有实验记录和常见安装路径。若本轮确实需要 `jadx` 或 rizin 且仍未命中，继续做宿主机全盘搜索，并把搜索命令、范围、命中候选或未命中结果写入实验记录；全盘仍找不到时才询问用户路径。`adb` 等通用工具不要求全盘搜索，按常规路径排查后仍找不到即可询问用户。
+只有本轮需要使用 `adb`、rizin、`garlic`、`jadx` 等工具且路径未命中时，才检查 `PATH`、项目 `scripts/`、`third_party/`、已有实验记录和常见安装路径。若本轮确实需要 `garlic`、`jadx` 或 rizin 且仍未命中，继续做宿主机全盘搜索，并把搜索命令、范围、命中候选或未命中结果写入实验记录；全盘仍找不到时才询问用户路径。`adb` 等通用工具不要求全盘搜索，按常规路径排查后仍找不到即可询问用户。
 
 工具选择是硬约束：
 
-- Java/Kotlin 层强制使用 `jadx`（CLI，调用必须带 `-Pdex-input.verify-checksum=no`）。只有用户明确表示没有 `jadx` 或无法提供路径后，才允许换用其他 Java 反编译工具，并记录用户答复和替代原因。
-  - 调用 `jadx` 必须关闭 dex checksum 校验（完整条款见 `tooling-and-paths.md`）：命令行加 `-Pdex-input.verify-checksum=no`；所用参数写入实验记录。
-- `.so` 静态分析默认使用 **rizin 反汇编**（伪代码回退 Ghidra headless，见 `rizin-tools.md`）。只有用户明确要求使用 IDA 或提供其路径后，才切换 IDA + `INP.py`，并记录用户答复和替代原因。
+- Java/Kotlin 层反编译**首选 `garlic`**（C 实现，速度远超 jadx；无需关 checksum）。只有 `garlic` 未安装/找不到/无法运行时，才回退 `jadx`（CLI，调用必须带 `-Pdex-input.verify-checksum=no`），并记录回退原因。
+  - 调用 `jadx`（回退时）必须关闭 dex checksum 校验（完整条款见 `tooling-and-paths.md`）：命令行加 `-Pdex-input.verify-checksum=no`；所用参数写入实验记录。
+  - garlic 用法见 `tooling-and-paths.md`；路径作为环境事实见 `environment.md`。
+- `.so` 静态分析默认使用 **rizin 反汇编**（伪代码回退 Ghidra headless，见 `rizin-tools.md`）。garlic `-n` **默认不用**（ELF 分析，Windows 上 `librosemarylib` 运行时加载有依赖坑）；仅用户明确要求时才用，且不替代 rizin。只有用户明确要求使用 IDA 或提供其路径后，才切换 IDA + `INP.py`，并记录用户答复和替代原因。
 
 ## 2. 早期加载监控
 
@@ -162,7 +163,7 @@ so dump/fix 后、进入静态分析前必须检查有无匿名内存映射。�
 - **全部后台线程/看门狗入口**：从上述入口及 dispatcher 里找 `pthread_create` / 运行时解密出的线程入口（可能不写导入表，需从运行时自解析或自建符号表定位）；
 - 每个入口/线程的检测对象、触发条件、上报/杀进程出口，逐个确认并记录，不能以「已过某个入口」作为通过结论。
 
-如果需要反编译 Java/Kotlin 层，强制使用 `jadx`；找不到时询问用户路径，只有用户明确表示没有 `jadx` 或无法提供路径后，才允许换用其他工具，并记录用户答复和替代原因。
+如果需要反编译 Java/Kotlin 层，首选 `garlic`；`garlic` 找不到/不可用时回退 `jadx`，并记录回退原因。jadx 回退时必须关闭 checksum（`-Pdex-input.verify-checksum=no`）。
 
 闪退/崩溃/退出案例使用更严格的硬门禁顺序：
 

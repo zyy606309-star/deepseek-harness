@@ -186,7 +186,7 @@ python -m pip install capstone unicorn keystone-engine
 4. Frida 路线下监控 constructor、`dlopen/android_dlopen_ext`、JNI、关键返回值；syscall-filter 捕获 direct syscall、kill、SIGSEGV、路径探测和匿名 RX。
 5. 分析 so 前必须判断是否加密、壳化、自解密或运行时重建；命中时 dump/fix 是硬门禁，禁止直接分析磁盘 so，下工具按 `dump-ida-ollvm-tools.md`「MemDumper 工具分流」选 `memdump_so.py` 或 `frida_memdump_so.py`。
 6. dump/fix 后、静态分析前先做匿名内存加载执行检查（§5）。
-7. 在已授权目标范围内用 rizin 分析 `.so`（jadx 分析 Java 层时关 dex checksum）；已有导出优先直接分析，需要导出时用 `rizin_export.py`（伪代码加 `--ghidra-support`）。
+7. 在已授权目标范围内用 rizin 分析 `.so`（Java 层首选 garlic 反编译、garlic 不可用回退 jadx 并关 dex checksum）；已有导出优先直接分析，需要导出时用 `rizin_export.py`（伪代码加 `--ghidra-support`）。
 8. 闪退案例按硬门禁闭环（§7）：syscall-filter 定位 pc/lr→加密/壳化判断与必要 dump/fix→先分析 `.init`/`.init_array`/`JNI_OnLoad`→匿名内存检查→CRC 检查→崩溃函数及上下游完整分析→patch→验证；未完成前禁止动态验证。
 9. 遇 OLLVM/非标准控制流先确认函数范围（§6）再用项目副本 OLLVM_Deobfuscator 还原（§8）。
 10. Frida/inline hook 不稳定或触发检测时，用 stealth-hook 做无痕参数/返回值验证。

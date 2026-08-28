@@ -10,7 +10,7 @@
 
 - 步骤A. 目标与授权确认
 - 步骤B. APK 信息收集（解包 / 清单 / 组件 / 入口 / 壳特征）
-- 步骤C. Java/DEX 静态分析（强制 jadx-cli）
+- 步骤C. Java/DEX 静态分析（首选 garlic，回退 jadx-cli）
 - 步骤D. 行为观察（动态，可选）
 - 步骤E. native 库发现
 - 交接：进入 native 分支 vs 收尾
@@ -35,10 +35,10 @@
 - **工具（候选）**：`aapt2 dump badging` / `aapt`、`apktool d`、`7z`，或用 `jadx-cli` 直接开 APK 看 manifest 与源码。按目标命中为准。
 - **产物**：manifest 摘录、组件/入口表、加固与 native 依赖初判。
 
-## 步骤C. Java/DEX 静态分析（强制 jadx-cli）
+## 步骤C. Java/DEX 静态分析（首选 garlic，回退 jadx）
 
 - **目的**：进入 native 前先回答"这个 App 到底干什么、值不值得逆 native"。这是**方向前哨**——方向错了，后续 native 分析都会偏。
-- **工具（硬约束）**：Java/Kotlin 层强制 `jadx`（CLI，调用必须带 `-Pdex-input.verify-checksum=no`；找不到时询问用户路径，用户明确没有才可用其他工具并记录）。完整条款见 `tooling-and-paths.md`。
+- **工具（硬约束）**：Java/Kotlin 层首选 `garlic`（C 实现、秒级，无需关 checksum）。`garlic` 未安装/找不到/不可用时回退 `jadx`（CLI，调用必须带 `-Pdex-input.verify-checksum=no`），并记录回退原因。完整条款见 `tooling-and-paths.md`。
 - **看什么**：
   - 入口启动链：`Application.onCreate`、入口 `Activity.onCreate`、`MainActivity`、`Service`/`Receiver` 入口。
   - native 边界：`System.loadLibrary`/`System.load` 调用点；`native` 方法声明清单；这些 native 方法如何绑定（`JNI_OnLoad` 里 `RegisterNatives`，或方法名/签名约定映射）。

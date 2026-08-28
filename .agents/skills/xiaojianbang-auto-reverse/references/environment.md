@@ -14,14 +14,24 @@
 | keystone-engine | `<KEYSTONE_VERSION>` |
 | rizin | `<RIZIN_PATH>`，例如 `C:\Program Files\Rizin\bin\rizin.exe`；**反汇编** |
 | rz-ghidra（伪代码） | `<RZ_GHIDRA_STATUS>`：未装（官方仅源码包、无 Windows 预编译）→ 伪代码走 Ghidra headless |
-| jadx（CLI） | `<JADX_CLI>`，例如 `D:\tools\jadx-1.5.6\bin\jadx-cli.bat` |
+| garlic（Java 反编译首选） | `<GARLIC_PATH>`，例如 `D:\garlic-build\garlic-main\build\garlic.exe`；C 实现、秒级反编译 apk/dex/class/jar |
+| garlic `-n`（ELF 分析） | 默认不用；仅用户明确要求时用（Windows 上 `librosemarylib.dll` 运行时加载有依赖坑） |
+| jadx（Java 反编译回退） | `<JADX_CLI>`，例如 `D:\tools\jadx-1.5.6\bin\jadx-cli.bat` |
 | jadx GUI | 不用（可选填 `<JADX_GUI>`） |
 | JDK（jadx wrapper 用） | `<JDK17>`，例如 `D:\openjdk-17_windows-x64_bin\jdk-17` |
 | 全局 `JAVA_HOME` | `<GLOBAL_JAVA_HOME>`（若太旧会使 jadx 报 class version 错误，用 jadx wrapper 规避） |
 | Ghidra | `<GHIDRA_DIR>`，例如 `D:\ghidra_12.0.3_PUBLIC`（伪代码回退，需 JDK 21+） |
 | adb | `<ADB_PATH>` 或 PATH；多设备时用 `adb -s <ADB_SERIAL> <cmd>` 指定 |
 
-### jadx 调用约定
+### garlic 调用约定（Java 反编译首选）
+```bat
+<GARLIC_PATH> <apk> -o <out_dir> -t 4
+<GARLIC_PATH> <apk> -s          # 输出 smali（可选）
+<GARLIC_PATH> <apk> -g          # 生成调用图（可选）
+```
+> garlic 无需关 dex checksum（无 jadx 的 checksum 坑）。默认不用 `-n`；仅用户明确要求时才用。garlic 不可用时回退 jadx。
+
+### jadx 调用约定（回退）
 ```bat
 <JADX_CLI> <apk> -Pdex-input.verify-checksum=no ...
 ```
@@ -40,7 +50,7 @@
 
 ## 当前阶段可用 / 不可用
 
-- **可用**：Frida 链（设备端 server + 宿主一致）、memdumper（有 root）、rizin 反汇编、jadx-cli 反编译。
-- **暂不可用（视部署）**：`xiaojianbang-syscall-filter`（需 APatch/KernelPatch + KPM + arm64）、`xiaojianbang-stealth-hook`（需 APatch/KernelPatch + GKI 5.4+ + KPM）、伪代码（rz-ghidra 未装 → 用 Ghidra headless 回退）、小肩膀定制系统能力（整体/抽取式脱壳、任意 so 注入、native 注册监听、内置 Apatch root）。
+- **可用**：Frida 链（设备端 server + 宿主一致）、memdumper（有 root）、rizin 反汇编、garlic 反编译（Java 层首选）、jadx-cli 反编译（回退）。
+- **暂不可用（视部署）**：`xiaojianbang-syscall-filter`（需 APatch/KernelPatch + KPM + arm64）、`xiaojianbang-stealth-hook`（需 APatch/KernelPatch + GKI 5.4+ + KPM）、伪代码（rz-ghidra 未装 → 用 Ghidra headless 回退）、garlic `-n` ELF 分析（Windows 上 librosemarylib dll 依赖坑）、小肩膀定制系统能力（整体/抽取式脱壳、任意 so 注入、native 注册监听、内置 Apatch root）。
 
 > 部署方复制本模板、用实际值替换 `<...>`，并把文件名保留为 `environment.md`。工具在 `references/rizin-tools.md`。

@@ -25,10 +25,10 @@
 
 ## 工具路径规则
 
-- 找不到 `adb`、rizin、`jadx` 等工具的位置时，先检查 `PATH`、项目 `scripts/`、`third_party/`、已有实验记录和常见安装路径。
+- 找不到 `adb`、rizin、`garlic`、`jadx` 等工具的位置时，先检查 `PATH`、项目 `scripts/`、`third_party/`、已有实验记录和常见安装路径。
 - 仍找不到时询问用户路径，不要凭空假设路径。
-- Java/Kotlin 层反编译强制使用 `jadx`；只有用户明确表示没有 `jadx` 或无法提供路径后，才允许换用其他工具，并记录用户答复和替代原因。
-- `.so` 静态分析默认用 rizin 反汇编（伪代码可选 Ghidra headless 回退）；只有用户明确要求用 IDA 时才切 IDA，并记录用户答复和替代原因。
+- Java/Kotlin 层反编译首选 `garlic`；`garlic` 找不到/不可用时回退 `jadx`（关 checksum），并记录回退原因。
+- `.so` 静态分析默认用 rizin 反汇编（伪代码可选 Ghidra headless 回退）；garlic `-n` 默认不用；只有用户明确要求用 IDA 时才切 IDA，并记录用户答复和替代原因。
 
 ## 记录边界
 

@@ -26,7 +26,7 @@
 
 > 硬门禁完整条款见 `workflow-standards.md` §3（syscall-filter）、§4（加密/壳化 dump/fix）、§5（匿名内存）、§7（闪退静态顺序）与 `tooling-and-paths.md`（jadx checksum）。本节只列勾选项。
 
-- 已用 jadx（`-Pdex-input.verify-checksum=no`）成功加载并反编译目标 dex，所用参数已记录。
+- 已用 garlic（首选）成功反编译目标 dex；或 garlic 不可用时已回退 jadx（`-Pdex-input.verify-checksum=no`），所用工具与参数已记录。
 - 已判断磁盘 so 是否加密、壳化、自解密或运行时重建；若命中，已 dump/fix 运行期 so 或真实可执行段并校验 ELF/readelf/rizin 导入结果。
 - 未把已命中加密/壳化/自解密/运行时重建的磁盘 so 直接用于函数语义、检测链结论、patch 候选或动态验证。
 - 闪退/崩溃/退出案例已先分析 `.init`、`.init_array`/constructor、`JNI_OnLoad`/RegisterNatives/JNI bridge，并记录入口函数范围和关键调用。
@@ -119,7 +119,7 @@
 - 产物目录 `/data/data/<pkg>/xiaojianbang/` 下 `.dex`、`.bin`、`.txt` 均已生成。
 - 只脱指定类时，`include_classes.txt` 已按"类名开头匹配"规则写入。
 - `dexfix_runner.py` 合并汇总中 `no_bin`、`failed` 为 0；有 `no_bin` 时确认那些是整体脱壳的完整 dex 而非缺 `.bin`。
-- 合并后的 `.fixed.dex` 用 jadx 能正常打开，目标类方法体非空、非 `throw` 占位。
+- 合并后的 `.fixed.dex` 用 garlic 或 jadx 能正常打开，目标类方法体非空、非 `throw` 占位。
 - native 注册监听：logcat `ArtMethod::RegisterNative` 日志的 `offset` 能对应 rizin 导出中的函数地址。
 - 区分系统级反检测伪装（Pixel 6、bootloader 已锁、VPN 适配等）与目标 App 自身检测链，未把系统伪装记为 App 绕过结果。
 
