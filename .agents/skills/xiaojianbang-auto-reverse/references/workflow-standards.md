@@ -85,6 +85,11 @@ Native 早期加载不要只靠轮询模块：
 - 捕获 `mmap/mprotect(PROT_EXEC)`、`memfd_create`，确认匿名 RX、memfd 或新可执行段来源。
 - 记录 pc/lr/sp、线程、pid/tid、syscall 号、参数和返回值；对比 pc/lr 是否落在 App native 段、系统库、匿名 RX、memfd 或未知映射，区分系统生命周期终止与 App 检测 kill。
 - 任何闪退、崩溃、退出、低地址自毁或主动终止，必须先用 syscall-filter 明确 syscall 与 pc/lr/sp 归属。若落在 so、匿名 RX 或 memfd，必须 dump/fix 对应 so/内存范围后再进入 rizin 静态分析；未完成前只能补证据，禁止继续 Frida 动态试错、给 patch 候选或下检测链结论。
+- **杀进程不只看符号（易漏点）**：强反调试/加固 so 经常**不用 kill/tgkill/exit/syscall 这些有名字的符号**来结束进程，而是：
+  - **运行时解密出的内联 shellcode**，`mmap RWX` 后直接执行 `exit_group(0)`，完全不经过 libc 符号；
+  - 或运行时用 `dlopen("libc.so")+dlsym` 动态拿函数再调用，导入表里看不到；
+  - 或干脆**自写 ELF 解析器 + 自建符号注册表**（解析 PHDR/SHDR/.got/.dynstr/.rel.*、DT_ANDROID_*），连 dlopen/dlsym 都不用。
+  因此：符号级 hook（挂 kill/exit/dlsym）扑空**不等于没有检测/没有杀进程**。此时不能下「无杀进程」结论，必须：① 看 syscall-filter 抓到的 `exit_group`/异常上下文；② 加 `--raw`/syscall dump 拿回原始镜像再解剖；③ 检查运行时解密出的可执行区块（匿名 RX/RWX、memfd）是否含内联 exit_group shellcode；④ 检查 so 是否运行时自解析符号（导入表缺失但运行期动态解析的函数）。定位出真实杀点后，patch 应落在这些**运行时解密执行器/动态解析函数**上（见 §10.1 归属边界），而不是只挂符号。
 - 检测输出里的 `libcapture` 和 `libtrace` 字符串默认视为小肩膀定制系统轮询噪声，不作为目标 App 检测结论。
 
 ## 4. 新 so、加密壳 so 或匿名 RX 处理
@@ -94,7 +99,7 @@ Native 早期加载不要只靠轮询模块：
 1. 记录加载时机、base、size、maps 权限和触发日志。
 2. **加密/壳化硬门禁**：必须判断磁盘 so 是否加密、壳化、自解密或运行时重建。判断依据包括但不限于 section table 异常、动态段/字符串表异常、反汇编工具只能识别导入桩或少量函数、磁盘代码与运行 pc/lr 不一致、constructor 解密/重建代码、运行期 `mprotect(PROT_EXEC)`/匿名 RX/memfd、壳入口或 wrapper 类加载。任一命中时，禁止直接分析磁盘 so 下检测链结论、patch 候选或动态验证；必须先 dump/fix 运行期 so 或真实可执行匿名段，并校验 ELF/readelf/rizin 可导入结果。
 3. dump 指定 so 或匿名内存段，dump 时机优先选择 `soinfo::call_constructors`。constructor 短窗口、快速闪退或运行时重建 so 必须优先用 `frida_memdump_so.py` 或等价短窗口联动；稳定进程才用 `memdump_so.py` 库模式。dump/fix 失败时只能补日志、maps、时机和工具证据，不得回退为直接分析磁盘 so。
-4. 修复 ELF wrapper 或重建 ELF，并记录产物路径、base/偏移口径、校验命令和结果。产物未校验通过前，不得进入静态分析结论或 patch 候选。
+4. 修复 ELF wrapper 或重建 ELF，并记录产物路径、base/偏移口径、校验命令和结果。产物未校验通过前，不得进入静态分析结论或 patch 候选。若拿回的是**原始内存镜像**（`--raw`、syscall dump、手工 dump），它是“畸形 ELF”、rizin/readelf 校验不通过，可先改用宿主机 **SoFixer**（`sofixer_run.py`，见 `dump-ida-ollvm-tools.md`）修复再校验；`-m` 必须等于 dump 基址。
 5. dump/fix 完成后、进入静态分析前，必须通过匿名执行硬门禁。不能默认 dump 出的 `.text` 就是真正执行的代码；必须检查运行期映射里是否存在 `rwx`、匿名 `r-x`（无文件名或 `[anon:...]`）、`memfd`、可疑 `[anon:.bss]` 等，并确认该 so 是否通过 `mmap(PROT_EXEC)`+`mprotect`、`memfd_create`、运行时解密把关键函数/检测逻辑搬到匿名内存执行。硬门禁证据：
    - syscall-filter 抓 `mmap/mprotect(PROT_EXEC)`、`memfd_create`；
    - 对比崩溃/调用 `pc/lr` 落在磁盘 so 段还是匿名段；
@@ -151,6 +156,11 @@ so dump/fix 后、进入静态分析前必须检查有无匿名内存映射。�
 6. 中心 dispatcher、状态码汇总函数、watchdog。
 7. 真实检测函数。
 8. helper、日志、加密/字符串解码、容器类。
+
+**多入口 + 多线程 + 分散触发必须枚举（本文提炼）**：强反调试/加固 so 通常**不在单一入口布防**，而是在 `.init`、`.init_array`、`JNI_OnLoad` 多处入口 + 多个后台看门狗线程分散触发检测。只堵住一个入口会漏掉其它。静态分析时须枚举并记录：
+- **全部入口**：`.init_proc`(DT_INIT)、`.init_array`(DT_INIT_ARRAY，可能多个构造指针)、`JNI_OnLoad`/`RegisterNatives`；
+- **全部后台线程/看门狗入口**：从上述入口及 dispatcher 里找 `pthread_create` / 运行时解密出的线程入口（可能不写导入表，需从运行时自解析或自建符号表定位）；
+- 每个入口/线程的检测对象、触发条件、上报/杀进程出口，逐个确认并记录，不能以「已过某个入口」作为通过结论。
 
 如果需要反编译 Java/Kotlin 层，强制使用 `jadx`；找不到时询问用户路径，只有用户明确表示没有 `jadx` 或无法提供路径后，才允许换用其他工具，并记录用户答复和替代原因。
 
@@ -226,6 +236,16 @@ patch 不限制必须最小化；可以根据静态分析和动态证据选择�
 
 每个 patch 必须记录原始行为、修改行为、命中证据、patch 范围、风险边界、回退方法和验证结果。整函数禁用或成组 patch 时，额外记录选择原因、覆盖范围、已确认不会破坏目标正常功能的依据，以及失败时的回退点。
 
+**分级 patch（P0/P1/P2，本文提炼）**：强反调试壳常把「直接杀进程的执法点」和「只上报/登记的一级检测」和「最低危的二级检测」混在一起。建议**按优先级分级处理**，避免一上来就铺开：
+- **P0（会直接杀进程的执法点，最紧急）**：直接调 `exit_group/exit(=内联 shellcode)/kill/tgkill/abort`、统一杀点（如 `executor+0x..`、`exit_group` 执行器）→ 优先 `replace 成 no-op`，先保住进程存活。
+- **P1（一级检测，会拦人/上报但不直接开枪）**：查 TracerPid/PPid/T 态、线程名扫描、fd 符号链接扫描、maps+/data/local/tmp 指纹、CRC32 特征扫描等 → 让检测函数**恒返回「正常值」**（0/1/NULL）以判定「环境干净」。
+- **P2（二级检测，最低危）**：ADB/USB/ART 结构校验等 → 可暂不处理，先解决会杀进程的和会拦人上报的。
+- 先处理 P0 再处理 P1，最后才看是否需要动 P2。成组 patch 时记录每组依据与覆盖范围。
+
+**打蛇打七寸（共用检测原语，本文提炼）**：定位**被多处调用者复用的核心检测原语**（如「检查是否被 inline hook 的原语」），把它**恒返回「未检测到异常」**，则所有依赖它的调用者都会走「环境干净」分支、**根本不去读它的输出 buffer**，从而一次性绕过所有 hook 检测，而不必逐个破解每个检测点。调用者只看返回值、不读 buffer 时，让原语恒返回干净值是最省事的绕过。
+
+**Patch 归属边界（细化为本文场景）**：检测逻辑在运行时解密出的**内联 shellcode** 或**动态解析函数**上时，patch 应停在 dump/fix 后的**对应执行器/自解析函数**（含匿名段产物），而不是只挂符号级 kill/exit（符号级 hook 对这些无效，见 §3「杀进程不只看符号」）。
+
 ### 10.1 Patch 归属边界
 
 patch 位置必须跟真实检测逻辑归属一致：
@@ -243,6 +263,7 @@ patch 位置必须跟真实检测逻辑归属一致：
 - **检测自杀**：能证明目标 App 代码进入 kill/abort/fatal/BRK/低地址自毁/故意空指针等执法路径，可以 patch 对应检测逻辑。
 - **空指针崩溃**：必须追溯指针为什么为空，至少区分故意置空自毁、payload/descriptor 缺失、前序 patch 导致加载链异常、layout/ABI 不匹配和普通稳定性 bug。
 - **系统生命周期或 framework 崩溃**：若 pc/lr、调用栈和日志指向系统生命周期、资源初始化、Activity 启动失败或 framework 正常异常路径，禁止当作检测 patch。
+- **ART 正常隐式异常（易误判，必须区分）**：`boot*.oat`、`libart.so` 上出现的 `access-violation` / SIGSEGV，**不一定是崩溃或检测**。ART 在正常运行时常用「故意触发一次访问异常再恢复」来做内部检查，如 null-check、GC read-barrier（隐式 null 检查 / 读屏障），由 ART 自身 handler 捕获并恢复，程序不崩。判别：异常落在 `boot*.oat`/`libart.so`，且无 kill/tgkill/exit_group/abort 伴随、无 `Process terminated`，即为 ART 正常机制，放行即可；只有异常落在目标 App 壳 so（如 `<shell_so>`）自身、或伴随 kill/exit/abort/`Process terminated`，才按检测/崩溃处理。
 - **前序 patch 诱发**：若回退某个 patch 后崩溃消失，优先归因到该 patch，必须修正或撤销该 patch，而不是继续扩大 patch 面。
 - **payload/metadata 缺失**：若崩溃点是 `memcpy/memmove`、VM wrapper、loader helper 或 parser helper，必须先回到 metadata contract、payload source 和 downstream consumer，不能直接 patch 症状点。
 

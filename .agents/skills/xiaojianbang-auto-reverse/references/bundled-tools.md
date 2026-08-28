@@ -41,6 +41,7 @@ Skill 内不应包含历史采集日志、`.git`、`__pycache__`、`.pyc`、nati
 - 工具复制、`--audit`、`--self-check`、`--with-runner`、`rizin_export.py`/`INP.py` 安装语义：读 `references/tool-installation.md`。
 - `xiaojianbang-syscall-filter`、Frida 联合采集、关键证据提取：读 `references/syscall-frida-tools.md`。
 - MemDumper 分流、短窗口 dump/fix、rizin 导出、函数范围修正、OLLVM 还原：读 `references/dump-ida-ollvm-tools.md`。
+- 加固壳/反调试 so 特定手法匹配（SMC、内联 shellcode 杀进程、dlopen+dlsym 自解析、多线程看门狗、inline hook 检测、CRC 等特征库）：读 `references/shell-signatures.md`。
 - 内核无痕 HWBP hook、eCapture Android arm64：读 `references/stealth-ecapture-tools.md`。
 - 小肩膀定制系统抽取式脱壳合并、`dexfix_runner.py`：读 `references/dexfix-tools.md`，并先按 `references/custom-system.md` 确认定制系统。
 
@@ -53,6 +54,7 @@ Skill 内不应包含历史采集日志、`.git`、`__pycache__`、`.pyc`、nati
 | syscall/direct syscall/闪退 pc/lr | `xiaojianbang-syscall-filter` / `frida_scfilter_runner.py` | `syscall-frida-tools.md` |
 | 稳定进程已加载 so dump/fix | `memdump_so.py` | `dump-ida-ollvm-tools.md` |
 | constructor 短窗口或快速闪退 dump/fix | `frida_memdump_so.py` | `dump-ida-ollvm-tools.md` |
+| 已拿回原始内存镜像（`--raw`/syscall/手动 dump）但为畸形 ELF，需宿主机修复 | `sofixer_run.py`（python-sofixer） | `dump-ida-ollvm-tools.md` |
 | rizin 导出 AI 输入（反汇编/字符串/元数据） | `rizin_export.py`（伪代码加 `--ghidra-support`） | `dump-ida-ollvm-tools.md` / `rizin-tools.md` |
 | OLLVM/CFF/间接跳转还原 | `OLLVM_Deobfuscator` | `dump-ida-ollvm-tools.md` |
 | 强反 Frida / 强 CRC 场景无痕验证 | `stealth_hook_android.py` | `stealth-ecapture-tools.md` |

@@ -24,6 +24,7 @@ RUNNER_NAMES = [
     "ida_fix_function_range.py",
     "dexfix_runner.py",
     "rizin_export.py",
+    "sofixer_run.py",
 ]
 
 
@@ -237,6 +238,7 @@ def run_self_check() -> int:
         TOOLS_DIR / "ecapture-v2.3.0-android-arm64",
         TOOLS_DIR / "xiaojianbang-stealth-hook",
         TOOLS_DIR / "dexfixer",
+        TOOLS_DIR / "python-sofixer",
     ]
     required_files = [
         SCRIPT_DIR / "make_experiment_note.py",
@@ -250,7 +252,9 @@ def run_self_check() -> int:
         TOOLS_DIR / "ida_fix_function_range.py",
         TOOLS_DIR / "dexfix_runner.py",
         TOOLS_DIR / "rizin_export.py",
+        TOOLS_DIR / "sofixer_run.py",
         TOOLS_DIR / "INP.py",
+        TOOLS_DIR / "python-sofixer" / "src" / "sofixer" / "main.py",
         TOOLS_DIR / "kernelpatch-kpatch" / "kpatch",
         TOOLS_DIR / "xiaojianbang-syscall-filter" / "syscallhook.kpm",
         TOOLS_DIR / "MemDumper" / "libs" / "arm64-v8a" / "memdumper",
@@ -345,6 +349,7 @@ def main() -> int:
         (TOOLS_DIR / "ecapture-v2.3.0-android-arm64", third_party / "ecapture-v2.3.0-android-arm64"),
         (TOOLS_DIR / "xiaojianbang-stealth-hook", third_party / "xiaojianbang-stealth-hook"),
         (TOOLS_DIR / "dexfixer", third_party / "dexfixer"),
+        (TOOLS_DIR / "python-sofixer", third_party / "python-sofixer"),
     ]
     for src, dst in tool_dirs:
         status = copytree_clean(src, dst, force=args.force, backup=args.backup_existing, dry_run=args.dry_run)

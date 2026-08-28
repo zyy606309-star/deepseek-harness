@@ -39,7 +39,7 @@ description: 覆盖从 APK/Java 层到 native 的完整 Android 逆向流程（�
 - 定位 native 库：哪些 `.so`、加载时机、exports、是否壳化/加密。
 - Android App native 反调试、反 Frida、Root、模拟器、Hook、完整性/CRC 检测分析。
 - 定位 `SIGKILL`/`SIGSEGV`/`SIGTRAP`/`BRK`/匿名 RX 崩溃/direct syscall/constructor 早期闪退。
-- 验证新加载 `.so`、dump 修复内存 so、分析 rizin/Ghidra 导出、处理 OLLVM/控制流混淆。
+- 验证新加载 `.so`、dump 修复内存 so（MemDumper 拉回原始镜像后可用宿主机 `sofixer_run.py` 修复畸形 ELF）、分析 rizin/Ghidra 导出、处理 OLLVM/控制流混淆。
 - 强反 Frida/强完整性/`.text` 校验环境下用内核无痕 HWBP hook 验证参数、返回值或 patch 候选。
 - 编写/维护逆向实验记录、复现文档、检测点汇总、patch 表、验证报告。
 - 用户提到 `xiaojianbang-syscall-filter`、Frida 启动/附加、`dlopen`、`call_constructors`、早期自解密 so、匿名 RX 等工作流。
@@ -126,6 +126,7 @@ description: 覆盖从 APK/Java 层到 native 的完整 Android 逆向流程（�
 - `references/tool-installation.md`：安装复制、`--audit`、`--self-check`、`rizin_export.py`/`INP.py` 复制规则。
 - `references/syscall-frida-tools.md`：syscall-filter、Frida 联合采集、关键证据提取。
 - `references/dump-ida-ollvm-tools.md`：MemDumper 分流、dump/fix、rizin 导出、函数范围修正、OLLVM 还原。
+- `references/shell-signatures.md`：加固壳/反调试 so 特定手法特征库（SMC、内联 shellcode 杀进程、dlopen+dlsym 自解析、多线程看门狗、inline hook 检测、CRC 等 → 快速匹配应对）。
 - `references/stealth-ecapture-tools.md`：内核无痕 hook、eCapture。
 - `references/dexfix-tools.md`：抽取式脱壳 dex/bin 合并 wrapper。
 - `references/cross-platform.md`：Windows/Linux/macOS 宿主机使用说明。
@@ -142,6 +143,7 @@ description: 覆盖从 APK/Java 层到 native 的完整 Android 逆向流程（�
 - 需要复制工具、自检、审计、`rizin_export.py`/`INP.py` 安装语义：读 `references/tool-installation.md`。
 - 需要 syscall-filter、Frida 联合采集或证据提取：读 `references/syscall-frida-tools.md`。
 - 需要 MemDumper/rizin 导出/函数范围/OLLVM：读 `references/dump-ida-ollvm-tools.md`。
+- 遇到加固壳/反调试 so，想快速匹配壳特定手法：读 `references/shell-signatures.md`。
 - 需要 stealth-hook 或 eCapture：读 `references/stealth-ecapture-tools.md`。
 - 需要 dexfixer：读 `references/dexfix-tools.md`，并先读 `references/custom-system.md`。
 - 需要路径、环境变量、jadx/rizin 规则或跨工具约束：读 `references/tooling-and-paths.md`。

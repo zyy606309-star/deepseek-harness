@@ -3,6 +3,7 @@
 ## 目录
 
 - MemDumper 工具分流
+- 宿主机 SoFixer 修复（dump 拿回的畸形 so）
 - Frida + MemDumper 短窗口 dump/fix
 - rizin AI 输入导出（伪代码回退 Ghidra headless）
 - 函数范围确认与修正
@@ -53,6 +54,32 @@ python3 scripts/frida_memdump_so.py \
 - `memdump_so.py` 库模式失败：保存 stdout/stderr、pid、`/proc/<pid>/maps` 或 wrapper 产物，确认 so 名称、路径、ABI 和进程状态后再考虑 `--manual`。
 - 如果失败对象是已判定加密、壳化、自解密或运行时重建的 so，失败后只能补 dump 时机、maps、linker constructor、JNI_OnLoad 前后和匿名段证据；不得因为 dump 失败就回退到直接分析磁盘 so。
 - `--force-stop-before` 只在需要干净启动基线时显式使用；已经命中 hold 或准备 dump 时不要 force-stop 目标进程。
+
+## 宿主机 SoFixer 修复（dump 拿回的畸形 so）
+
+MemDumper 的库模式默认会 `rebuild/fix`，所以正常路径不一定需要 SoFixer。但当你已经拿到**原始内存镜像**（`--raw`、syscall dump、手工地址 dump、Frida `dumpModule` 等没有自动修复的产物）时，它就是**“畸形 ELF”**：段表/程序头/重定位都乱，直接给 rizin/IDA/Binary Ninja 反编译会认不出或只认出少量函数。此时在宿主机上用 **SoFixer** 把它修复成合法可分析的 ELF，再进 rizin 导出/反编译。
+
+判别：`rz-bin -I <so>` 或 `file <so>` 显示 bintype/class 正常，但段表(`readelf -S`)、程序头(`readelf -l`) 数量/offset 异常，或 rizin 只识别导入桩、少量函数、无有效 `.text`，即判定为需 SoFixer 修复的畸形镜像。
+
+实现：用 **python-sofixer**（F8LEFT 原版 C++ SoFixer 的纯 Python 移植，功能等价：修程序头、重建段头表、处理动态段/重定位）。本 Skill 已把工具本体随技能分发：
+
+- 一键脚本：`scripts/tools/sofixer_run.py`（封装 python-sofixer，简化调用）。
+- 源码目录：`scripts/tools/python-sofixer/`（含 `src/`、`tools/`、`tests/` 与出处 README）。
+- 安装/复制到项目：`scripts/install_skill_tools.py` 复制到 `third_party/`（见 `references/tool-installation.md`）。
+
+```bash
+# 一键修复（-m 必须 = dump 时的内存基地址，十六进制）
+python scripts/tools/sofixer_run.py -s dump.so -o fixed.so -m 0x7c17af5000
+# 可选: -b 原始so（辅助恢复动态段，实验性）  -d 打印 debug
+```
+
+要点：
+
+- **`-m` 必须与 dump 时记录的内存基址一致**，否则段地址对不上、修出来仍乱。由 dump 记录/base 决定，不能猜。
+- 自动识别 ELF 是 32/64 位（`detect_elf_architecture`），无需手动指定。
+- 修复后必须校验：`rz-bin -I fixed.so` 或 `file fixed.so`，确认 `ELF64/ELF32, class, arch` 正常后再进 rizin/IDA。校验不过则说明镜像或 `-m` 有误，先修正再继续。
+- SoFixer 不是 100% 完美（原作者自述重定位解析有少数小错），个别复杂 so 修复后可能仍需人工微调；校验通过即可继续。
+- 模块 API 方式（在 `python-sofixer/` 目录下）：`python -c "from src.sofixer.main import fix_so_file; fix_so_file('dump.so','fixed.so',0x7c17af5000)"`。不要用 `python -m src.sofixer.main`（有模块重复导入的坑）。
 
 ## Frida + MemDumper 短窗口 dump/fix
 
