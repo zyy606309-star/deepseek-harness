@@ -102,6 +102,23 @@
 
 ---
 
+## 特征 14：检测逻辑在早期初始化（.init / .init_proc / .init_array），不等到 JNI_OnLoad
+
+- **是什么**：加固 so 把反调试/反 Hook/完整性校验放在 `.init`、`.init_proc` 或 `.init_array`（so 加载最早期的初始化阶段），**提前到 JNI_OnLoad 之前**执行。
+- **怎么识别**：解析 ELF 动态段（DT_INIT → `.init_proc`、DT_INIT_ARRAY → 构造数组）发现早期初始化入口；`android_dlopen_ext` 的 **onLeave 时检测已跑完**（App 闪退/退出/流程异常，即使没到 JNI_OnLoad）；早期初始化里出现 `__system_property_get`、读 maps、扫线程等环境探测调用。
+- **应对（Hook 时机要早于检测阶段）**：
+  1. 检测有早期初始化特征时，`android_dlopen_ext`/`dlopen` 的 **onLeave 太晚**（onLeave 触发时 .init/.init_array 已执行完）。改用 **onEnter**（so 刚进入加载流程、初始化还没跑）。
+  2. 先判断检测逻辑到底在 `.init`/`.init_array`/JNI_OnLoad 哪个阶段，再选 Hook 时机，不默认"过了 onLeave 再 hook"。
+  3. **用"外部导入函数"当二级锚点**：找早期初始化函数（如 `.init_proc`）内部调用的**外部导入函数**（如 `__system_property_get`），在它被调用时确认"初始化已跑起来 + 目标 so 基址已知"，此时装 Hook 时机最合适；比盲目轮询模块加载更稳定，可用属性名/路径过滤避免误伤其它模块。
+
+## 特征 15：早期环境探测 = 检测起点（__system_property_get 读 SDK/属性）
+
+- **是什么**：`.init_proc` 等早期初始化就调用 `__system_property_get`（如读 `ro.build.version.sdk`）、读 maps、扫线程做环境探测，并据此决定启用哪些检测。
+- **怎么识别**：`.init_proc` / 早期子函数里出现 `__system_property_get`、字符串表里有 `ro.build.version.sdk` 等属性名；导入表里有 `__system_property_get`。
+- **应对**：把 `__system_property_get` 当**最早、最值得 hook 的锚点**；通过过滤属性名（只在目标 so 读取时才装 Hook）精确定位，可在检测逻辑真正执行前建立观测/装 Hook。静态分析时优先确认 init 早期调用链。
+
+---
+
 ## 速查表（特征 → 首处应对）
 
 | 命中特征 | 首处应对 | 详见 |
@@ -119,6 +136,8 @@
 | CRC/完整性 | 干掉 CRC 校验/执法分支 | 特征 11 |
 | 复用壳自身 API | 借壳已备好的对象做 patch | 特征 12 |
 | trace 打印卡死 | 删打印/关重 trace | 特征 13 |
+| 检测在早期初始化(.init/.init_proc/.init_array) | onEnter + 二级锚点（早于 JNI_OnLoad） | 特征 14 |
+| 早期环境探测(__system_property_get) | 当最早 hook 锚点 + 属性名过滤 | 特征 15 |
 
 ---
 
