@@ -97,6 +97,7 @@ Native 早期加载不要只靠轮询模块：
   - 或运行时用 `dlopen("libc.so")+dlsym` 动态拿函数再调用，导入表里看不到；
   - 或干脆**自写 ELF 解析器 + 自建符号注册表**（解析 PHDR/SHDR/.got/.dynstr/.rel.*、DT_ANDROID_*），连 dlopen/dlsym 都不用。
   因此：符号级 hook（挂 kill/exit/dlsym）扑空**不等于没有检测/没有杀进程**。此时不能下「无杀进程」结论，必须：① 看 syscall-filter 抓到的 `exit_group`/异常上下文；② 加 `--raw`/syscall dump 拿回原始镜像再解剖；③ 检查运行时解密出的可执行区块（匿名 RX/RWX、memfd）是否含内联 exit_group shellcode；④ 检查 so 是否运行时自解析符号（导入表缺失但运行期动态解析的函数）。定位出真实杀点后，patch 应落在这些**运行时解密执行器/动态解析函数**上（见 §10.1 归属边界），而不是只挂符号。
+- **syscall 走指针表，PLT/inline hook 从根上失效（本文提炼）**：强加固 so 的关键 syscall（如 ptrace）**不 `bl` libc 的 PLT**，而是运行时用 libc 基址填一张**自建指针表**，调用时 `ldr xN,[表+偏移]` + `blr xN` 间接调。调用点看不到任何符号名 → hook libc 导出（如 ptrace）全程零命中。判别：hook libc 关键导出后从启动到崩溃零命中，或反汇编里调用点是"从自建表取地址再跳"而非 `bl <符号@PLT>`。应对：**在更底层动手**——seccomp 拦 syscall 入口、或 hook 指针表填充点（运行时填地址的那处），而不是挂 libc 符号。
 - 检测输出里的 `libcapture` 和 `libtrace` 字符串默认视为小肩膀定制系统轮询噪声，不作为目标 App 检测结论。
 
 ## 4. 新 so、加密壳 so 或匿名 RX 处理
@@ -119,6 +120,13 @@ Native 早期加载不要只靠轮询模块：
 10. **闪退静态入口顺序硬门禁**：闪退/崩溃/退出案例进入静态分析后，必须先分析 `.init`、`.init_array`/constructor、`JNI_OnLoad`/RegisterNatives/JNI bridge；这些入口未完成前，不得跳到崩溃点局部函数、CRC 局部函数或动态验证。
 11. 入口分析完成后，必须按顺序检查匿名内存映射与跳转证据、CRC/完整性校验、崩溃点所在函数及其上游调用者/下游关键调用、所有 fatal/返回分支、常量、字符串、系统交互和状态码。该顺序是闪退检测案例的硬门禁，不是建议。
 12. 找到明确 patch 位置后，且 §10-§11 已完成并写入实验记录，才允许回到 Frida/stealth-hook 动态验证关键分支、参数和返回值；若 2-3 轮验证仍在同一函数或调度链内迁移崩溃，必须停止继续试 patch，回到完整函数分析。
+
+**脱壳跳出 dalvik 区思维（本文提炼）**：加固壳可能把解密出的明文 dex **不落在 `[anon:dalvik-DEX data]` 区**，而是用 `dlsym(art::DexFile::OpenMemory)` **就地引用 native heap**（如 `[anon:scudo:secondary]`），ART 不 copy 到自己的 mmap 区。后果：常规脱壳工具靠"扫 dalvik-DEX data 区 + dex 魔数"定位，对它**完全失效**。此时：
+- 先确认进程已跑起来（自毁已压住、dex 已解密进内存）。
+- 读 `/proc/<pid>/maps`，在匿名 rw 区里找，**排除 GC region-space（几百 MB 托管堆）**，盯 native heap（`[anon:scudo:secondary]`）。
+- 用**业务类描述符**核对（strings 搜 `Lcom/<业务包名>`，命中的大块就是藏 dex 处）。
+- 用 `dd if=/proc/<pid>/mem bs=4096 skip=<起始VA/4096> count=<大小/4096> conv=noerror,sync` 拉数据（⚠️ skip 是 64 位块号，在 host 算好当十进制字面量传，设备 shell `$(( ))` 对高地址会截成 32 位）。
+- 按 dex 头锚点 `endian_tag=0x12345678`（小端字节 `78 56 34 12`，落在头偏移 0x28）逐个扫描 dump，补回被抹的 8 字节魔数 `dex\n035\0`，即合法 dex。
 
 ## 5. 匿名内存加载执行检查
 
@@ -152,6 +160,11 @@ so dump/fix 后、进入静态分析前必须检查有无匿名内存映射。�
 - 未确认函数范围前，禁止给出伪代码结论、patch 候选或继续动态验证。
 
 ## 7. 静态分析推进顺序
+
+**先过反静态门槛（本文提炼）**：强加固 so 常设两道反静态门槛，先识别并绕过再读代码，否则会被误导：
+
+- **`.text` 撒垃圾字节**：线性反汇编（capstone 一次 pass）撞到非法指令就停、只覆盖第一段，导致扫引用点得 0 个（不是没有）。对策：用**容错扫描**（每 4 字节 try 一条、失败就跳过），引用点才会暴露（例：0 → 10 个）。
+- **检测串 XOR 加密**：明文串（MAGISK/ptrace/crc32 等）在 `.rodata` 里 `strings` 得出来，但代码对它们**零直接 adrp+add 引用**，真正用的是加密 blob、运行时才解。`strings | grep -i <关键词>` 出来的八成是诱饵。对策：找**解密循环 + 加密 blob 组合**（例：XOR key=0xAC，一次解 16 字节），而不是认明文关键词。
 
 普通检测链推荐顺序：
 
@@ -259,6 +272,15 @@ patch 不限制必须最小化；可以根据静态分析和动态证据选择�
 - **改返回值（onLeave 替换）**：只改变上层分支判断结果，相对安全，不破坏函数体。适用于"该函数还要执行，但要让上层走向干净分支"的场景。
 - **写 `RET` 指令（整函数禁用）**：在函数开头直接写 ARM64 `RET`，让函数**立即返回、什么都不做**。适用于**已确认该函数无副作用**（主要用于检测/线程创建/轮询校验，不承担正常业务）的场景；否则禁用会破坏正常功能。判断"是否无副作用"要基于静态分析确认该函数只做检测/线程/校验，不产出业务必需结果。
 
+**自毁压制的兜底策略（本文提炼）**：对会"自毁升级"的壳，逐点堵跟不上（你堵 SIGSEGV 它换 SIGBUS/SIGABRT/kill）。压制要按以下顺序叠加，**源头 NOP 是主力，signal handler 只是兜底**：
+
+1. **多进程守护先处理**：main 常 fork 出看门狗子进程盯着它，一冻/改 main 就被看门狗 SIGKILL。应对**有序 SIGSTOP**：先 `kill -STOP` 所有看门狗子进程，再冻 main。
+2. **源头 NOP 自毁点**：对已确认的自毁序列（清 SP/LR + BR 低地址）逐点改成 `NOP;NOP;NOP;RET`，保住 SP/LR、函数干净返回。**这是主力**——自毁一旦 fire，SP 已清 0，无论 handler 还是 retstub 都难干净恢复；能干净解决的是不让它 fire。
+3. **按终止原语类兜底（不逐点堵）**：自毁点地址/对齐/寄存器/信号都能变，但"让进程终止"的手段只有 **硬件 fault(SIGSEGV/SIGBUS) / abort(SIGABRT) / kill(SIGKILL) / exit** 这几类。按类兜底才收敛。
+4. **页0 retstub**：把第 0 页（0x0~0xFFF）映射成可执行、填满 `RET`，让漏网"跳低地址"的自毁执行到 RET 无害；需短周期线程持续重填（壳会写脏）。⚠️ 严格 SELinux 真机要先 `echo 0 > /proc/sys/vm/mmap_min_addr` + `setenforce 0`，否则 `mmap page 0` 失败；跨设备移植要单独确认这一层环境前提。
+5. **seccomp 拦 kill 家族**：把 `kill/tkill/tgkill` 拦成 EPERM，堵变种里的 kill 路。
+6. **signal handler 兜底**：SIGSEGV/SIGBUS/SIGABRT 各自兜底恢复；worker 线程崩就静默 `exit` 只退该线程、主进程留着。
+
 ### 10.1 Patch 归属边界
 
 patch 位置必须跟真实检测逻辑归属一致：
@@ -274,6 +296,7 @@ patch 位置必须跟真实检测逻辑归属一致：
 崩溃不是 patch 许可。提出 patch 前必须先完成原因分型：
 
 - **检测自杀**：能证明目标 App 代码进入 kill/abort/fatal/BRK/低地址自毁/故意空指针等执法路径，可以 patch 对应检测逻辑。
+  - **低地址自毁签名（本文提炼，认签名别认字面）**：pc 落在**非法低地址**（<0x1000，如 0x1f4/0x61c/0x79c）+ **sp/lr 被清 0** + **回溯打空**（backtrace 只有空帧）= 壳主动自毁，不是普通野指针。普通野指针 pc 会落在真实 so 里、sp/lr 有效、能回溯。自毁字节指纹（ARM64）：`MOV X0,#0(0xD2800000)` + `MOV SP,X0(0x9100001F)` + `MOV X30,X0(0xAA0003FE)` + `BR Xn`。注意**随 build 变**（清 SP/LR 有 `mov sp,xzr`/`mov sp,x0` 两种写法，字节不同），且魔数（如 `0xB6A2`）是通用哨兵、普通代码也用，不能单独当判据——必须**锚整段序列、不照抄偏移/魔数**，对手上这份 so 重新逆。
 - **空指针崩溃**：必须追溯指针为什么为空，至少区分故意置空自毁、payload/descriptor 缺失、前序 patch 导致加载链异常、layout/ABI 不匹配和普通稳定性 bug。
 - **系统生命周期或 framework 崩溃**：若 pc/lr、调用栈和日志指向系统生命周期、资源初始化、Activity 启动失败或 framework 正常异常路径，禁止当作检测 patch。
 - **ART 正常隐式异常（易误判，必须区分）**：`boot*.oat`、`libart.so` 上出现的 `access-violation` / SIGSEGV，**不一定是崩溃或检测**。ART 在正常运行时常用「故意触发一次访问异常再恢复」来做内部检查，如 null-check、GC read-barrier（隐式 null 检查 / 读屏障），由 ART 自身 handler 捕获并恢复，程序不崩。判别：异常落在 `boot*.oat`/`libart.so`，且无 kill/tgkill/exit_group/abort 伴随、无 `Process terminated`，即为 ART 正常机制，放行即可；只有异常落在目标 App 壳 so（如 `<shell_so>`）自身、或伴随 kill/exit/abort/`Process terminated`，才按检测/崩溃处理。
