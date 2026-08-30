@@ -1,0 +1,708 @@
+{
+  "fields": [
+    {
+      "path": "自动化 / 群控检测 > 音量 > 采集特征 > 扬声器通话模式是否开启",
+      "signals": [
+        "automation",
+        "farm",
+        "cloudphone"
+      ],
+      "risk": "音量与音频状态是物理使用痕迹。真机用户会产生通话、媒体、蓝牙、麦克风等状态变化；云手机、群控和脚本环境往往长期静音、无播放、无麦克风或状态分布高度一致。",
+      "detect": "通过 AudioManager、MediaSession、蓝牙音频与麦克风状态采集媒体流最大/当前音量、音频模式、扬声器通话模式和播放状态，并按设备与账号聚合分布。",
+      "anomaly": "大批设备长期媒体音量为 0 或固定值、麦克风/蓝牙状态恒定、音频模式与业务场景不匹配，或同一批设备音频状态哈希高度一致。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 音量 > 采集特征 > 媒体流最大音量",
+      "signals": [
+        "automation",
+        "farm",
+        "cloudphone"
+      ],
+      "risk": "音量与音频状态是物理使用痕迹。真机用户会产生通话、媒体、蓝牙、麦克风等状态变化；云手机、群控和脚本环境往往长期静音、无播放、无麦克风或状态分布高度一致。",
+      "detect": "通过 AudioManager、MediaSession、蓝牙音频与麦克风状态采集媒体流最大/当前音量、音频模式、扬声器通话模式和播放状态，并按设备与账号聚合分布。",
+      "anomaly": "大批设备长期媒体音量为 0 或固定值、麦克风/蓝牙状态恒定、音频模式与业务场景不匹配，或同一批设备音频状态哈希高度一致。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 音量 > 采集特征 > 麦克风状态",
+      "signals": [
+        "automation",
+        "farm",
+        "cloudphone"
+      ],
+      "risk": "音量与音频状态是物理使用痕迹。真机用户会产生通话、媒体、蓝牙、麦克风等状态变化；云手机、群控和脚本环境往往长期静音、无播放、无麦克风或状态分布高度一致。",
+      "detect": "通过 AudioManager、MediaSession、蓝牙音频与麦克风状态采集媒体流最大/当前音量、音频模式、扬声器通话模式和播放状态，并按设备与账号聚合分布。",
+      "anomaly": "大批设备长期媒体音量为 0 或固定值、麦克风/蓝牙状态恒定、音频模式与业务场景不匹配，或同一批设备音频状态哈希高度一致。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 音量 > 采集特征 > 媒体流当前音量",
+      "signals": [
+        "automation",
+        "farm",
+        "cloudphone"
+      ],
+      "risk": "音量与音频状态是物理使用痕迹。真机用户会产生通话、媒体、蓝牙、麦克风等状态变化；云手机、群控和脚本环境往往长期静音、无播放、无麦克风或状态分布高度一致。",
+      "detect": "通过 AudioManager、MediaSession、蓝牙音频与麦克风状态采集媒体流最大/当前音量、音频模式、扬声器通话模式和播放状态，并按设备与账号聚合分布。",
+      "anomaly": "大批设备长期媒体音量为 0 或固定值、麦克风/蓝牙状态恒定、音频模式与业务场景不匹配，或同一批设备音频状态哈希高度一致。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 音量 > 采集特征 > 媒体是否正在播放",
+      "signals": [
+        "automation",
+        "farm",
+        "cloudphone"
+      ],
+      "risk": "音量与音频状态是物理使用痕迹。真机用户会产生通话、媒体、蓝牙、麦克风等状态变化；云手机、群控和脚本环境往往长期静音、无播放、无麦克风或状态分布高度一致。",
+      "detect": "通过 AudioManager、MediaSession、蓝牙音频与麦克风状态采集媒体流最大/当前音量、音频模式、扬声器通话模式和播放状态，并按设备与账号聚合分布。",
+      "anomaly": "大批设备长期媒体音量为 0 或固定值、麦克风/蓝牙状态恒定、音频模式与业务场景不匹配，或同一批设备音频状态哈希高度一致。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 音量 > 采集特征 > 音频模式",
+      "signals": [
+        "automation",
+        "farm",
+        "cloudphone"
+      ],
+      "risk": "音量与音频状态是物理使用痕迹。真机用户会产生通话、媒体、蓝牙、麦克风等状态变化；云手机、群控和脚本环境往往长期静音、无播放、无麦克风或状态分布高度一致。",
+      "detect": "通过 AudioManager、MediaSession、蓝牙音频与麦克风状态采集媒体流最大/当前音量、音频模式、扬声器通话模式和播放状态，并按设备与账号聚合分布。",
+      "anomaly": "大批设备长期媒体音量为 0 或固定值、麦克风/蓝牙状态恒定、音频模式与业务场景不匹配，或同一批设备音频状态哈希高度一致。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 音量 > 采集特征 > 蓝牙音频状态",
+      "signals": [
+        "automation",
+        "farm",
+        "cloudphone"
+      ],
+      "risk": "音量与音频状态是物理使用痕迹。真机用户会产生通话、媒体、蓝牙、麦克风等状态变化；云手机、群控和脚本环境往往长期静音、无播放、无麦克风或状态分布高度一致。",
+      "detect": "通过 AudioManager、MediaSession、蓝牙音频与麦克风状态采集媒体流最大/当前音量、音频模式、扬声器通话模式和播放状态，并按设备与账号聚合分布。",
+      "anomaly": "大批设备长期媒体音量为 0 或固定值、麦克风/蓝牙状态恒定、音频模式与业务场景不匹配，或同一批设备音频状态哈希高度一致。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 无障碍服务 > packagename白名单、黑名单 > -bin.mt.plus | -com.android.settings | -com.baidu.input_mi | -com.google.android.marvin.talkback | -com.iflytek.inputmethod.miui | -com.miui.accessibility | -com.miui.personalassistant | -com.miui.securitycenter | -com.miui.voiceassist-com.voyah.fassistant | -com.xiaomi.gamecenter.sdk.service | -com.xiaomi.misettings | -com.xiaomi.scanner",
+      "signals": [
+        "automation",
+        "screen",
+        "hook"
+      ],
+      "risk": "无障碍服务包名白/黑名单用于识别自动化控制通道。包名可被伪装，但命中黑名单或伪装成系统辅助服务时仍是强解释信号。",
+      "detect": "枚举已启用 AccessibilityService 的 packageName、serviceName、capabilities 与 eventTypes，与白名单、黑名单和系统签名状态交叉校验。",
+      "anomaly": "命中自动化/改包工具黑名单，或非系统签名应用伪装为系统无障碍服务，并声明手势注入或窗口内容读取能力。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 系统状态 > 挂载卷 > 采集来源 > mount/StatFs/native",
+      "signals": [
+        "tamper",
+        "emulator",
+        "cloudphone"
+      ],
+      "risk": "挂载卷反映运行环境的文件系统拓扑。模拟器、云手机、Root 容器或改机环境通常会暴露异常挂载点、可写系统分区或容器化路径。",
+      "detect": "读取 mount、StatFs 与 native 层文件系统信息，采集挂载点、文件系统类型、读写属性、容量和路径特征。",
+      "anomaly": "出现 qemu、vbox、overlay、magisk、tmpfs 异常挂载，system/vendor 可写，或多台设备挂载卷布局完全一致。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 电量异常 > 电池状态",
+      "signals": [
+        "farm",
+        "cloudphone",
+        "emulator"
+      ],
+      "risk": "电量状态是物理设备活跃度与群控环境的重要证据。真机电池容量、电压、温度和充电状态会随使用变化，云手机或机柜设备则常出现固定或缺失值。",
+      "detect": "采集 BatteryManager、Intent.ACTION_BATTERY_CHANGED 和系统电源属性，记录电池是否存在、状态、容量、电压、温度、充电状态与充电电源类型。",
+      "anomaly": "长期满电或固定电量、电压/温度缺失或不随负载变化、批量设备长时间 USB 充电，或电池字段与设备型号能力不一致。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 电量异常 > 电池容量",
+      "signals": [
+        "farm",
+        "cloudphone",
+        "emulator"
+      ],
+      "risk": "电量状态是物理设备活跃度与群控环境的重要证据。真机电池容量、电压、温度和充电状态会随使用变化，云手机或机柜设备则常出现固定或缺失值。",
+      "detect": "采集 BatteryManager、Intent.ACTION_BATTERY_CHANGED 和系统电源属性，记录电池是否存在、状态、容量、电压、温度、充电状态与充电电源类型。",
+      "anomaly": "长期满电或固定电量、电压/温度缺失或不随负载变化、批量设备长时间 USB 充电，或电池字段与设备型号能力不一致。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 电量异常 > 电池电压",
+      "signals": [
+        "farm",
+        "cloudphone",
+        "emulator"
+      ],
+      "risk": "电量状态是物理设备活跃度与群控环境的重要证据。真机电池容量、电压、温度和充电状态会随使用变化，云手机或机柜设备则常出现固定或缺失值。",
+      "detect": "采集 BatteryManager、Intent.ACTION_BATTERY_CHANGED 和系统电源属性，记录电池是否存在、状态、容量、电压、温度、充电状态与充电电源类型。",
+      "anomaly": "长期满电或固定电量、电压/温度缺失或不随负载变化、批量设备长时间 USB 充电，或电池字段与设备型号能力不一致。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 电量异常 > 电池温度",
+      "signals": [
+        "farm",
+        "cloudphone",
+        "emulator"
+      ],
+      "risk": "电量状态是物理设备活跃度与群控环境的重要证据。真机电池容量、电压、温度和充电状态会随使用变化，云手机或机柜设备则常出现固定或缺失值。",
+      "detect": "采集 BatteryManager、Intent.ACTION_BATTERY_CHANGED 和系统电源属性，记录电池是否存在、状态、容量、电压、温度、充电状态与充电电源类型。",
+      "anomaly": "长期满电或固定电量、电压/温度缺失或不随负载变化、批量设备长时间 USB 充电，或电池字段与设备型号能力不一致。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 电量异常 > 充电状态",
+      "signals": [
+        "farm",
+        "cloudphone",
+        "emulator"
+      ],
+      "risk": "电量状态是物理设备活跃度与群控环境的重要证据。真机电池容量、电压、温度和充电状态会随使用变化，云手机或机柜设备则常出现固定或缺失值。",
+      "detect": "采集 BatteryManager、Intent.ACTION_BATTERY_CHANGED 和系统电源属性，记录电池是否存在、状态、容量、电压、温度、充电状态与充电电源类型。",
+      "anomaly": "长期满电或固定电量、电压/温度缺失或不随负载变化、批量设备长时间 USB 充电，或电池字段与设备型号能力不一致。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 电量异常 > 电池是否存在",
+      "signals": [
+        "farm",
+        "cloudphone",
+        "emulator"
+      ],
+      "risk": "电量状态是物理设备活跃度与群控环境的重要证据。真机电池容量、电压、温度和充电状态会随使用变化，云手机或机柜设备则常出现固定或缺失值。",
+      "detect": "采集 BatteryManager、Intent.ACTION_BATTERY_CHANGED 和系统电源属性，记录电池是否存在、状态、容量、电压、温度、充电状态与充电电源类型。",
+      "anomaly": "长期满电或固定电量、电压/温度缺失或不随负载变化、批量设备长时间 USB 充电，或电池字段与设备型号能力不一致。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 电量异常 > 充电电源类型",
+      "signals": [
+        "farm",
+        "cloudphone",
+        "emulator"
+      ],
+      "risk": "电量状态是物理设备活跃度与群控环境的重要证据。真机电池容量、电压、温度和充电状态会随使用变化，云手机或机柜设备则常出现固定或缺失值。",
+      "detect": "采集 BatteryManager、Intent.ACTION_BATTERY_CHANGED 和系统电源属性，记录电池是否存在、状态、容量、电压、温度、充电状态与充电电源类型。",
+      "anomaly": "长期满电或固定电量、电压/温度缺失或不随负载变化、批量设备长时间 USB 充电，或电池字段与设备型号能力不一致。"
+    },
+    {
+      "path": "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > wifi链路速度Mbps > 采集来源 > WifiInfo.getLinkSpeed",
+      "signals": [
+        "proxy",
+        "farm",
+        "multi"
+      ],
+      "risk": "WiFi 细节用于交叉验证网络真实性和代理环境。真实设备的链路速度、RSSI、SSID、局域网 IP、连接状态与系统代理应具备物理和网络一致性。",
+      "detect": "通过 WifiInfo、NetworkInterface 和 Proxy API 采集链路速度、RSSI、networkId、局域网 IPv4、MAC、SSID、HTTP 代理主机端口与网络连接状态。",
+      "anomaly": "RSSI/链路速度长期固定、局域网 IP 与出口 IP/地域不自洽、SSID/MAC 缺失或默认值、系统 HTTP 代理被设置且与业务请求出口一致。"
+    },
+    {
+      "path": "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > wifi接收的信号强度 > 采集来源 > WifiInfo.getRssi",
+      "signals": [
+        "proxy",
+        "farm",
+        "multi"
+      ],
+      "risk": "WiFi 细节用于交叉验证网络真实性和代理环境。真实设备的链路速度、RSSI、SSID、局域网 IP、连接状态与系统代理应具备物理和网络一致性。",
+      "detect": "通过 WifiInfo、NetworkInterface 和 Proxy API 采集链路速度、RSSI、networkId、局域网 IPv4、MAC、SSID、HTTP 代理主机端口与网络连接状态。",
+      "anomaly": "RSSI/链路速度长期固定、局域网 IP 与出口 IP/地域不自洽、SSID/MAC 缺失或默认值、系统 HTTP 代理被设置且与业务请求出口一致。"
+    },
+    {
+      "path": "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > wifi ID > 采集来源 > WifiInfo.getNetworkId",
+      "signals": [
+        "proxy",
+        "farm",
+        "multi"
+      ],
+      "risk": "WiFi 细节用于交叉验证网络真实性和代理环境。真实设备的链路速度、RSSI、SSID、局域网 IP、连接状态与系统代理应具备物理和网络一致性。",
+      "detect": "通过 WifiInfo、NetworkInterface 和 Proxy API 采集链路速度、RSSI、networkId、局域网 IPv4、MAC、SSID、HTTP 代理主机端口与网络连接状态。",
+      "anomaly": "RSSI/链路速度长期固定、局域网 IP 与出口 IP/地域不自洽、SSID/MAC 缺失或默认值、系统 HTTP 代理被设置且与业务请求出口一致。"
+    },
+    {
+      "path": "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > wifi局域网IPv4 > 采集来源 > WifiInfo.getIpAddress",
+      "signals": [
+        "proxy",
+        "farm",
+        "multi"
+      ],
+      "risk": "WiFi 细节用于交叉验证网络真实性和代理环境。真实设备的链路速度、RSSI、SSID、局域网 IP、连接状态与系统代理应具备物理和网络一致性。",
+      "detect": "通过 WifiInfo、NetworkInterface 和 Proxy API 采集链路速度、RSSI、networkId、局域网 IPv4、MAC、SSID、HTTP 代理主机端口与网络连接状态。",
+      "anomaly": "RSSI/链路速度长期固定、局域网 IP 与出口 IP/地域不自洽、SSID/MAC 缺失或默认值、系统 HTTP 代理被设置且与业务请求出口一致。"
+    },
+    {
+      "path": "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > wifi局域网IPv4 > 采集来源 > NetworkInterface/WifiInfo",
+      "signals": [
+        "proxy",
+        "farm",
+        "multi"
+      ],
+      "risk": "WiFi 细节用于交叉验证网络真实性和代理环境。真实设备的链路速度、RSSI、SSID、局域网 IP、连接状态与系统代理应具备物理和网络一致性。",
+      "detect": "通过 WifiInfo、NetworkInterface 和 Proxy API 采集链路速度、RSSI、networkId、局域网 IPv4、MAC、SSID、HTTP 代理主机端口与网络连接状态。",
+      "anomaly": "RSSI/链路速度长期固定、局域网 IP 与出口 IP/地域不自洽、SSID/MAC 缺失或默认值、系统 HTTP 代理被设置且与业务请求出口一致。"
+    },
+    {
+      "path": "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > wifi MAC > 采集来源 > WifiInfo.getMacAddress",
+      "signals": [
+        "proxy",
+        "farm",
+        "multi"
+      ],
+      "risk": "WiFi 细节用于交叉验证网络真实性和代理环境。真实设备的链路速度、RSSI、SSID、局域网 IP、连接状态与系统代理应具备物理和网络一致性。",
+      "detect": "通过 WifiInfo、NetworkInterface 和 Proxy API 采集链路速度、RSSI、networkId、局域网 IPv4、MAC、SSID、HTTP 代理主机端口与网络连接状态。",
+      "anomaly": "RSSI/链路速度长期固定、局域网 IP 与出口 IP/地域不自洽、SSID/MAC 缺失或默认值、系统 HTTP 代理被设置且与业务请求出口一致。"
+    },
+    {
+      "path": "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > wifi SSID > 采集来源 > WifiInfo.getSSID",
+      "signals": [
+        "proxy",
+        "farm",
+        "multi"
+      ],
+      "risk": "WiFi 细节用于交叉验证网络真实性和代理环境。真实设备的链路速度、RSSI、SSID、局域网 IP、连接状态与系统代理应具备物理和网络一致性。",
+      "detect": "通过 WifiInfo、NetworkInterface 和 Proxy API 采集链路速度、RSSI、networkId、局域网 IPv4、MAC、SSID、HTTP 代理主机端口与网络连接状态。",
+      "anomaly": "RSSI/链路速度长期固定、局域网 IP 与出口 IP/地域不自洽、SSID/MAC 缺失或默认值、系统 HTTP 代理被设置且与业务请求出口一致。"
+    },
+    {
+      "path": "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > 系统HTTP代理主机 > 采集来源 > Proxy.getHost",
+      "signals": [
+        "proxy",
+        "farm",
+        "multi"
+      ],
+      "risk": "WiFi 细节用于交叉验证网络真实性和代理环境。真实设备的链路速度、RSSI、SSID、局域网 IP、连接状态与系统代理应具备物理和网络一致性。",
+      "detect": "通过 WifiInfo、NetworkInterface 和 Proxy API 采集链路速度、RSSI、networkId、局域网 IPv4、MAC、SSID、HTTP 代理主机端口与网络连接状态。",
+      "anomaly": "RSSI/链路速度长期固定、局域网 IP 与出口 IP/地域不自洽、SSID/MAC 缺失或默认值、系统 HTTP 代理被设置且与业务请求出口一致。"
+    },
+    {
+      "path": "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > 系统HTTP代理端口 > 采集来源 > Proxy.getPort",
+      "signals": [
+        "proxy",
+        "farm",
+        "multi"
+      ],
+      "risk": "WiFi 细节用于交叉验证网络真实性和代理环境。真实设备的链路速度、RSSI、SSID、局域网 IP、连接状态与系统代理应具备物理和网络一致性。",
+      "detect": "通过 WifiInfo、NetworkInterface 和 Proxy API 采集链路速度、RSSI、networkId、局域网 IPv4、MAC、SSID、HTTP 代理主机端口与网络连接状态。",
+      "anomaly": "RSSI/链路速度长期固定、局域网 IP 与出口 IP/地域不自洽、SSID/MAC 缺失或默认值、系统 HTTP 代理被设置且与业务请求出口一致。"
+    },
+    {
+      "path": "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > 网络是否连接 > 采集来源",
+      "signals": [
+        "proxy",
+        "farm",
+        "multi"
+      ],
+      "risk": "WiFi 细节用于交叉验证网络真实性和代理环境。真实设备的链路速度、RSSI、SSID、局域网 IP、连接状态与系统代理应具备物理和网络一致性。",
+      "detect": "通过 WifiInfo、NetworkInterface 和 Proxy API 采集链路速度、RSSI、networkId、局域网 IPv4、MAC、SSID、HTTP 代理主机端口与网络连接状态。",
+      "anomaly": "RSSI/链路速度长期固定、局域网 IP 与出口 IP/地域不自洽、SSID/MAC 缺失或默认值、系统 HTTP 代理被设置且与业务请求出口一致。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > CPU 真实性 > SoC 平台 > soc名字 > 采集来源 > /sys/devices/soc0/family",
+      "signals": [
+        "emulator",
+        "cloudphone",
+        "tamper"
+      ],
+      "risk": "SoC 平台信息用于验证 CPU/硬件身份是否自洽。真实设备的 SoC 名称、型号、ID 与机型、ABI、GPU 和系统属性应能相互印证。",
+      "detect": "读取 /sys/devices/soc0、/sys/bus/soc/devices/soc0 等 sysfs 节点，采集 family、machine、serial_number、soc_id 等信息。",
+      "anomaly": "SoC 字段缺失、返回默认/空值、同批设备序列完全一致，或 SoC 与品牌机型、CPU ABI、GPU 渲染器存在明显冲突。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > CPU 真实性 > SoC 平台 > SoC型号 > 采集来源 > /sys/devices/soc0/machine",
+      "signals": [
+        "emulator",
+        "cloudphone",
+        "tamper"
+      ],
+      "risk": "SoC 平台信息用于验证 CPU/硬件身份是否自洽。真实设备的 SoC 名称、型号、ID 与机型、ABI、GPU 和系统属性应能相互印证。",
+      "detect": "读取 /sys/devices/soc0、/sys/bus/soc/devices/soc0 等 sysfs 节点，采集 family、machine、serial_number、soc_id 等信息。",
+      "anomaly": "SoC 字段缺失、返回默认/空值、同批设备序列完全一致，或 SoC 与品牌机型、CPU ABI、GPU 渲染器存在明显冲突。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > CPU 真实性 > SoC 平台 > SoC型号 > 采集来源 > /sys/devices/soc0/serial_number",
+      "signals": [
+        "emulator",
+        "cloudphone",
+        "tamper"
+      ],
+      "risk": "SoC 平台信息用于验证 CPU/硬件身份是否自洽。真实设备的 SoC 名称、型号、ID 与机型、ABI、GPU 和系统属性应能相互印证。",
+      "detect": "读取 /sys/devices/soc0、/sys/bus/soc/devices/soc0 等 sysfs 节点，采集 family、machine、serial_number、soc_id 等信息。",
+      "anomaly": "SoC 字段缺失、返回默认/空值、同批设备序列完全一致，或 SoC 与品牌机型、CPU ABI、GPU 渲染器存在明显冲突。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > CPU 真实性 > SoC 平台 > SoC序列/原始ID > 采集来源 > /sys/devices/soc0/serial_number",
+      "signals": [
+        "emulator",
+        "cloudphone",
+        "tamper"
+      ],
+      "risk": "SoC 平台信息用于验证 CPU/硬件身份是否自洽。真实设备的 SoC 名称、型号、ID 与机型、ABI、GPU 和系统属性应能相互印证。",
+      "detect": "读取 /sys/devices/soc0、/sys/bus/soc/devices/soc0 等 sysfs 节点，采集 family、machine、serial_number、soc_id 等信息。",
+      "anomaly": "SoC 字段缺失、返回默认/空值、同批设备序列完全一致，或 SoC 与品牌机型、CPU ABI、GPU 渲染器存在明显冲突。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > CPU 真实性 > SoC 平台 > SoC序列/原始ID > 采集来源 > /sys/bus/soc/devices/soc0",
+      "signals": [
+        "emulator",
+        "cloudphone",
+        "tamper"
+      ],
+      "risk": "SoC 平台信息用于验证 CPU/硬件身份是否自洽。真实设备的 SoC 名称、型号、ID 与机型、ABI、GPU 和系统属性应能相互印证。",
+      "detect": "读取 /sys/devices/soc0、/sys/bus/soc/devices/soc0 等 sysfs 节点，采集 family、machine、serial_number、soc_id 等信息。",
+      "anomaly": "SoC 字段缺失、返回默认/空值、同批设备序列完全一致，或 SoC 与品牌机型、CPU ABI、GPU 渲染器存在明显冲突。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > CPU 真实性 > SoC 平台 > SoC ID > 采集来源 > /sys/devices/soc0/soc_id",
+      "signals": [
+        "emulator",
+        "cloudphone",
+        "tamper"
+      ],
+      "risk": "SoC 平台信息用于验证 CPU/硬件身份是否自洽。真实设备的 SoC 名称、型号、ID 与机型、ABI、GPU 和系统属性应能相互印证。",
+      "detect": "读取 /sys/devices/soc0、/sys/bus/soc/devices/soc0 等 sysfs 节点，采集 family、machine、serial_number、soc_id 等信息。",
+      "anomaly": "SoC 字段缺失、返回默认/空值、同批设备序列完全一致，或 SoC 与品牌机型、CPU ABI、GPU 渲染器存在明显冲突。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > CPU 真实性 > SoC 平台 > SoC ID > 采集来源 > /sys/bus/soc/devices/soc0",
+      "signals": [
+        "emulator",
+        "cloudphone",
+        "tamper"
+      ],
+      "risk": "SoC 平台信息用于验证 CPU/硬件身份是否自洽。真实设备的 SoC 名称、型号、ID 与机型、ABI、GPU 和系统属性应能相互印证。",
+      "detect": "读取 /sys/devices/soc0、/sys/bus/soc/devices/soc0 等 sysfs 节点，采集 family、machine、serial_number、soc_id 等信息。",
+      "anomaly": "SoC 字段缺失、返回默认/空值、同批设备序列完全一致，或 SoC 与品牌机型、CPU ABI、GPU 渲染器存在明显冲突。"
+    },
+    {
+      "path": "调试 / 反跟踪 > USB 调试状态 > ADB守护进程状态 > 采集来源 > init.svc.adbd",
+      "signals": [
+        "debug",
+        "automation"
+      ],
+      "risk": "USB 调试细项用于识别 ADB 驱动、自动化部署和逆向调试环境。adbd 状态、ADB 开关和 USB 功能配置能相互验证调试链路是否存在。",
+      "detect": "读取 init.svc.adbd、Settings 全局 ADB 配置、persist/sys.usb.config 等属性，结合进程链和安装来源校验。",
+      "anomaly": "adbd 运行且 USB 配置包含 adb，ADB 设置开启，或业务动作时间窗内出现 shell/adb 父进程链。"
+    },
+    {
+      "path": "调试 / 反跟踪 > USB 调试状态 > ADB启用状态 > 采集来源 > Settings/系统ADB属性",
+      "signals": [
+        "debug",
+        "automation"
+      ],
+      "risk": "USB 调试细项用于识别 ADB 驱动、自动化部署和逆向调试环境。adbd 状态、ADB 开关和 USB 功能配置能相互验证调试链路是否存在。",
+      "detect": "读取 init.svc.adbd、Settings 全局 ADB 配置、persist/sys.usb.config 等属性，结合进程链和安装来源校验。",
+      "anomaly": "adbd 运行且 USB 配置包含 adb，ADB 设置开启，或业务动作时间窗内出现 shell/adb 父进程链。"
+    },
+    {
+      "path": "调试 / 反跟踪 > USB 调试状态 > USB功能配置 > 采集来源 > persist/sys.usb.config",
+      "signals": [
+        "debug",
+        "automation"
+      ],
+      "risk": "USB 调试细项用于识别 ADB 驱动、自动化部署和逆向调试环境。adbd 状态、ADB 开关和 USB 功能配置能相互验证调试链路是否存在。",
+      "detect": "读取 init.svc.adbd、Settings 全局 ADB 配置、persist/sys.usb.config 等属性，结合进程链和安装来源校验。",
+      "anomaly": "adbd 运行且 USB 配置包含 adb，ADB 设置开启，或业务动作时间窗内出现 shell/adb 父进程链。"
+    },
+    {
+      "path": "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区",
+      "signals": [
+        "batch_reg",
+        "emulator",
+        "proxy"
+      ],
+      "risk": "注册时区是注册环境一致性校验点。批量注册和模拟环境常批量复用默认时区，或时区与 IP、语言、国家码不一致。",
+      "detect": "采集客户端 TimeZone、Locale、国家码、注册 IP 归属地和服务端时间，按账号、设备、IP 做窗口聚合。",
+      "anomaly": "时区与 IP/国家码/语言冲突，同一设备族群复用异常时区，或注册时间集中但本地时区分布与目标业务区域不匹配。"
+    },
+    {
+      "path": "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区 > 模拟环境",
+      "signals": [
+        "batch_reg",
+        "emulator",
+        "proxy"
+      ],
+      "risk": "注册时区是注册环境一致性校验点。批量注册和模拟环境常批量复用默认时区，或时区与 IP、语言、国家码不一致。",
+      "detect": "采集客户端 TimeZone、Locale、国家码、注册 IP 归属地和服务端时间，按账号、设备、IP 做窗口聚合。",
+      "anomaly": "时区与 IP/国家码/语言冲突，同一设备族群复用异常时区，或注册时间集中但本地时区分布与目标业务区域不匹配。"
+    },
+    {
+      "path": "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区 > 采集特征",
+      "signals": [
+        "batch_reg",
+        "emulator",
+        "proxy"
+      ],
+      "risk": "注册时区是注册环境一致性校验点。批量注册和模拟环境常批量复用默认时区，或时区与 IP、语言、国家码不一致。",
+      "detect": "采集客户端 TimeZone、Locale、国家码、注册 IP 归属地和服务端时间，按账号、设备、IP 做窗口聚合。",
+      "anomaly": "时区与 IP/国家码/语言冲突，同一设备族群复用异常时区，或注册时间集中但本地时区分布与目标业务区域不匹配。"
+    },
+    {
+      "path": "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区 > 采集特征 > 系统时区ID",
+      "signals": [
+        "batch_reg",
+        "emulator",
+        "proxy"
+      ],
+      "risk": "注册时区是注册环境一致性校验点。批量注册和模拟环境常批量复用默认时区，或时区与 IP、语言、国家码不一致。",
+      "detect": "采集客户端 TimeZone、Locale、国家码、注册 IP 归属地和服务端时间，按账号、设备、IP 做窗口聚合。",
+      "anomaly": "时区与 IP/国家码/语言冲突，同一设备族群复用异常时区，或注册时间集中但本地时区分布与目标业务区域不匹配。"
+    },
+    {
+      "path": "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区 > 采集特征 > 系统时区ID > 采集来源",
+      "signals": [
+        "batch_reg",
+        "emulator",
+        "proxy"
+      ],
+      "risk": "注册时区是注册环境一致性校验点。批量注册和模拟环境常批量复用默认时区，或时区与 IP、语言、国家码不一致。",
+      "detect": "采集客户端 TimeZone、Locale、国家码、注册 IP 归属地和服务端时间，按账号、设备、IP 做窗口聚合。",
+      "anomaly": "时区与 IP/国家码/语言冲突，同一设备族群复用异常时区，或注册时间集中但本地时区分布与目标业务区域不匹配。"
+    },
+    {
+      "path": "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区 > 采集特征 > 系统时区ID > 采集来源 > TimeZone.getDefault().getID()",
+      "signals": [
+        "batch_reg",
+        "emulator",
+        "proxy"
+      ],
+      "risk": "注册时区是注册环境一致性校验点。批量注册和模拟环境常批量复用默认时区，或时区与 IP、语言、国家码不一致。",
+      "detect": "采集客户端 TimeZone、Locale、国家码、注册 IP 归属地和服务端时间，按账号、设备、IP 做窗口聚合。",
+      "anomaly": "时区与 IP/国家码/语言冲突，同一设备族群复用异常时区，或注册时间集中但本地时区分布与目标业务区域不匹配。"
+    },
+    {
+      "path": "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区 > 采集特征 > Locale国家/地区代码",
+      "signals": [
+        "batch_reg",
+        "emulator",
+        "proxy"
+      ],
+      "risk": "注册时区是注册环境一致性校验点。批量注册和模拟环境常批量复用默认时区，或时区与 IP、语言、国家码不一致。",
+      "detect": "采集客户端 TimeZone、Locale、国家码、注册 IP 归属地和服务端时间，按账号、设备、IP 做窗口聚合。",
+      "anomaly": "时区与 IP/国家码/语言冲突，同一设备族群复用异常时区，或注册时间集中但本地时区分布与目标业务区域不匹配。"
+    },
+    {
+      "path": "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区 > 采集特征 > Locale国家/地区代码 > 采集来源",
+      "signals": [
+        "batch_reg",
+        "emulator",
+        "proxy"
+      ],
+      "risk": "注册时区是注册环境一致性校验点。批量注册和模拟环境常批量复用默认时区，或时区与 IP、语言、国家码不一致。",
+      "detect": "采集客户端 TimeZone、Locale、国家码、注册 IP 归属地和服务端时间，按账号、设备、IP 做窗口聚合。",
+      "anomaly": "时区与 IP/国家码/语言冲突，同一设备族群复用异常时区，或注册时间集中但本地时区分布与目标业务区域不匹配。"
+    },
+    {
+      "path": "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区 > 采集特征 > Locale国家/地区代码 > 采集来源 > Locale.getCountry",
+      "signals": [
+        "batch_reg",
+        "emulator",
+        "proxy"
+      ],
+      "risk": "注册时区是注册环境一致性校验点。批量注册和模拟环境常批量复用默认时区，或时区与 IP、语言、国家码不一致。",
+      "detect": "采集客户端 TimeZone、Locale、国家码、注册 IP 归属地和服务端时间，按账号、设备、IP 做窗口聚合。",
+      "anomaly": "时区与 IP/国家码/语言冲突，同一设备族群复用异常时区，或注册时间集中但本地时区分布与目标业务区域不匹配。"
+    },
+    {
+      "path": "设备唯一性 > 屏幕 > 采集信息 > 屏幕状态 > 点亮或交互 > 采集来源 > PowerManager.isInteractive/isScreenOn",
+      "signals": [
+        "reset",
+        "emulator",
+        "cloudphone"
+      ],
+      "risk": "屏幕状态与旋转方向是设备物理交互状态。真实手机的亮屏、锁屏、横竖屏会随使用场景变化，云手机和脚本环境常保持固定状态。",
+      "detect": "采集 PowerManager.isInteractive/isScreenOn、Display.getRotation 等信息，记录屏幕点亮/交互状态、横竖屏方向及与前台页面的关系。",
+      "anomaly": "长期固定竖屏或亮屏、旋转方向与页面/传感器不一致，或批量设备屏幕状态变化完全同步。"
+    },
+    {
+      "path": "设备唯一性 > 屏幕 > 采集信息 > 旋转方向 > 横屏或竖屏 > 采集来源 > Display.getRotation()",
+      "signals": [
+        "reset",
+        "emulator",
+        "cloudphone"
+      ],
+      "risk": "屏幕状态与旋转方向是设备物理交互状态。真实手机的亮屏、锁屏、横竖屏会随使用场景变化，云手机和脚本环境常保持固定状态。",
+      "detect": "采集 PowerManager.isInteractive/isScreenOn、Display.getRotation 等信息，记录屏幕点亮/交互状态、横竖屏方向及与前台页面的关系。",
+      "anomaly": "长期固定竖屏或亮屏、旋转方向与页面/传感器不一致，或批量设备屏幕状态变化完全同步。"
+    }
+  ],
+  "rules": [
+    {
+      "id": "R-AUTO-AUDIO-001",
+      "name": "音频状态模板化",
+      "level": "medium",
+      "action": "降低设备信任分并进入群控复核",
+      "signals": [
+        "automation",
+        "farm",
+        "cloudphone"
+      ],
+      "logic": "媒体音量、麦克风、蓝牙音频和播放状态长期固定，且同一设备族群音频状态分布高度一致",
+      "expr": "audio_state_entropy < 0.2 AND audio_state_cluster_cnt >= 10",
+      "note": "单个静音设备不拦截；用于识别云手机、机柜和批量脚本环境的物理状态缺失。",
+      "fields": [
+        "自动化 / 群控检测 > 音量 > 采集特征 > 扬声器通话模式是否开启",
+        "自动化 / 群控检测 > 音量 > 采集特征 > 媒体流最大音量",
+        "自动化 / 群控检测 > 音量 > 采集特征 > 麦克风状态",
+        "自动化 / 群控检测 > 音量 > 采集特征 > 媒体流当前音量",
+        "自动化 / 群控检测 > 音量 > 采集特征 > 媒体是否正在播放",
+        "自动化 / 群控检测 > 音量 > 采集特征 > 音频模式",
+        "自动化 / 群控检测 > 音量 > 采集特征 > 蓝牙音频状态"
+      ]
+    },
+    {
+      "id": "R-AUTO-ACCESS-001",
+      "name": "无障碍包名名单命中",
+      "level": "high",
+      "action": "拦截关键动作并要求强人机验证",
+      "signals": [
+        "automation",
+        "screen",
+        "hook"
+      ],
+      "logic": "已启用无障碍服务命中黑名单，或非系统签名服务伪装为白名单包名并声明手势/窗口读取能力",
+      "expr": "access_pkg_black_hit OR (access_pkg_whitelist_spoof AND access_can_gesture)",
+      "fields": [
+        "自动化 / 群控检测 > 无障碍服务 > packagename白名单、黑名单 > -bin.mt.plus | -com.android.settings | -com.baidu.input_mi | -com.google.android.marvin.talkback | -com.iflytek.inputmethod.miui | -com.miui.accessibility | -com.miui.personalassistant | -com.miui.securitycenter | -com.miui.voiceassist-com.voyah.fassistant | -com.xiaomi.gamecenter.sdk.service | -com.xiaomi.misettings | -com.xiaomi.scanner",
+        "自动化 / 群控检测 > 无障碍服务",
+        "自动化 / 群控检测 > 无障碍服务 > 采集方式 > 检测服务能力"
+      ]
+    },
+    {
+      "id": "R-AUTO-MOUNT-001",
+      "name": "挂载卷拓扑异常",
+      "level": "high",
+      "action": "标记系统环境不可信",
+      "signals": [
+        "tamper",
+        "emulator",
+        "cloudphone"
+      ],
+      "logic": "挂载卷命中虚拟化、Root 或容器路径，或 system/vendor 分区读写属性异常",
+      "expr": "mount_hit_virtual_path OR system_rw OR overlay_mount_hit",
+      "fields": [
+        "自动化 / 群控检测 > 系统状态 > 挂载卷 > 采集来源 > mount/StatFs/native"
+      ]
+    },
+    {
+      "id": "R-AUTO-BATTERY-001",
+      "name": "电池遥测不自洽",
+      "level": "medium",
+      "action": "设备维度降权并观察",
+      "signals": [
+        "farm",
+        "cloudphone",
+        "emulator"
+      ],
+      "logic": "电量、电压、温度或充电状态长期固定，且与设备型号、运行时长或负载不一致",
+      "expr": "battery_value_static AND (battery_temp_missing OR voltage_static OR usb_plugged_long)",
+      "fields": [
+        "自动化 / 群控检测 > 电量异常 > 电池状态",
+        "自动化 / 群控检测 > 电量异常 > 电池容量",
+        "自动化 / 群控检测 > 电量异常 > 电池电压",
+        "自动化 / 群控检测 > 电量异常 > 电池温度",
+        "自动化 / 群控检测 > 电量异常 > 充电状态",
+        "自动化 / 群控检测 > 电量异常 > 电池是否存在",
+        "自动化 / 群控检测 > 电量异常 > 充电电源类型"
+      ]
+    },
+    {
+      "id": "R-NET-WIFI-004",
+      "name": "WiFi 与代理链路不自洽",
+      "level": "medium",
+      "action": "要求二次验证并降低网络信任分",
+      "signals": [
+        "proxy",
+        "farm",
+        "multi"
+      ],
+      "logic": "WiFi 链路/RSSI/局域网信息异常，或系统 HTTP 代理主机端口存在且与出口网络特征冲突",
+      "expr": "wifi_static_fingerprint OR proxy_host_port_set OR wifi_geo_mismatch",
+      "fields": [
+        "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > wifi链路速度Mbps > 采集来源 > WifiInfo.getLinkSpeed",
+        "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > wifi接收的信号强度 > 采集来源 > WifiInfo.getRssi",
+        "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > wifi ID > 采集来源 > WifiInfo.getNetworkId",
+        "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > wifi局域网IPv4 > 采集来源 > WifiInfo.getIpAddress",
+        "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > wifi局域网IPv4 > 采集来源 > NetworkInterface/WifiInfo",
+        "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > wifi MAC > 采集来源 > WifiInfo.getMacAddress",
+        "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > wifi SSID > 采集来源 > WifiInfo.getSSID",
+        "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > 系统HTTP代理主机 > 采集来源 > Proxy.getHost",
+        "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > 系统HTTP代理端口 > 采集来源 > Proxy.getPort",
+        "网络环境 / 代理检测 > WiFi 环境 > 采集特征 > 网络是否连接 > 采集来源",
+        "网络环境 / 代理检测 > WiFi 环境"
+      ]
+    },
+    {
+      "id": "R-EMU-SOC-001",
+      "name": "SoC 平台身份冲突",
+      "level": "high",
+      "action": "标记模拟器/云手机高风险",
+      "signals": [
+        "emulator",
+        "cloudphone",
+        "tamper"
+      ],
+      "logic": "SoC 名称、型号、序列或 ID 缺失/重复，且与品牌机型、CPU ABI 或 GPU 信息不一致",
+      "expr": "soc_missing_or_dup AND (soc_model_mismatch OR abi_gpu_mismatch)",
+      "fields": [
+        "模拟器 / 虚拟环境 > CPU 真实性 > SoC 平台 > soc名字 > 采集来源 > /sys/devices/soc0/family",
+        "模拟器 / 虚拟环境 > CPU 真实性 > SoC 平台 > SoC型号 > 采集来源 > /sys/devices/soc0/machine",
+        "模拟器 / 虚拟环境 > CPU 真实性 > SoC 平台 > SoC型号 > 采集来源 > /sys/devices/soc0/serial_number",
+        "模拟器 / 虚拟环境 > CPU 真实性 > SoC 平台 > SoC序列/原始ID > 采集来源 > /sys/devices/soc0/serial_number",
+        "模拟器 / 虚拟环境 > CPU 真实性 > SoC 平台 > SoC序列/原始ID > 采集来源 > /sys/bus/soc/devices/soc0",
+        "模拟器 / 虚拟环境 > CPU 真实性 > SoC 平台 > SoC ID > 采集来源 > /sys/devices/soc0/soc_id",
+        "模拟器 / 虚拟环境 > CPU 真实性 > SoC 平台 > SoC ID > 采集来源 > /sys/bus/soc/devices/soc0",
+        "模拟器 / 虚拟环境 > CPU 真实性"
+      ]
+    },
+    {
+      "id": "R-DEBUG-USB-001",
+      "name": "USB 调试链路开启",
+      "level": "high",
+      "action": "阻断敏感操作并标记逆向/自动化环境",
+      "signals": [
+        "debug",
+        "automation"
+      ],
+      "logic": "adbd 正在运行，ADB 设置开启或 USB 功能配置包含 adb，并与自动化启动/安装来源证据共现",
+      "expr": "(adbd_running OR adb_enabled OR usb_config_has_adb) AND automation_context_hit",
+      "fields": [
+        "调试 / 反跟踪 > USB 调试状态 > ADB守护进程状态 > 采集来源 > init.svc.adbd",
+        "调试 / 反跟踪 > USB 调试状态 > ADB启用状态 > 采集来源 > Settings/系统ADB属性",
+        "调试 / 反跟踪 > USB 调试状态 > USB功能配置 > 采集来源 > persist/sys.usb.config",
+        "调试 / 反跟踪 > USB 调试状态",
+        "自动化 / 群控检测 > 启动来源 > adb / 自动化启动"
+      ]
+    },
+    {
+      "id": "R-BEH-TZ-001",
+      "name": "注册时区环境冲突",
+      "level": "medium",
+      "action": "注册限流并要求补充验证",
+      "signals": [
+        "batch_reg",
+        "emulator",
+        "proxy"
+      ],
+      "logic": "注册时区与 IP 归属地、语言环境、国家码不一致，或同一设备族群复用异常时区",
+      "expr": "timezone_geo_mismatch OR timezone_locale_mismatch OR timezone_cluster_dup",
+      "fields": [
+        "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区",
+        "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区 > 模拟环境",
+        "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区 > 采集特征",
+        "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区 > 采集特征 > 系统时区ID",
+        "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区 > 采集特征 > 系统时区ID > 采集来源",
+        "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区 > 采集特征 > 系统时区ID > 采集来源 > TimeZone.getDefault().getID()",
+        "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区 > 采集特征 > Locale国家/地区代码",
+        "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区 > 采集特征 > Locale国家/地区代码 > 采集来源",
+        "行为习惯 > 注册行为 > 行为特征 > 注册基础信息 > 时区 > 采集特征 > Locale国家/地区代码 > 采集来源 > Locale.getCountry"
+      ]
+    },
+    {
+      "id": "R-ID-SCREEN-001",
+      "name": "屏幕状态与方向不自洽",
+      "level": "medium",
+      "action": "设备画像降权",
+      "signals": [
+        "reset",
+        "emulator",
+        "cloudphone"
+      ],
+      "logic": "屏幕状态或旋转方向长期固定，且与页面、传感器或前后台状态冲突",
+      "expr": "screen_state_static OR orientation_sensor_mismatch",
+      "fields": [
+        "设备唯一性 > 屏幕 > 采集信息 > 屏幕状态 > 点亮或交互 > 采集来源 > PowerManager.isInteractive/isScreenOn",
+        "设备唯一性 > 屏幕 > 采集信息 > 旋转方向 > 横屏或竖屏 > 采集来源 > Display.getRotation()"
+      ]
+    }
+  ]
+}

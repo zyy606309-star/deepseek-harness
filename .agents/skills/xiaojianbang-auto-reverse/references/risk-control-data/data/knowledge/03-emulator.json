@@ -1,0 +1,201 @@
+{
+  "fields": [
+    {
+      "path": "模拟器 / 虚拟环境",
+      "signals": ["emulator", "cloudphone"],
+      "risk": "虚拟环境的本质是“软件冒充硬件”。判定思路不是找某个特征串，而是检查硬件各子系统之间的自洽性——CPU 说自己是骁龙 8Gen1，GPU 却是 Swiftshader，这种矛盾无法批量修补。",
+      "detect": "四条腿并行：属性特征（QEMU/goldfish）、CPU 真实性（part/implementer/features）、渲染栈（GPU 厂商与型号）、外设完整性（传感器与输入设备）。任意两条相互矛盾即可定性。",
+      "spoof": "定制模拟器会改属性、伪造 /proc/cpuinfo、注入假传感器；但 GPU 渲染指纹与指令集特征需要真实硅片支持，难以完全伪造。",
+      "anomaly": "CPU 型号与 GPU 型号不匹配；ABI 含 x86 而品牌为国产手机；传感器仅有加速度计。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性",
+      "signals": ["emulator"],
+      "risk": "AOSP 模拟器遗留的 goldfish/ranchu/qemu 属性与文件是最经典的确定性证据。",
+      "detect": "读 ro.kernel.qemu、ro.hardware（goldfish/ranchu）、ro.bootloader（unknown）；检查 /dev/socket/qemud、/dev/qemu_pipe、/sys/qemu_trace 是否存在。",
+      "spoof": "商业模拟器（雷电、MuMu）已清理这些属性，故不能单靠此项。",
+      "anomaly": "任一 QEMU 属性或设备节点存在。",
+      "links": [
+        { "to": "模拟器 / 虚拟环境 > CPU 真实性", "type": "互补判据", "note": "属性被清理时靠 CPU 特征兜底" },
+        { "to": "设备唯一性 > ro.boot.hardware（硬件平台）", "type": "同一数据源" }
+      ]
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > CPU 真实性",
+      "signals": ["emulator", "cloudphone"],
+      "risk": "CPU 是最难伪造的部件：核心数、频率梯度、implementer/part 编号、指令集特征共同构成硅片身份，且必须与机型标称一致。",
+      "detect": "读 /proc/cpuinfo 与 /sys/devices/system/cpu/*（cpufreq、midr_el1、revidr_el1），交叉比对 Build.HARDWARE 与 ro.board.platform 的标称规格。",
+      "spoof": "伪造 /proc/cpuinfo 文本容易，但 /sys 下的 midr_el1 寄存器值与频率节点数量难以整体一致伪造。",
+      "anomaly": "8 核但所有核心频率相同（真机为大小核梯度）；implementer 为 0x69(Intel) 而品牌为华为；ABI 含 x86_64。",
+      "links": [
+        { "to": "设备唯一性 > 处理器型号", "type": "一致性校验" },
+        { "to": "设备唯一性 > ro.product.cpu.abilist（CPU ABI 列表）", "type": "一致性校验" }
+      ]
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > CPU 真实性 > CPU 核心数",
+      "signals": ["emulator"],
+      "risk": "模拟器核心数由宿主分配，常为 2/4 整值且无大小核结构。",
+      "detect": "Runtime.availableProcessors() 与 /sys/devices/system/cpu 目录计数双取，两者不一致本身就是异常。",
+      "anomaly": "两种方式取值不同；核心数与机型标称不符。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > CPU 真实性 > CPU 频率范围",
+      "signals": ["emulator", "cloudphone"],
+      "risk": "真机的频率区间体现大中小核架构，是机型的强指纹。",
+      "detect": "逐核读 cpufreq/cpuinfo_min_freq、cpuinfo_max_freq，形成频率分组。",
+      "anomaly": "全核频率一致；频率值为整 GHz；cpufreq 节点缺失。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > CPU 真实性 > Features",
+      "signals": ["emulator"],
+      "risk": "指令集特征集合由硅片能力决定。缺 aes/sha2/crc32 这类现代 ARM 必备项，说明是翻译层或老旧虚拟 CPU。",
+      "detect": "解析 /proc/cpuinfo 的 Features 行，与 Android 版本、SoC 世代的应有集合比对。",
+      "anomaly": "缺失 asimd/aes/sha2；出现 x86 特有标志（sse/avx）。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > CPU 真实性 > CPU part",
+      "signals": ["emulator"],
+      "risk": "part 编号直接对应 Cortex 核心型号，能反推 SoC 并与机型声明比对。",
+      "detect": "/proc/cpuinfo 的 'CPU part' 逐核收集，形成核心组合（如 1×X1 + 3×A76 + 4×A55）。",
+      "anomaly": "所有核心 part 相同；part 组合与 ro.board.platform 对应的 SoC 不符。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > CPU 真实性 > CPU implementer",
+      "signals": ["emulator"],
+      "risk": "implementer 标识 CPU 设计厂商，与品牌存在强约束关系。",
+      "detect": "/proc/cpuinfo 的 'CPU implementer'，0x41=ARM、0x51=Qualcomm、0x48=HiSilicon。",
+      "anomaly": "implementer 为 Intel/AMD 而系统声明为手机 SoC。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > CPU 真实性 > cpu路径",
+      "signals": ["emulator", "hook"],
+      "risk": "/sys 下的 midr_el1、revidr_el1 是内核直接暴露的 CPU 标识寄存器，比 /proc/cpuinfo 文本更难被伪造工具覆盖。",
+      "detect": "读取 /sys/devices/system/cpu/cpuN/regs/identification/midr_el1 与 revidr_el1，与 /proc/cpuinfo 解析结果做一致性比对。",
+      "anomaly": "两处标识不一致（说明 cpuinfo 被改写）；节点缺失。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > 传感器",
+      "signals": ["emulator", "cloudphone"],
+      "risk": "传感器数量与厂商是虚拟环境最稳定的短板：完整真机通常有十余个传感器，虚拟环境往往三五个且厂商可疑。",
+      "detect": "SensorManager.getSensorList(TYPE_ALL) 取每个传感器的 name/vendor/version/power/resolution/maxRange。",
+      "anomaly": "vendor 含 Goldfish/AOSP/Google Inc.；缺失陀螺仪、磁力计、气压计；resolution 为 0；同型号真机传感器集合不匹配。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 传感器噪声", "type": "同一判据" },
+        { "to": "传感器与物理环境特征 > 惯性传感器", "type": "同一数据源" }
+      ]
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > 输入设备",
+      "signals": ["emulator", "automation", "cloudphone"],
+      "risk": "输入设备列表暴露两件事：是否有真实触摸屏硬件，以及是否存在 uinput 注入的虚拟设备。",
+      "detect": "读 /proc/bus/input/devices，检查设备名、Handlers 与 EV 位；真机应有指纹/触摸/物理按键节点。",
+      "anomaly": "存在 name 为 virtual 的设备；缺失 fts/goodix 等触控与指纹节点；仅有 qwerty/keyboard 输入。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 自动点击器", "type": "证据来源" },
+        { "to": "自动化 / 群控检测 > 输入法列表", "type": "交叉验证" }
+      ]
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > 输入设备 > 黑名单",
+      "signals": ["automation", "farm"],
+      "risk": "按键精灵、云测平台、脚本框架会落地固定的包名与配置文件路径，属高置信确定性证据。",
+      "detect": "包名匹配（com.cyjh.mobileanjian 系列）+ 文件路径探测（mobile_info.properties、tc/input3.sh 等）。",
+      "anomaly": "命中任一黑名单项即可直接判定自动化工具在场。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > GPU 与渲染",
+      "signals": ["emulator", "cloudphone"],
+      "risk": "GPU 渲染栈是虚拟环境最难伪装的一环：软件渲染器（Swiftshader、llvmpipe）与虚拟 GPU（VirGL、VMware SVGA）会直接出现在 GL_RENDERER 字符串里。",
+      "detect": "创建 EGL 上下文读 GL_VENDOR/GL_RENDERER/GL_VERSION 与扩展列表；进一步可做渲染结果哈希（Canvas/WebGL 指纹）。",
+      "spoof": "可 Hook GL 字符串返回值，但扩展列表与渲染像素差异难以整体伪造。",
+      "anomaly": "renderer 含 Swiftshader/llvmpipe/VirGL/Bluestacks；GPU 型号与 SoC 不配套（骁龙却报 Mali）；扩展列表异常短。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 录屏与截屏检测 > 性能反推", "type": "同一数据源" },
+        { "to": "设备唯一性 > ro.board.platform（芯片）", "type": "一致性校验" }
+      ]
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > GPU 与渲染 > 渲染器信息",
+      "signals": ["emulator"],
+      "risk": "GL_RENDERER 是单条字符串即可定性的强证据。",
+      "detect": "GLES20.glGetString(GL_RENDERER)，建议在 native 层取以规避 Java 层 Hook。",
+      "anomaly": "命中软件渲染器关键词。"
+    }
+  ],
+  "rules": [
+    {
+      "id": "R-EMU-001",
+      "name": "确定性模拟器特征",
+      "level": "high",
+      "action": "拒绝服务",
+      "signals": ["emulator"],
+      "logic": "存在 QEMU 属性/设备节点，或 GL_RENDERER 命中软件渲染器",
+      "expr": "qemu_prop_hit OR gl_renderer ~ 'Swiftshader|llvmpipe|VirGL|Bluestacks'",
+      "note": "单条命中即可定性，属零误伤级别证据。",
+      "fields": [
+        "模拟器 / 虚拟环境 > QEMU 属性",
+        "模拟器 / 虚拟环境 > GPU 与渲染 > 渲染器信息"
+      ]
+    },
+    {
+      "id": "R-EMU-002",
+      "name": "硬件自洽性冲突",
+      "level": "high",
+      "action": "拒绝服务",
+      "signals": ["emulator", "cloudphone"],
+      "logic": "CPU implementer/part 与机型标称 SoC 不符，或 GPU 型号与 SoC 不配套，或 ABI 含 x86 而品牌为 ARM 机型",
+      "expr": "cpu_soc_mismatch OR gpu_soc_mismatch OR ('x86' IN abi_list AND brand IN arm_brands)",
+      "note": "自洽性冲突比单点特征更抗对抗：伪造方需要同时改全所有子系统。",
+      "fields": [
+        "模拟器 / 虚拟环境 > CPU 真实性 > CPU implementer",
+        "模拟器 / 虚拟环境 > CPU 真实性 > CPU part",
+        "模拟器 / 虚拟环境 > GPU 与渲染 > GPU 型号",
+        "设备唯一性 > ro.product.cpu.abilist（CPU ABI 列表）",
+        "设备唯一性 > ro.board.platform（芯片）"
+      ]
+    },
+    {
+      "id": "R-EMU-003",
+      "name": "外设缺失（云手机/容器）",
+      "level": "medium",
+      "action": "限制高价值权益，要求真人验证",
+      "signals": ["cloudphone", "emulator"],
+      "logic": "传感器数量 < 5 或缺失陀螺仪与磁力计，且输入设备无触控/指纹节点，且无电池温度变化",
+      "expr": "(sensor_cnt < 5 OR NOT has_gyro_and_mag) AND NOT input_has_touch AND battery_temp_variance = 0",
+      "fields": [
+        "模拟器 / 虚拟环境 > 传感器",
+        "模拟器 / 虚拟环境 > 输入设备",
+        "自动化 / 群控检测 > 电量异常 > 电池温度",
+        "传感器与物理环境特征 > 惯性传感器"
+      ]
+    },
+    {
+      "id": "R-EMU-004",
+      "name": "CPU 信息被改写",
+      "level": "high",
+      "action": "标记采集数据不可信，走保守策略",
+      "signals": ["emulator", "hook"],
+      "logic": "/proc/cpuinfo 解析结果与 /sys 下 midr_el1 标识不一致，或核心数两种取法不同",
+      "expr": "cpuinfo_midr_mismatch OR core_cnt_java != core_cnt_sysfs",
+      "fields": [
+        "模拟器 / 虚拟环境 > CPU 真实性 > cpu路径",
+        "模拟器 / 虚拟环境 > CPU 真实性 > CPU 核心数",
+        "Hook 框架 / 注入检测 > Hook 命中列表"
+      ]
+    },
+    {
+      "id": "R-AUTO-004",
+      "name": "脚本工具落地文件命中",
+      "level": "high",
+      "action": "设备封禁",
+      "signals": ["automation", "farm"],
+      "logic": "命中按键精灵/云测/注入框架的包名或文件路径黑名单",
+      "expr": "pkg_blacklist_hit OR file_blacklist_hit",
+      "fields": [
+        "模拟器 / 虚拟环境 > 输入设备 > 黑名单",
+        "自动化 / 群控检测 > 应用行为 > 应用安装列表"
+      ]
+    }
+  ]
+}

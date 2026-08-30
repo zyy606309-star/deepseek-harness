@@ -1,0 +1,189 @@
+{
+  "fields": [
+    {
+      "path": "网络环境 / 代理检测",
+      "signals": ["proxy"],
+      "risk": "网络出口决定“我从哪来”。IP 是最易更换也最常被用于绕过频次与地域限制的维度，因此需要把链路的每一层都当作证据。",
+      "detect": "分层采集：应用层代理设置、系统层 VPN 接口、链路层 ARP/路由/网卡、无线层 BSSID、蜂窝层基站，最后与服务端观测到的 IP 做一致性回归。",
+      "anomaly": "本地判定 WiFi 而服务端 IP 属机房；存在 tun0 接口；网关 MAC 在大量设备间复用。"
+    },
+    {
+      "path": "网络环境 / 代理检测 > VPN",
+      "signals": ["proxy"],
+      "risk": "VPN 把真实出口隐藏在隧道后，是跨境刷量与规避地域封禁的主要手段。",
+      "detect": "NetworkInterface 枚举 tun0/ppp0/utun；ConnectivityManager 检查 NetworkCapabilities 是否含 TRANSPORT_VPN 或缺失 NOT_VPN。",
+      "spoof": "使用 iptables 透明代理或路由器级代理可绕过接口检测，此时依赖服务端 IP 画像与 TCP 指纹。",
+      "anomaly": "存在 tun/ppp 接口；VPN 生效但用户声称本地网络。",
+      "links": [
+        { "to": "网络环境 / 代理检测 > 网卡枚举", "type": "证据来源" },
+        { "to": "网络环境 / 代理检测 > 路由表", "type": "交叉验证" }
+      ]
+    },
+    {
+      "path": "网络环境 / 代理检测 > 代理",
+      "signals": ["proxy", "debug"],
+      "risk": "HTTP 代理既用于改 IP，也是抓包逆向的必备环节；命中代理常同时意味着协议正在被分析。",
+      "detect": "读取 System.getProperty('http.proxyHost')、ProxyInfo（ConnectivityManager.getDefaultProxy）、以及自建 socket 检查是否被中转。",
+      "anomaly": "存在非空代理配置；代理指向 127.0.0.1 高端口（本机抓包）。",
+      "links": [
+        { "to": "网络环境 / 代理检测 > SSL 证书链", "type": "同族风险", "note": "中间人抓包必然伴随自签证书" }
+      ]
+    },
+    {
+      "path": "网络环境 / 代理检测 > ARP 表",
+      "signals": ["proxy", "farm"],
+      "risk": "ARP 表暴露同一局域网内的邻居数量与网关 MAC，是识别设备农场与共享出口的低成本手段。",
+      "detect": "读取 /proc/net/arp，统计条目数与网关 MAC。",
+      "anomaly": "网关 MAC 在跨账号设备间大量复用；ARP 表条目数达数十（集群内网）。",
+      "links": [{ "to": "网络环境 / 代理检测 > WiFi 环境", "type": "同层证据" }]
+    },
+    {
+      "path": "网络环境 / 代理检测 > 路由表",
+      "signals": ["proxy"],
+      "risk": "默认路由指向何处，决定流量真实走向；代理与 VPN 都会改写它。",
+      "detect": "读取 /proc/net/route 与 ip route（受限时用 NetworkInterface 推断），检查默认网关与接口。",
+      "anomaly": "默认路由走 tun0；存在指向 10.0.0.0/8 的异常策略路由。"
+    },
+    {
+      "path": "网络环境 / 代理检测 > 网卡枚举",
+      "signals": ["proxy", "emulator", "cloudphone"],
+      "risk": "接口列表既能暴露隧道，也能暴露虚拟化：模拟器常见 eth0，真机通常只有 wlan0/rmnet。",
+      "detect": "NetworkInterface.getNetworkInterfaces() 取名称、MAC 前缀、MTU、是否 up。",
+      "anomaly": "真机场景出现 eth0；MAC OUI 属虚拟化厂商（52:54:00 QEMU、08:00:27 VirtualBox）。",
+      "links": [
+        { "to": "模拟器 / 虚拟环境 > QEMU 属性", "type": "同族判据" },
+        { "to": "设备唯一性 > MAC", "type": "同一数据源" }
+      ]
+    },
+    {
+      "path": "网络环境 / 代理检测 > WiFi 环境",
+      "signals": ["farm", "proxy", "gps_spoof"],
+      "risk": "BSSID 是稳定的物理位置锚点，也是最强的设备聚类维度之一：同一路由器下的百台设备几乎必然同源。",
+      "detect": "WifiManager 取当前 BSSID/SSID/RSSI 与扫描列表（Android 9+ 需定位权限），服务端按 BSSID 聚类。",
+      "spoof": "云手机无真实 WiFi，常返回固定假 BSSID（如 02:00:00:00:00:00）。",
+      "anomaly": "BSSID 为全 0 或固定占位值；单 BSSID 关联账号数异常；扫描列表为空但声称 WiFi 连接。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 模拟定位 > 基站与wifi校验", "type": "验证用途" },
+        { "to": "设备唯一性 > 服务端锚点", "type": "聚类依据" }
+      ]
+    },
+    {
+      "path": "网络环境 / 代理检测 > SSL 证书链",
+      "signals": ["debug", "proxy"],
+      "risk": "证书链被替换意味着流量正在被解密观察，协议与业务参数已暴露。",
+      "detect": "证书固定（Pinning）+ 校验链中是否存在用户 CA（/data/misc/user/0/cacerts-added）；native 层实现以抗 Hook。",
+      "anomaly": "用户 CA 目录非空；证书链根不在内置信任集合。",
+      "links": [
+        { "to": "系统完整性 / 篡改检测 > 安全证书", "type": "同一判据" },
+        { "to": "Hook 框架 / 注入检测 > 证书列表", "type": "同一判据" }
+      ]
+    },
+    {
+      "path": "网络环境 / 代理检测 > 基站",
+      "signals": ["gps_spoof", "farm"],
+      "risk": "蜂窝网络的 LAC/CID 由运营商基础设施提供，伪造成本远高于 GPS，是位置校验的可信侧。",
+      "detect": "TelephonyManager.getAllCellInfo 取 MCC/MNC/LAC/CID/TAC 与信号强度，服务端反查地理位置。",
+      "anomaly": "无 SIM 却声称蜂窝网络；基站信息全为 Integer.MAX_VALUE（不可用占位）；跨账号共用同一 CID 且数量异常。"
+    },
+    {
+      "path": "网络环境 / 代理检测 > 协议特征与包大小规律",
+      "signals": ["automation", "debug"],
+      "risk": "自动化请求的包长、间隔与字段顺序高度规整，与真人操作驱动的请求分布不同；也可识别重放。",
+      "detect": "服务端侧统计请求间隔分布、包体长度直方图、TLS ClientHello 指纹（JA3）与 User-Agent 组合一致性。",
+      "anomaly": "JA3 属已知脚本库（okhttp 裸用/python requests）；包长方差极小；请求间隔恒定。"
+    },
+    {
+      "path": "网络环境 / 代理检测 > 网络链路",
+      "signals": ["proxy", "cloudphone"],
+      "risk": "链路属性（制式、运营商、SIM 状态）与出口 IP 必须自洽，云手机与模拟器往往在这里露出破绽。",
+      "detect": "TelephonyManager 取 networkType、simState、simOperator、networkOperatorName，与服务端 IP 归属做比对。",
+      "anomaly": "声称 5G 但 IP 属数据中心；无 SIM 卡但运营商名非空。"
+    },
+    {
+      "path": "网络环境 / 代理检测 > 网络链路 > SIM 卡状态",
+      "signals": ["cloudphone", "emulator"],
+      "risk": "无 SIM 是云手机与模拟器的常态，而正常个人机绝大多数有 SIM。",
+      "detect": "getSimState()，多卡槽逐一检查。",
+      "anomaly": "SIM_STATE_ABSENT 且长期通过 WiFi 使用；SIM 存在但 ICCID 为固定假值。",
+      "links": [{ "to": "设备唯一性 > SIM卡", "type": "同一数据源" }]
+    },
+    {
+      "path": "网络环境 / 代理检测 > 网络链路 > SIM 卡序列号 (ICCID)",
+      "signals": ["multi", "reset"],
+      "risk": "ICCID 与手机号绑定，是账号-设备关系中较稳的一环；批量卡池会呈现连号特征。",
+      "detect": "getSimSerialNumber（Android 10+ 普通应用不可读，需以运营商权限或改用服务端号码验证）。",
+      "anomaly": "同一设备短期内更换多张 SIM；卡池 ICCID 连续递增。"
+    },
+    {
+      "path": "网络环境 / 代理检测 > DNS 服务器",
+      "signals": ["proxy"],
+      "risk": "DNS 配置泄露代理与分流策略，也可暴露定制 ROM 与广告屏蔽环境。",
+      "detect": "LinkProperties.getDnsServers()（API 21+），比对是否为运营商正常 DNS。",
+      "anomaly": "DNS 指向公共代理服务或 127.0.0.1。"
+    },
+    {
+      "path": "网络环境 / 代理检测 > 主机名",
+      "signals": ["emulator", "cloudphone"],
+      "risk": "主机名在真机上通常为 localhost 或机型代号，虚拟化平台常带容器编号，是弱但成本极低的指纹。",
+      "detect": "读取 net.hostname 属性或 /proc/sys/kernel/hostname。",
+      "anomaly": "主机名含 docker/container/instance 等虚拟化命名，或呈 node-001 序列化命名。"
+    }
+  ],
+  "rules": [
+    {
+      "id": "R-NET-001",
+      "name": "代理隧道出口",
+      "level": "medium",
+      "action": "提高风险分，敏感操作二次验证",
+      "signals": ["proxy"],
+      "logic": "存在 tun/ppp 接口或非空代理配置，或服务端 IP 属数据中心 ASN",
+      "expr": "iface_has_tun OR proxy_host != null OR ip_asn_type = 'datacenter'",
+      "fields": [
+        "网络环境 / 代理检测 > VPN",
+        "网络环境 / 代理检测 > 代理",
+        "网络环境 / 代理检测 > 路由表"
+      ]
+    },
+    {
+      "id": "R-NET-002",
+      "name": "中间人抓包",
+      "level": "high",
+      "action": "断开连接，标记逆向风险",
+      "signals": ["debug", "proxy"],
+      "logic": "用户 CA 目录非空或证书 Pinning 校验失败，且存在本机代理",
+      "expr": "user_ca_cnt > 0 OR pinning_failed AND proxy_host IN ('127.0.0.1','localhost')",
+      "fields": [
+        "网络环境 / 代理检测 > SSL 证书链",
+        "网络环境 / 代理检测 > 代理",
+        "系统完整性 / 篡改检测 > 安全证书"
+      ]
+    },
+    {
+      "id": "R-NET-003",
+      "name": "同网段设备聚集",
+      "level": "medium",
+      "action": "设备族群标记，限制同网段并发",
+      "signals": ["farm", "multi"],
+      "logic": "同 BSSID 或同网关 MAC 下活跃设备数 > 20，且 ARP 表条目数 > 30",
+      "expr": "device_cnt_per_gateway > 20 AND arp_entry_cnt > 30",
+      "fields": [
+        "网络环境 / 代理检测 > WiFi 环境",
+        "网络环境 / 代理检测 > ARP 表"
+      ]
+    },
+    {
+      "id": "R-NET-004",
+      "name": "链路自洽性冲突",
+      "level": "medium",
+      "action": "标记为疑似虚拟环境",
+      "signals": ["cloudphone", "emulator"],
+      "logic": "无 SIM 卡但运营商名非空，或声称蜂窝网络而网卡仅有 eth0",
+      "expr": "(sim_state = 'ABSENT' AND operator_name != '') OR (network_type LIKE '%G' AND iface_list = ['eth0'])",
+      "fields": [
+        "网络环境 / 代理检测 > 网络链路 > SIM 卡状态",
+        "网络环境 / 代理检测 > 网卡枚举",
+        "网络环境 / 代理检测 > 网络链路"
+      ]
+    }
+  ]
+}

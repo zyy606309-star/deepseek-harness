@@ -127,6 +127,7 @@ description: 覆盖从 APK/Java 层到 native 的完整 Android 逆向流程（�
 - `references/syscall-frida-tools.md`：syscall-filter、Frida 联合采集、关键证据提取。
 - `references/dump-ida-ollvm-tools.md`：MemDumper 分流、dump/fix、rizin 导出、函数范围修正、OLLVM 还原。
 - `references/shell-signatures.md`：加固壳/反调试 so 特征库（**壳厂商画像 + 手法索引**两层：SMC、内联 shellcode 杀进程、dlopen+dlsym 自解析、多线程看门狗、自毁签名、syscall 指针表、native heap 藏 dex、CRC 等 → 快速匹配应对）。
+- `references/risk-control-map.md`：风控特征对照（防守方视角 ↔ 逆向检测；数据已入库 `references/risk-control-data/`，含 CRC/完整性、Hook/调试、模拟器、root 等风控判据与规则表达式）。
 - `references/stealth-ecapture-tools.md`：内核无痕 hook、eCapture。
 - `references/dexfix-tools.md`：抽取式脱壳 dex/bin 合并 wrapper。
 - `references/cross-platform.md`：Windows/Linux/macOS 宿主机使用说明。
@@ -144,6 +145,7 @@ description: 覆盖从 APK/Java 层到 native 的完整 Android 逆向流程（�
 - 需要 syscall-filter、Frida 联合采集或证据提取：读 `references/syscall-frida-tools.md`。
 - 需要 MemDumper/rizin 导出/函数范围/OLLVM：读 `references/dump-ida-ollvm-tools.md`。
 - 遇到加固壳/反调试 so，想快速匹配壳特定手法：读 `references/shell-signatures.md`。
+- 遇到 CRC/完整性/Hook/调试/模拟器/root 等检测，想查风控侧怎么定义与处置：读 `references/risk-control-map.md`（数据已入库 `references/risk-control-data/`）。
 - 需要 stealth-hook 或 eCapture：读 `references/stealth-ecapture-tools.md`。
 - 需要 dexfixer：读 `references/dexfix-tools.md`，并先读 `references/custom-system.md`。
 - 需要路径、环境变量、jadx/rizin 规则或跨工具约束：读 `references/tooling-and-paths.md`。

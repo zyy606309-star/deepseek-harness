@@ -1,0 +1,249 @@
+{
+  "fields": [
+    {
+      "path": "Hook 框架 / 注入检测",
+      "signals": ["hook"],
+      "risk": "Hook 是风控的元问题：一旦运行时被注入，所有采集结果都可能是攻击者构造的。因此 Hook 检测的价值不在于“发现一个坏应用”，而在于判断本次采集是否可信——检测结论必须先于其他所有判定生效。",
+      "detect": "四个方向：内存视图（/proc/self/maps 中的可疑 so 与匿名可执行段）、调用栈（Java 方法是否被替换为 native）、进程环境（端口、线程名、共享内存）、时间侧信道（关键函数耗时）。核心检测必须在 native 层实现，且自身要有完整性校验。",
+      "spoof": "Frida 可改名、无端口模式（gadget 注入）、抹掉特征串；Xposed 系（LSPosed/Zygisk）可对指定应用隐藏。所以更可靠的是行为一致性：同一数据的两条独立获取路径是否给出相同答案。",
+      "anomaly": "同一字段两路取值不一致；关键函数耗时突增；maps 中存在无文件名的可执行内存段。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 采集耗时", "type": "侧信道检测" },
+        { "to": "系统完整性 / 篡改检测 > 注入框架检测", "type": "同一判据" }
+      ]
+    },
+    {
+      "path": "Hook 框架 / 注入检测 > Xposed",
+      "signals": ["hook"],
+      "risk": "Xposed 系框架在 Zygote 阶段注入，可改写任意 Java 方法返回值，是改机与破解应用的主流工具链。",
+      "detect": "检查 ClassLoader 能否加载 de.robv.android.xposed.XposedBridge；抛异常读栈中是否有 XposedBridge 帧；扫描 /proc/self/maps 找 XposedBridge.jar 与 LSPosed 相关内存映射；检查系统属性残留。",
+      "spoof": "LSPosed 的隐藏功能可对目标应用屏蔽自身特征，此时依赖方法一致性校验与耗时侧信道。",
+      "anomaly": "栈中出现 Xposed 帧；maps 命中 XposedBridge/lspd；关键 Java 方法的 accessFlags 含 native 标记。",
+      "links": [{ "to": "Hook 框架 / 注入检测 > 栈回溯 isNative", "type": "检测手段" }]
+    },
+    {
+      "path": "Hook 框架 / 注入检测 > Frida",
+      "signals": ["hook", "debug"],
+      "risk": "Frida 是动态分析的事实标准工具，出现即意味着协议正在被逆向，往往是批量作弊的前置阶段。",
+      "detect": "扫描默认端口 27042/27043；检查进程线程名（gmain/gum-js-loop/pool-frida）；/proc/self/maps 与 /proc/self/task/*/maps 找 frida-agent 与匿名可执行段；检查 /proc/self/fd 指向的可疑文件。",
+      "spoof": "改端口、改线程名、gadget 静态注入都能绕过特征匹配；因此应加上匿名可执行内存段扫描与 GOT/PLT 完整性校验。",
+      "anomaly": "存在 frida 线程名或端口响应 D-Bus AUTH；maps 中匿名段带 rwx 权限。",
+      "links": [
+        { "to": "调试 / 反跟踪 > 内存修改检测", "type": "同族检测" },
+        { "to": "自动化 / 群控检测 > 采集耗时", "type": "侧信道检测" }
+      ]
+    },
+    {
+      "path": "Hook 框架 / 注入检测 > Cydia Substrate",
+      "signals": ["hook"],
+      "risk": "较老的注入框架，现存量小但仍见于旧设备与老工具链。",
+      "detect": "检查 com.saurik.substrate 包与 libsubstrate.so 内存映射。",
+      "anomaly": "命中相关包名或 so。"
+    },
+    {
+      "path": "Hook 框架 / 注入检测 > 栈回溯 isNative",
+      "signals": ["hook"],
+      "risk": "Java 方法被 Hook 后，其实现会被替换为 native 跳板，方法属性由此暴露——这是不依赖特征串的通用检测。",
+      "detect": "反射取目标 Method 的 accessFlags 检查 ACC_NATIVE；或主动抛异常读取 StackTrace，检查调用链中是否插入了非预期帧与代理类。",
+      "spoof": "高级框架会修补 accessFlags 与栈回溯结果；此时可对比同一逻辑的 Java 与 native 两路实现结果。",
+      "anomaly": "非 native 声明的方法 accessFlags 含 native；栈中出现 LSPHooker_/proxy 类名。"
+    },
+    {
+      "path": "Hook 框架 / 注入检测 > Instrumentation 替换",
+      "signals": ["hook"],
+      "risk": "替换 ActivityThread 的 Instrumentation 对象可接管所有组件生命周期与启动流程，是插件化与外挂共用的技术。",
+      "detect": "反射取 ActivityThread.mInstrumentation 的实际类名，检查是否为系统类；同时校验 mH.mCallback 是否被设置。",
+      "anomaly": "Instrumentation 实现类不属于 android.app 包；Handler callback 非空。"
+    },
+    {
+      "path": "Hook 框架 / 注入检测 > Hook 命中列表",
+      "signals": ["hook"],
+      "risk": "把“哪些方法被 Hook 了”作为结构化结果上报，比单纯的布尔值有用得多：被 Hook 的方法集合本身就是攻击意图的画像（改定位、改机型、跳过校验）。",
+      "detect": "对一批关键方法（getDeviceId、getImei、Location 相关、Build 属性读取、签名校验）逐一做 native 属性检查，输出命中列表与方法签名。",
+      "anomaly": "命中集合聚焦于设备标识 → 改机；聚焦于 Location → 位置伪造；聚焦于签名校验 → 破解。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 自动点击器 > 黑名单 > isUserAMonkey | com.cygery.repetitouch.pro | com.cyjh.mobileanjian | com.touchsprite.android | com.cjzs123.zhushou | com.touchspriteent.android | com.zidongdianji | org.autojs.autojspro | org.autojs.autojs | com.zdanjian.zdanjian | com.zdnewproject | com.ifengwoo.zyjdkj | com.angel.nrzs | com.cyjh.mobileanjian.vip | com.shumai.shudaxia | fun.tooling.clicker.cn | com.dianjiqi | com.miaodong.autoactionssss | com.mxz.wxautojiafujinderen | com.touchelf.app | com.stardust.scriptdroid | com.adinall.autoclick | com.i_cool.auto_clicker | com.kongshan.aidianji | com.xptech.catclicker | com.tingniu.autoclick | com.yicu.yichujifa | com.smallyin.autoclick | com.ksxkq.autoclick | com.x2.clicker | com.scott.autoclickhelper | com.auyou.auyouwzs", "type": "常见目标" },
+        { "to": "设备唯一性 > 品牌", "type": "常见目标" },
+        { "to": "自动化 / 群控检测 > 模拟定位", "type": "常见目标" }
+      ]
+    },
+    {
+      "path": "Hook 框架 / 注入检测 > 检测位置",
+      "signals": ["hook"],
+      "risk": "检测代码所处的层次决定其可靠性：Java 层检测可被 Java 层 Hook 直接改返回值，因此必须下移到 native 并做自校验。",
+      "detect": "核心检测放在 so 中，用 syscall 直读 /proc，避免走 libc 封装；对自身 so 做 CRC 校验并检查 GOT/PLT 是否被改写。",
+      "anomaly": "so 自校验失败；同一检测在 Java 与 native 两侧结论不同。"
+    },
+    {
+      "path": "Hook 框架 / 注入检测 > Magisk/Zygisk 特征检测",
+      "signals": ["tamper", "hook"],
+      "risk": "Magisk 提供 systemless root 并能对指定应用隐藏（DenyList），Zygisk 更进一步在 Zygote 注入，是当前最主流的 root 方案。",
+      "detect": "探测 /data/adb/magisk、/sbin/.magisk、magisk 相关 unix socket；检查 mount namespace 是否异常（挂载点数量与 overlay）；检查 init 进程子进程列表。",
+      "spoof": "shamiko 等模块专门抹除上述痕迹；因此更可靠的判定是硬件 attestation 与 Play Integrity。",
+      "anomaly": "命中 magisk 路径或 socket；/proc/self/mountinfo 中存在异常 tmpfs 覆盖。",
+      "links": [{ "to": "设备唯一性 > 硬件信任根", "type": "可信替代" }]
+    },
+    {
+      "path": "Hook 框架 / 注入检测 > SELinux 状态异常",
+      "signals": ["tamper"],
+      "risk": "SELinux 从 enforcing 降为 permissive 通常是为了让注入与调试工具正常工作，是环境异常的低成本强信号。",
+      "detect": "读 /sys/fs/selinux/enforce 或 getprop ro.boot.selinux，期望 enforcing(1)。",
+      "anomaly": "值为 0/permissive；节点不可读（被隐藏）。"
+    },
+    {
+      "path": "Hook 框架 / 注入检测 > 僵尸进程与内核模块",
+      "signals": ["tamper", "hook"],
+      "risk": "加载的内核模块可实现内核级 Hook（如 KernelSU），此层面的篡改用户态几乎无法可靠检测，需依赖硬件证明。",
+      "detect": "读 /proc/modules 列出已加载模块，与厂商基线比对；统计 /proc 下 Z 状态进程。",
+      "anomaly": "存在非厂商基线的内核模块；命中 kernelsu 相关特征。"
+    },
+    {
+      "path": "Hook 框架 / 注入检测 > 证书列表",
+      "signals": ["debug"],
+      "risk": "与安全证书同源，用户 CA 的存在说明流量可被解密。",
+      "detect": "枚举 AndroidCAStore 中用户来源证书。",
+      "anomaly": "用户 CA 数量 > 0。",
+      "links": [{ "to": "系统完整性 / 篡改检测 > 安全证书", "type": "同一判据" }]
+    },
+    {
+      "path": "调试 / 反跟踪",
+      "signals": ["debug"],
+      "risk": "调试痕迹意味着有人正在阅读你的执行流程。这类信号的价值不只是拦截当次请求，更是发现协议破解的早期预警——被逆向的下一步通常是批量脚本。",
+      "detect": "组合四类：进程被附加（TracerPid）、应用可调试（FLAG_DEBUGGABLE）、系统调试开关（ADB/开发者选项）、执行环境异常（模拟执行、内存改写）。",
+      "anomaly": "TracerPid 非 0；应用为 debuggable 版本却在生产环境运行。"
+    },
+    {
+      "path": "调试 / 反跟踪 > TracerPid",
+      "signals": ["debug"],
+      "risk": "TracerPid 非 0 表示进程正被 ptrace 附加（gdb/lldb/frida 都会留下痕迹），是最直接的调试证据。",
+      "detect": "native 层读 /proc/self/status 解析 TracerPid；也可主动 ptrace(PTRACE_TRACEME) 占位，使他人无法附加。",
+      "spoof": "改写内核返回值或用不依赖 ptrace 的注入方式可绕过；因此需与 maps 扫描联用。",
+      "anomaly": "TracerPid != 0；自身 PTRACE_TRACEME 调用失败（已被占用）。",
+      "links": [{ "to": "调试 / 反跟踪 > 父进程可读", "type": "同族检测" }]
+    },
+    {
+      "path": "调试 / 反跟踪 > isDebuggerConnected",
+      "signals": ["debug"],
+      "risk": "Java 调试器附加检测，覆盖 Android Studio 一类的 JDWP 调试场景。",
+      "detect": "Debug.isDebuggerConnected() 与 Debug.waitingForDebugger() 双查；注意此 API 易被 Hook。",
+      "anomaly": "返回 true；或与 TracerPid 结论矛盾（说明有一侧被改）。"
+    },
+    {
+      "path": "调试 / 反跟踪 > `FLAG_DEBUGGABLE`",
+      "signals": ["debug", "tamper"],
+      "risk": "生产包不应带 debuggable 标记；带此标记通常意味着重打包，且可被任意附加调试器。",
+      "detect": "ApplicationInfo.flags 与 FLAG_DEBUGGABLE 做位与；同时检查 ro.debuggable 系统属性。",
+      "anomaly": "应用 debuggable 为真；ro.debuggable=1（工程系统）。",
+      "links": [{ "to": "系统完整性 / 篡改检测 > APK 签名", "type": "同族风险", "note": "重打包通常同时开启 debuggable" }]
+    },
+    {
+      "path": "调试 / 反跟踪 > 调试标志位组",
+      "signals": ["debug"],
+      "risk": "把多个调试相关标志作为一组上报，能区分“开发者自用设备”与“正在被攻击的设备”。",
+      "detect": "组合 ro.debuggable、adb_enabled、development_settings_enabled、FLAG_DEBUGGABLE、TracerPid 形成位图。",
+      "anomaly": "位图中调试项全开，且伴随 Hook 特征。"
+    },
+    {
+      "path": "调试 / 反跟踪 > `/proc` 可写检测",
+      "signals": ["debug", "tamper"],
+      "risk": "正常应用无法写入自身 /proc 目录下的敏感节点；可写说明权限模型已被破坏（root 环境）。",
+      "detect": "native 层对 /proc/self/mem 等节点做 access(W_OK) 探测（不实际写）。",
+      "anomaly": "关键节点可写。"
+    },
+    {
+      "path": "调试 / 反跟踪 > 父进程可读",
+      "signals": ["debug", "automation"],
+      "risk": "父进程身份揭示谁启动了应用：正常为 zygote，异常为 sh/adbd/frida-server。",
+      "detect": "读 /proc/self/stat 第 4 字段取 ppid，再读 /proc/<ppid>/cmdline。",
+      "anomaly": "父进程非 zygote/zygote64。",
+      "links": [{ "to": "自动化 / 群控检测 > 启动来源 > adb / 自动化启动", "type": "同一数据源" }]
+    },
+    {
+      "path": "调试 / 反跟踪 > unidbg / 模拟执行",
+      "signals": ["debug"],
+      "risk": "unidbg 一类工具把 so 从设备中剥离，在 PC 上模拟执行以批量生成签名参数，这是协议破解产业化的关键环节——设备侧看不到任何异常，因为请求确实来自“正确的算法”。",
+      "detect": "在 so 内检查运行环境完整性：读取 /proc/self/maps 是否存在完整 Android 进程映射、检查 JNI 环境与系统属性可达性、依赖真实设备特有的 syscall 与文件；也可让签名算法依赖设备实时状态（传感器、时间）作为输入。",
+      "anomaly": "签名参数正确但设备侧无对应行为轨迹；同一设备指纹的请求量远超真实操作能力；so 运行环境探测失败。",
+      "links": [
+        { "to": "网络环境 / 代理检测 > 协议特征与包大小规律", "type": "服务端侧证据" },
+        { "to": "Hook 框架 / 注入检测 > 检测位置", "type": "实现要求" }
+      ]
+    },
+    {
+      "path": "调试 / 反跟踪 > USB 调试状态",
+      "signals": ["debug", "automation", "farm"],
+      "risk": "ADB 开启本身在开发者中常见，但与群控特征（USB 长充、adb 拉起、批量同构）叠加时是真机农场的核心指标。",
+      "detect": "Settings.Global ADB_ENABLED 与 development_settings_enabled；检查 adbd 进程与 5555 端口（无线调试）。",
+      "anomaly": "ADB 开启 + 无线调试端口监听 + USB 充电态。"
+    },
+    {
+      "path": "调试 / 反跟踪 > 内存修改检测",
+      "signals": ["debug", "hook"],
+      "risk": "游戏与业务外挂通过改写内存值实现作弊；同时内存扫描工具（GameGuardian）的存在本身即高风险信号。",
+      "detect": "对关键内存区做 CRC 周期校验；检查 /proc/self/maps 中的匿名 rwx 段与异常映射；探测已知修改器进程与 so。",
+      "anomaly": "代码段 CRC 变化；存在 rwx 匿名段；命中修改器特征。"
+    }
+  ],
+  "rules": [
+    {
+      "id": "R-HOOK-001",
+      "name": "运行时注入（采集不可信）",
+      "level": "high",
+      "action": "丢弃本次采集数据，按最高风险处置",
+      "signals": ["hook"],
+      "logic": "maps 命中 frida/xposed 特征，或关键方法 accessFlags 含 native，或同一字段两路取值不一致",
+      "expr": "maps_hook_hit OR method_native_flag_hit OR dual_path_mismatch_cnt >= 1",
+      "note": "此规则应先于所有其他规则执行：注入成立时，其余字段的值都不可作为判据。",
+      "fields": [
+        "Hook 框架 / 注入检测 > Frida",
+        "Hook 框架 / 注入检测 > Xposed",
+        "Hook 框架 / 注入检测 > 栈回溯 isNative",
+        "Hook 框架 / 注入检测 > Hook 命中列表"
+      ]
+    },
+    {
+      "id": "R-DEBUG-001",
+      "name": "调试器附加",
+      "level": "high",
+      "action": "终止敏感流程，上报逆向预警",
+      "signals": ["debug"],
+      "logic": "TracerPid 非 0，或 Java 调试器已连接，或应用带 debuggable 标记",
+      "expr": "tracer_pid != 0 OR debugger_connected = 1 OR (app_flags & FLAG_DEBUGGABLE) != 0",
+      "fields": [
+        "调试 / 反跟踪 > TracerPid",
+        "调试 / 反跟踪 > isDebuggerConnected",
+        "调试 / 反跟踪 > `FLAG_DEBUGGABLE`"
+      ]
+    },
+    {
+      "id": "R-DEBUG-002",
+      "name": "协议破解（模拟执行）",
+      "level": "high",
+      "action": "签名参数作废并轮换算法，账号族群处置",
+      "signals": ["debug", "automation"],
+      "logic": "签名校验通过但缺失设备行为轨迹（无触控、无传感器数据），或单指纹请求量超真实操作上限，或 so 环境自检失败",
+      "expr": "sign_valid AND touch_event_cnt = 0 AND sensor_sample_cnt = 0 OR req_cnt_per_fp > human_max OR so_env_check_failed",
+      "note": "unidbg 类攻击在设备侧无痕，必须靠服务端行为完整性发现。",
+      "fields": [
+        "调试 / 反跟踪 > unidbg / 模拟执行",
+        "网络环境 / 代理检测 > 协议特征与包大小规律",
+        "自动化 / 群控检测 > 触控数据",
+        "自动化 / 群控检测 > 传感器噪声"
+      ]
+    },
+    {
+      "id": "R-DEBUG-003",
+      "name": "内存作弊",
+      "level": "high",
+      "action": "回滚异常收益并封禁",
+      "signals": ["debug", "hook"],
+      "logic": "代码段 CRC 校验失败，或存在匿名 rwx 内存段，或命中内存修改器进程",
+      "expr": "code_crc_mismatch OR anon_rwx_seg_cnt > 0 OR memtool_proc_hit",
+      "fields": [
+        "调试 / 反跟踪 > 内存修改检测",
+        "Hook 框架 / 注入检测 > Frida",
+        "调试 / 反跟踪 > `/proc` 可写检测"
+      ]
+    }
+  ]
+}

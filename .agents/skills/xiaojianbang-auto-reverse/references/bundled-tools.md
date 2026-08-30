@@ -42,6 +42,7 @@ Skill 内不应包含历史采集日志、`.git`、`__pycache__`、`.pyc`、nati
 - `xiaojianbang-syscall-filter`、Frida 联合采集、关键证据提取：读 `references/syscall-frida-tools.md`。
 - MemDumper 分流、短窗口 dump/fix、rizin 导出、函数范围修正、OLLVM 还原：读 `references/dump-ida-ollvm-tools.md`。
 - 加固壳/反调试 so 特定手法匹配（**壳厂商画像 + 手法索引**两层：SMC、内联 shellcode 杀进程、dlopen+dlsym 自解析、多线程看门狗、自毁签名、syscall 指针表、native heap 藏 dex、CRC 等）：读 `references/shell-signatures.md`。
+- 风控特征对照（防守方视角，CRC/完整性/Hook/调试/模拟器/root 的风控判据与规则）：读 `references/risk-control-map.md`。
 - 内核无痕 HWBP hook、eCapture Android arm64：读 `references/stealth-ecapture-tools.md`。
 - 小肩膀定制系统抽取式脱壳合并、`dexfix_runner.py`：读 `references/dexfix-tools.md`，并先按 `references/custom-system.md` 确认定制系统。
 

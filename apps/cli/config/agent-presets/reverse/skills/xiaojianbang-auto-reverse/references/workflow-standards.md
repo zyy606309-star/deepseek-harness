@@ -231,6 +231,8 @@ Frida 路线下若 spawn/attach/早期注入异常，必须先执行 §2 的“F
 
 强约束：静态分析时必须主动检查是否存在 CRC/完整性校验；有则优先干掉检测代码来绕过。
 
+> **风控侧对照**：识别出 CRC/完整性/签名/ROM 一致性检测后，同步查 `references/risk-control-map.md`（数据已入库 `references/risk-control-data/`），确认风控侧如何定义与处置（如 `R-TAMPER-001` 信任链、`R-TAMPER-002` 重打包、`R-TAMPER-003` ROM 属性不自洽、`R-DEBUG-003` 内存作弊）。风控判据（`vbmeta_device_state`/`veritymode`/`build_tags`/签名哈希/双路取值）常对应壳里的检测实现，双向印证能更准确定位"要骗过哪些条件"。
+
 加固/反作弊 so 普遍对 **自身 `.text`、`libc.so`、`libart.so`**（有时含 `linker`/`linker64`、dex、apk 签名）做 CRC/hash/逐字节比对。
 
 识别特征：
