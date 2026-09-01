@@ -40,7 +40,18 @@
   - 特征 9 环境异常（TracerPid/ADB/root）、特征 8 Frida 痕迹、特征 11 CRC
 - **整体应对**：先解决 Hook 时机（onEnter + 二级锚点，别用 onLeave）→ 枚举全部入口+看门狗线程 → 分级 patch（P0 杀点 no-op / P1 检测恒返回正常 / P2 暂缓）→ 注意杀进程走内联 shellcode、符号级 hook 会扑空。
 
-> 其它厂商（爱加密、腾讯乐固、360 加固等）遇到后再补充；上述画像以已学文章为依据，实际样本以证据为准。
+### 爱加密（ijiami，标志：`libexec.so` + `assets/ijiami.dat` / `ijiami.ajm`）
+
+- **代表性文章**：看雪 292771（某加密企业版 Frida 检测绕过）
+- **手法组合**：
+  - 特征 1 SMC / 自解密（libexec.so 大段加密，疑似轻改 UPX）
+  - 特征 8 特征：VM 调度器 / A-table 检测（gate 链 ops 表 + A[7]/A[4]/A[31]）
+  - 特征 特征：TracerPid / wchan / ptrace_stop 检测
+  - 特征 新：**方法级抽取 DEX**（`ijiami.dat` 恢复方法抽空的 DEX 骨架，`ijiami.ajm` 存 142k 条方法体按 marker 回填）
+  - 特征 6 多入口多线程、特征 11 CRC/完整性、特征 14 早期检测
+- **整体应对**：先 hook dlopen 定位处决逻辑所在 so（用 sleep 应对检测滞后）→ dump + SoFixer 修复 libexec.so → trace 定位检测点（AI 写 + sleep + 二分）→ 打蛇打七寸（精确 caller 条件改返回 + 持续清检测状态位 + 多窗口安装）→ 脱 DEX 时注意**方法级抽取**：结构校验通过≠方法恢复，要扫 NOP/默认返回骨架、debug_info_off 异常 marker。
+
+> 其它厂商（腾讯乐固、360 加固等）遇到后再补充；上述画像以已学文章为依据，实际样本以证据为准。
 
 ---
 
@@ -194,8 +205,11 @@
 ### 特征 20：多进程看门狗守护（main fork 子进程反制）
 
 - **是什么**：main 进程 fork 出看门狗子进程盯着它，main 一被冻/被改，看门狗就 SIGKILL 它。
-- **怎么识别**：直接 `kill -STOP` 冻 main，几百 ms 内被 SIGKILL；`ps` 看到同名多进程（main + 看门狗子进程，子进程 PPID = main PID、线程数少）。
-- **应对**：**有序 SIGSTOP**——先冻看门狗子进程、再冻 main（此时 main 冻住也无法再 fork 新看门狗）。这是对付多进程自守的通用手法。
+- **怎么识别**：
+  - 直接 `kill -STOP` 冻 main，几百 ms 内被 SIGKILL；`ps` 看到同名多进程（main + 看门狗子进程，子进程 PPID = main PID、线程数少）。
+  - **hook `clone`/`fork` 观察子进程**（更早、更稳，不依赖 kill -STOP 试错）：在 `clone` 返回处看是否 fork 出独立检测子进程，记录子进程 PID、入口、以及它`重新解密/加载了什么`。
+- **⚠️ 误判警告：fork 不是补丁继承**：子进程**不**是 COW 继承父进程的 patch，而常常是**重新解密了内层 ELF、基址不同**——父进程内的 patch 根本覆盖不到子进程所在的检测载体。所以「patch 主进程」不等于「过了检测」，必须**先确认检测逻辑到底在哪个进程**，再决定 patch 落点；只在主进程内 patch，子进程的检测照样触发 SIGKILL。
+- **应对**：**有序 SIGSTOP**——先冻看门狗子进程、再冻 main（此时 main 冻住也无法再 fork 新看门狗）。这是对付多进程自守的通用手法。**击杀/冻结检测载体进程 = 让检测函数不再执行，不等于环境层隐藏 root**（属于函数级/进程级绕过，不违背授权边界）。
 - **用过该手法的壳**：梆梆。
 
 ### 特征 21：syscall 走指针表（不 via libc PLT）
@@ -211,6 +225,27 @@
 - **怎么识别**：常规脱壳工具扫不到 dex（main 进程无 `[anon:dalvik-DEX data]` 区）；`classes.dex` 里只有框架类（androidx/com.google 等）、业务类（如 com/byb）一个都没有；maps 里 `[anon:scudo:secondary]` 有几十 MB 大块，strings 能扫到业务类描述符。
 - **应对**：① 先压住自毁、App 跑起来让 dex 解密；② 读 maps 排除 GC region-space，盯 scudo:secondary，用业务类描述符核对；③ `dd if=/proc/<pid>/mem` 按页拉出；④ 按 dex 头锚点 `endian_tag=0x12345678`（字节 `78 56 34 12` @ 0x28）逐个 dump，补回被抹的 8 字节魔数 `dex\n035\0`。⑤ 框架层 hook 点不用脱壳（明文），只有动业务逻辑才非脱不可。
 - **用过该手法的壳**：梆梆。
+
+### 特征 23：方法级抽取 DEX（骨架在，方法体抽空）
+
+- **是什么**：DEX **结构合法**（能过 dexdump 结构校验），但**方法体被抽空**——被替换成"默认返回 / NOP 骨架"；真正的方法体加密存放在另一个文件里（如 `ijiami.dat` 恢复骨架、`ijiami.ajm` 存 14 万+ 条方法体按 marker 回填）。
+- **怎么识别**：`assets/ijiami.dat`、`assets/ijiami.ajm` 这类**磁盘占用大、信息熵高**的文件很可能是加密 DEX / 方法体；解出的 DEX 能过结构校验但**业务方法大量是默认返回/NOP**；`debug_info_off` 异常 marker；业务类保留 try 块但**首条即 return**。
+- **应对**：① 沿字符串 + xref 静态追踪定位解密逻辑（密钥常量可暴力穷举 + 文件魔数约束）；② 用 `ijiami.ajm` 的方法体记录**按 marker 原位回填**到 DEX 骨架；③ **判断"真恢复"不能只看结构校验**，必须额外扫 NOP/默认返回骨架、`debug_info_off` 异常 marker、业务类 try 块首条 return。大模型常停在"能打开 DEX"就不动，需主动提醒。
+- **用过该手法的壳**：爱加密（ijiami）。
+
+### 特征 24：VM 调度器 / A-table 检测（gate 链 ops 表 + A[N] 表）
+
+- **是什么**：核心检测逻辑用 **VM（虚拟机）调度器**执行——如构造期 VM 调度器（`sub_5CCF8`）跑 VM 字节码，再用"VM 结果栈提取器"（`sub_DDF94`）取结果，返回 1 = 检测命中；检测表用 **A-table**（如 A[7]/A[4]/A[31] 分别对应不同检测，A-table 用下标取函数）。
+- **怎么识别**：反编译里出现"调某函数去跑 VM 字节码 + 另取结果"的调度结构；或"用固定表下标（A[7] 等）取检测函数"；gate 链里有 `ops[0x00]` 这类 thunk。
+- **应对**：找出 VM 调度器 + 结果提取器，分别 hook（命中改 0）；注意结果提取器可能**被多处复用**（如还被 `JNI_OnLoad` 用来返回 `JNI_VERSION`），只能**按 caller 区间精确改**。A-table 里的具体检测（读 `/proc/self/status` 解析 TracerPid、读 `/proc/self/wchan` 识别 `sys_epoll`/`ptrace_stop`、字符串比较 helper）分别 hook 改 0。
+- **用过该手法的壳**：爱加密（ijiami，企业版 VMP）。
+
+### 特征 25：TracerPid / wchan / ptrace_stop 检测
+
+- **是什么**：通过读 `/proc/self/status` 解析 **TracerPid**（是否被 ptrace 跟踪）、读 `/proc/self/wchan` 识别 `sys_epoll`/`ptrace_stop`（是否被挂起/跟踪）、以及配套的字符串比较 helper，来判断是否被调试/挂起。
+- **怎么识别**：反编译里出现直接 syscall 打开/读 `/proc/self/status` 解析 TracerPid 的逻辑；读 `/proc/self/wchan` 匹配 `sys_epoll`/`ptrace_stop`；字符串比较 helper 匹配这些行名。
+- **应对**：对应检测函数（如 A[7] TracerPid 解析、A[4] wchan、A[31] 字符串比较 helper）逐个 hook 改 0。
+- **用过该手法的壳**：爱加密（ijiami）。
 
 ---
 
@@ -240,6 +275,9 @@
 | 20 多进程看门狗守护 | 先冻看门狗、再冻 main | 梆梆 |
 | 21 syscall 走指针表 | seccomp 拦 syscall 入口 | 梆梆 |
 | 22 dex 藏 native heap / 选择性加固 | 跳出 dalvik 区，按 endian_tag 锚点 dump | 梆梆 |
+| 23 方法级抽取 DEX | 结构校验≠方法恢复，扫 NOP/默认返回骨架，ajm 按 marker 回填 | 爱加密 |
+| 24 VM 调度器 / A-table 检测 | 按 caller 区间精确改，结果提取器防误伤 | 爱加密 |
+| 25 TracerPid / wchan / ptrace_stop | 对应检测函数逐个 hook 改 0 | 爱加密 |
 
 ---
 
