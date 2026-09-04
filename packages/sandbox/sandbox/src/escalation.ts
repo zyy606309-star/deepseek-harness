@@ -156,6 +156,15 @@ export interface EscalationRequest {
  */
 export async function approveEscalation<A, C>(request: EscalationRequest, approval: EscalationApproval<A, C>): Promise<SandboxMode> {
   const { requestedMode: mode, effectiveMode, justification, subject } = request
+  // A request for the SAME mode the call already runs under is an idempotent
+  // no-op: nothing widens, so nothing needs approval, and the tool's own grant
+  // stamping proceeds unchanged. The runtime sessions we care about most — a
+  // `danger-full-access` deployment whose schema still advertises the escalation
+  // enum — would otherwise reject every redundant same-mode ask ("not strictly
+  // wider"), turning a harmless repetition into an error. A request that is
+  // neither the effective mode NOR strictly wider is a genuine downgrade and
+  // still fails closed below.
+  if (mode === effectiveMode) return effectiveMode
   // Strict widening is an EXECUTION check against the call's effective mode —
   // deliberately not a schema constraint (the enum is the closed target
   // vocabulary; the effective mode is per-call truth).

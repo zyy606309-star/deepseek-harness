@@ -105,7 +105,7 @@ describe('timeout-policy TOOL_TIMEOUT replacement (deadline wins)', () => {
     await vi.advanceTimersByTimeAsync(150)
     const result = await pending
     expect(result).toEqual({
-      content: [{ type: 'text', text: 'Error: tool call timed out after 100ms' }],
+      content: [{ type: 'text', text: 'Error: tool call timed out after 100ms. Do not repeat the same call unchanged; narrow its scope or use a smaller follow-up before retrying.' }],
       isError: true,
       error: {
         message: 'tool call timed out after 100ms',
@@ -125,7 +125,7 @@ describe('timeout-policy TOOL_TIMEOUT replacement (deadline wins)', () => {
       message: 'tool call timed out after 100ms',
       info: { name: 'ToolTimeoutError', code: 'TOOL_TIMEOUT' },
     })
-    expect(result.content[0]).toMatchObject({ text: 'Error: tool call timed out after 100ms' })
+    expect(result.content[0]).toMatchObject({ text: 'Error: tool call timed out after 100ms. Do not repeat the same call unchanged; narrow its scope or use a smaller follow-up before retrying.' })
   })
 
   it('preserves registry ABORTED when the caller aborts first (upstream cancel, not our timeout)', async () => {

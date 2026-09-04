@@ -41,7 +41,7 @@ export const inject = ['tools']
 function toolTimeoutResult(timeoutMs: number): ToolExecutionResult {
   const message = `tool call timed out after ${timeoutMs}ms`
   return {
-    content: [{ type: 'text', text: `Error: ${message}` }],
+    content: [{ type: 'text', text: `Error: ${message}. Do not repeat the same call unchanged; narrow its scope or use a smaller follow-up before retrying.` }],
     isError: true,
     error: { message, info: { name: 'ToolTimeoutError', code: TOOL_TIMEOUT } },
   }

@@ -228,6 +228,7 @@
       name: '@deepseek-ai/dsh-tool-fs-search'
       config:
         sampleOverCapGlobResults: false
+        timeoutMs: 10000
 
     - id: agent-instructions
       name: '@deepseek-ai/dsh-agent-instructions'

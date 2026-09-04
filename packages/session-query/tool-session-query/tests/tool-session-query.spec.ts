@@ -1883,7 +1883,7 @@ describe('search paging, prior-history bounds, titles, and cancellation', () => 
     const result = await pending
     expect(active).toBe(false)
     expect(errorCode(result)).toBe('TOOL_TIMEOUT')
-    expect(text(result)).toBe(`Error: tool call timed out after ${timeoutMs}ms`)
+    expect(text(result)).toBe(`Error: tool call timed out after ${timeoutMs}ms. Do not repeat the same call unchanged; narrow its scope or use a smaller follow-up before retrying.`)
   })
 
   it('passes the exact execution signal to every FTS page and stops on cancellation', async () => {
