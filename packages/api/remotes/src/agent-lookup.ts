@@ -1,7 +1,7 @@
 /** Host BFF policy for resolving Remote Agent and Session identities. */
 
 import type { Context } from '@deepseek-ai/cordis'
-import type { Agent, AgentOptions, AgentSetup } from '@deepseek-ai/dsh-agent'
+import type { Agent, AgentHandle, AgentOptions, AgentSetup } from '@deepseek-ai/dsh-agent'
 import type { Session, SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-session-persistence'
 import { TypertLookupFailure } from '@deepseek-ai/dsh-typert-protocol'
@@ -121,8 +121,15 @@ export async function inspectApiRemoteSession(
 export function createApiRemoteAgentResolver(
   ctx: Context,
   options: ApiRemoteAgentOptions,
-): (sessionId: SessionId) => Promise<ApiRemoteAgentResult> {
+): ((sessionId: SessionId) => Promise<ApiRemoteAgentResult>) & {
+  /** Release a resolved (idle) agent: stops the loop, unregisters it, and detaches its session. */
+  dispose(sessionId: SessionId): Promise<boolean>
+} {
   const resumes = new Map<SessionId, Promise<Agent>>()
+  // Resolved handles, retained so a later `dispose` can stop and drain the agent
+  // (the resume path otherwise discards the capability and the session stays
+  // resident with its whole event log until its owner fiber unloads).
+  const handles = new Map<SessionId, AgentHandle>()
 
   const fencedLiveAgent = (sessionId: SessionId): ApiRemoteAgentResult | undefined => {
     const live = ctx.agents.get(sessionId)
@@ -164,6 +171,7 @@ export function createApiRemoteAgentResolver(
             ...options.agentOptions === undefined ? {} : { agentOptions: options.agentOptions() },
             ...setup === undefined ? {} : { setup },
           })
+          handles.set(sessionId, handle)
           return handle.agent
         } finally {
           resumes.delete(sessionId)
@@ -207,5 +215,15 @@ export function createApiRemoteAgentResolver(
     typeCtx.typert.contexts.configureHost('agent', async sessionId => (await resolveAgent(sessionId)).ctx)
   })
 
-  return agentFor
+  const resolver = agentFor as ((sessionId: SessionId) => Promise<ApiRemoteAgentResult>) & {
+    dispose(sessionId: SessionId): Promise<boolean>
+  }
+  resolver.dispose = async (sessionId: SessionId): Promise<boolean> => {
+    const handle = handles.get(sessionId)
+    if (handle === undefined) return false
+    handles.delete(sessionId)
+    await handle.dispose()
+    return true
+  }
+  return resolver
 }

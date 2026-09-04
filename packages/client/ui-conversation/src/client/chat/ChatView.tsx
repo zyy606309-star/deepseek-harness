@@ -14,6 +14,7 @@
 // lifecycle updates replace only their own row without remounting it.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import type { ConversationTimelineSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
 import { Button, IconChevronDownOutline14, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ChatViewSlotProps, RenderMessageImages } from '../contract/slots.ts'
@@ -23,6 +24,15 @@ import { formatRunDuration } from './message-chrome.ts'
 import css from './ChatView.module.css'
 
 const FOLLOW_THRESHOLD = 24
+// A long session's dominant mount cost is the keyed business-node list: every
+// node becomes a live, independently-subscribing seat, so a multi-page
+// transcript can hold thousands of rows in the DOM at once. Above this count
+// the list is windowed; below it the plain flow keeps every node browser-
+// measured, so the existing paging/rail anchors still read the full mounted set.
+const VIRTUALIZATION_THRESHOLD = 100
+const VIRTUAL_OVERSCAN_ROWS = 12
+const VIRTUAL_ESTIMATE_PX = 200
+const VIRTUAL_GAP_PX = 16
 
 /** Active column host when present; otherwise the view-local scroller. */
 function scrollerOf(from: HTMLElement): HTMLElement {
@@ -240,6 +250,8 @@ export function ChatView({
 
   const listRef = useRef<HTMLDivElement | null>(null)
   const columnRef = useRef<HTMLDivElement | null>(null)
+  /** Virtualized window element that positions its items absolutely. */
+  const windowRef = useRef<HTMLDivElement | null>(null)
   // Question-navigation rail: strip height rides the scrollport, marker Y
   // positions are computed from each user row's offset in the flow content.
   const railRef = useRef<HTMLDivElement | null>(null)
@@ -267,6 +279,57 @@ export function ChatView({
   const lastNode = lastKey === null ? undefined : nodeStore.get(lastKey)
   const lastSteeringId = pendingSteering[pendingSteering.length - 1]?.id ?? null
   const followSig = `${openState}:${firstSeq}:${lastKey}:${order.length}:${running ? 1 : 0}:${lastSteeringId ?? ''}`
+
+  // Long-transcript windowing: above the threshold the keyed business nodes are
+  // the dominant mount cost, so only the viewport (plus overscan) mounts. Below
+  // it the plain flow stays so every existing anchor/rail/scroll contract reads
+  // the full mounted set exactly as before.
+  const virtualized = order.length >= VIRTUALIZATION_THRESHOLD
+  // The scrollport is the ancestor conversation column in the real tree and the
+  // view-local scroller when mounted alone; the same resolver the follow and
+  // paging logic already use.
+  const getScrollElement = useCallback((): HTMLElement | null => {
+    const list = listRef.current
+    return list === null ? null : scrollerOf(list)
+  }, [])
+  // The virtual window is a mid-column child, not the scrollport's content top:
+  // padding, the load-older row, and any open-state hint sit above it. That
+  // offset feeds `scrollMargin` so item starts and the range stay scrollport-
+  // relative; it changes only when those siblings change, so it is measured once
+  // per layout and on resize rather than continuously.
+  const [scrollMargin, setScrollMargin] = useState(0)
+  useLayoutEffect(() => {
+    if (!virtualized) return
+    const windowEl = windowRef.current
+    const list = listRef.current
+    if (windowEl === null || list === null) return
+    const scrollport = scrollerOf(list)
+    const measure = (): void => {
+      setScrollMargin(windowEl.getBoundingClientRect().top
+        - scrollport.getBoundingClientRect().top + scrollport.scrollTop)
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(scrollport)
+    observer.observe(windowEl)
+    return () => { observer.disconnect() }
+  }, [virtualized, hasMore, openState, userKeys.length])
+  const virtualizer = useVirtualizer({
+    count: virtualized ? order.length : 0,
+    enabled: virtualized,
+    getScrollElement,
+    estimateSize: () => VIRTUAL_ESTIMATE_PX,
+    getItemKey: index => order[index] ?? index,
+    overscan: VIRTUAL_OVERSCAN_ROWS,
+    gap: VIRTUAL_GAP_PX,
+    // A non-zero first-measure rect keeps the window non-empty before the
+    // scroll element's real size is observed, and makes the windowed path
+    // testable in jsdom (where no layout exists to measure).
+    initialRect: { width: 0, height: 600 },
+    scrollMargin,
+    paddingEnd: VIRTUAL_GAP_PX,
+  })
 
   const toBottom = (el: HTMLElement): void => {
     anchorRef.current = null
@@ -445,6 +508,13 @@ export function ChatView({
     /* v8 ignore next -- ref-null guard: the handler only fires while mounted. */
     if (local === null) return
     const el = scrollerOf(local)
+    // Windowed long transcripts position their items through the virtualizer;
+    // the target row may be unmounted, so jump by index instead of DOM offset.
+    if (virtualized) {
+      const index = order.indexOf(key)
+      if (index >= 0) virtualizer.scrollToIndex(index, { align: 'start' })
+      return
+    }
     const row = anchorElement(local, key)
     if (row === null) return
     el.scrollTop = flowTop(row, el) + el.scrollTop - 12
@@ -453,7 +523,8 @@ export function ChatView({
   // Recompute the rail's marker positions whenever the question set changes or
   // the flow/viewport resizes (streaming, images, window resize). Markers are
   // proportional to the WHOLE content, so scrolling does not move them — only
-  // content growth does.
+  // content growth does. Under windowing the marker sits at the virtual item's
+  // measured start instead of a live DOM row (the row may be unmounted).
   useEffect(() => {
     const local = listRef.current
     const column = columnRef.current
@@ -464,6 +535,15 @@ export function ChatView({
       const height = el.clientHeight - 32
       if (height <= 0) return
       rail.style.height = `${height}px`
+      if (virtualized) {
+        const total = virtualizer.getTotalSize()
+        setMarkers(userKeys.map((key) => {
+          const index = order.indexOf(key)
+          const start = index < 0 ? 0 : (virtualizer.measurementsCache[index]?.start ?? 0)
+          return Math.max(0, Math.min(height, (start / total) * height))
+        }))
+        return
+      }
       const contentHeight = el.scrollHeight
       setMarkers(userKeys.map((key) => {
         const row = anchorElement(local, key)
@@ -477,7 +557,7 @@ export function ChatView({
     observer.observe(el)
     observer.observe(column)
     return () => { observer.disconnect() }
-  }, [userKeys])
+  }, [userKeys, virtualized, virtualizer, order])
 
   return (
     <div className={css.root}>
@@ -521,22 +601,58 @@ export function ChatView({
               </button>
             </div>
           )}
-          {order.map(nodeKey => (
-            <ChatNodeSeat
-              key={nodeKey}
-              nodeKey={nodeKey}
-              useSession={useSession}
-              selectedCallId={selectedCallId}
-              cwd={cwd}
-              openFile={requestOpenFile}
-              inspectCall={inspectCall}
-              forkAt={forkAt}
-              renderMessageImages={renderMessageImages}
-              fileMentions={fileMentions}
-              renderSlot={renderSlot}
-              t={t}
-            />
-          ))}
+          {virtualized ? (
+            <div
+              ref={windowRef}
+              className={css.virtualWindow}
+              style={{ height: virtualizer.getTotalSize() }}
+            >
+              {virtualizer.getVirtualItems().map((virtualItem) => {
+                const nodeKey = order[virtualItem.index]
+                if (nodeKey === undefined) return null
+                return (
+                  <div
+                    key={virtualItem.key}
+                    ref={virtualizer.measureElement}
+                    data-index={virtualItem.index}
+                    className={css.virtualItem}
+                    style={{ transform: `translateY(${virtualItem.start - scrollMargin}px)` }}
+                  >
+                    <ChatNodeSeat
+                      nodeKey={nodeKey}
+                      useSession={useSession}
+                      selectedCallId={selectedCallId}
+                      cwd={cwd}
+                      openFile={requestOpenFile}
+                      inspectCall={inspectCall}
+                      forkAt={forkAt}
+                      renderMessageImages={renderMessageImages}
+                      fileMentions={fileMentions}
+                      renderSlot={renderSlot}
+                      t={t}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            order.map(nodeKey => (
+              <ChatNodeSeat
+                key={nodeKey}
+                nodeKey={nodeKey}
+                useSession={useSession}
+                selectedCallId={selectedCallId}
+                cwd={cwd}
+                openFile={requestOpenFile}
+                inspectCall={inspectCall}
+                forkAt={forkAt}
+                renderMessageImages={renderMessageImages}
+                fileMentions={fileMentions}
+                renderSlot={renderSlot}
+                t={t}
+              />
+            ))
+          )}
           {/* No pending placeholders: questions (ui-user-questions) and approvals
               (ApprovalPanel) both take over the composer, so a flow card would
               double-render the same wait. */}

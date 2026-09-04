@@ -1506,7 +1506,15 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     includeProjections: boolean,
   ): { events: SessionEvent[]; projections?: SessionProjectionsBlock } {
     if (source.kind === 'detached') {
-      const projections = includeProjections ? detachedProjectionsFor(ctx, source.events) : undefined
+      // A cold transcript read must not refold the whole log from init on
+      // every open: the persistence cache already holds each projection
+      // unit's finished value (the same zero-log-load column `list` uses for
+      // cold rows), so prefer it and only fall back to a full detached fold
+      // when the cache has no usable row for this identity.
+      const cached = includeProjections ? ctx.get('sessionProjectionCache')?.cachedSnapshot(source.header) : undefined
+      const projections = cached !== undefined && Object.keys(cached.values).length > 0
+        ? cached
+        : includeProjections ? detachedProjectionsFor(ctx, source.events) : undefined
       return { events: source.events, ...projections === undefined ? {} : { projections } }
     }
     const events = [...source.session.events]
@@ -2530,6 +2538,27 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         }
         agent.cancel({ kind: 'user' }, { keepInbox: true })
         return Promise.resolve(ok(request, { accepted: true as const }))
+      },
+
+      async dispose(request) {
+        const { sessionId } = request.payload
+        const agent = ctx.agents.get(sessionId)
+        if (agent === undefined) {
+          // Already released (or never resident): nothing to free.
+          return ok(request, { released: false })
+        }
+        if (hasSubagentOwner(agent.session, agent)) {
+          return err(request, subagentOwnershipError(sessionId))
+        }
+        if (agent.status === 'running') {
+          return err(request, {
+            code: 'session-busy',
+            message: `session "${sessionId}" is running and cannot be released`,
+            details: { sessionId },
+          })
+        }
+        const released = await agentFor.dispose(sessionId)
+        return ok(request, { released })
       },
     },
 

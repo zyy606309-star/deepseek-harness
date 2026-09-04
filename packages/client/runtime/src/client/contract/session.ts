@@ -83,6 +83,13 @@ export interface ISession {
    * @returns the admission result, or the Remote face's error branch.
    */
   command(line: string): Promise<RemoteResult<{ matched: boolean }>>
+  /**
+   * Release this session from host memory without touching its durable log.
+   * Rejects with `session-busy` when a turn is running; on success the history
+   * stays on disk and re-loads on the next open.
+   * @returns whether the host actually released a resident agent.
+   */
+  dispose(): Promise<RpcResult<{ released: boolean }>>
 }
 
 /**

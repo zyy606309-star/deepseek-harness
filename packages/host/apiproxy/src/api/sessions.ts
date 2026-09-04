@@ -374,4 +374,14 @@ export interface SessionsApi {
    */
   cancel(request: RpcRequest<{ sessionId: SessionId }>): Promise<RpcResponse<{ accepted: true }>>
 
+  /**
+   * Releases a live but idle session from host memory without touching its
+   * durable log: stops and unregisters the agent, detaches the session, and
+   * lets its in-memory event log be garbage-collected. The durable JSONL log
+   * stays intact, so a later read re-loads the history from persistence. A
+   * running session (an active turn) rejects with `session-busy` so it is never
+   * torn down mid-task. Session-backed subagents reject with `agent-busy`.
+   */
+  dispose(request: RpcRequest<{ sessionId: SessionId }>): Promise<RpcResponse<{ released: boolean }>>
+
 }

@@ -57,6 +57,16 @@ export type {
   StoredSuffix,
 } from './coordinator.ts'
 
+// Stored-event normalization shared with worker-side cold loaders, so a
+// worker-served page can never drift from the coordinator's own load path.
+export {
+  adoptStoredEvents,
+  assertKnownEventTypes,
+  assertSupportedEvents,
+  needsLegacyPrefix,
+  snapshotStoredEvents,
+} from './stored-normalization.ts'
+
 declare module '@deepseek-ai/cordis' {
   interface Context {
     sessionPersistence: SessionPersistence

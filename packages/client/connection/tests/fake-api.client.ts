@@ -70,6 +70,7 @@ export class FakeApiClient implements IApiClient {
     () => Promise.resolve(ok({ attachment: { attachmentId: 'a' as never, mediaType: 'image/png', bytes: 1, width: 1, height: 1 }, data: 'AA==' }))
   onUpdateQueue: (payload: unknown) => Promise<RpcResponse<{ accepted: true }>> = () => Promise.resolve(ok({ accepted: true as const }))
   onCancel: (payload: unknown) => Promise<RpcResponse<{ accepted: true }>> = () => Promise.resolve(ok({ accepted: true as const }))
+  onDispose: (payload: unknown) => Promise<RpcResponse<{ released: boolean }>> = () => Promise.resolve(ok({ released: false }))
   onDescribe: (payload: unknown) => Promise<RpcResponse<{
     version: string
     cwd: string
@@ -122,6 +123,7 @@ export class FakeApiClient implements IApiClient {
     attachment: (payload: unknown) => this.record('session.attachment', payload, this.onAttachment(payload)),
     updateQueue: (payload: unknown) => this.record('session.updateQueue', payload, this.onUpdateQueue(payload)),
     cancel: (payload: unknown) => this.record('session.cancel', payload, this.onCancel(payload)),
+    dispose: (payload: unknown) => this.record('session.dispose', payload, this.onDispose(payload)),
   }
 
   readonly subagents: IApiClient['subagents'] = {

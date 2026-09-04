@@ -37,6 +37,8 @@ import { chatSnapshotFixture } from './chat-snapshot-fixture.client.ts'
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+  Reflect.deleteProperty(HTMLElement.prototype, 'scrollTo')
 })
 // Keyless create() persists under the bare declared key; clear between cases
 // so one harness's selection cannot rehydrate into the next.
@@ -1167,6 +1169,19 @@ describe('ChatView', () => {
     scroller.scrollTop = 500
     fireEvent.scroll(scroller)
     expect(view.getByLabelText('回到底部')).toBeTruthy()
+  })
+
+  it('windows a long transcript: mounts only a bounded viewport of the keyed nodes', async () => {
+    const nodes = Array.from({ length: 400 }, (_, index) => assistant(index + 1, `answer ${index + 1}`))
+    const h = makeHarness({ nodes })
+    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: true, get: () => 400 })
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', { configurable: true, value: vi.fn() })
+    const view = render(<h.ChatView {...h.props} />)
+    await waitFor(() => {
+      expect(view.container.querySelectorAll('[data-chat-flow-key]').length).toBeGreaterThan(0)
+    })
+    const mounted = view.container.querySelectorAll('[data-chat-flow-key]').length
+    expect(mounted).toBeLessThan(nodes.length)
   })
 
   it('one ResizeObserver owns pinned dynamic-height follow and ignores growth while away', () => {

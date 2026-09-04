@@ -130,6 +130,11 @@ export type WorkspaceBrowserInjected = {
    */
   archiveSession: (sessionId: SessionId) => Promise<void>
   /**
+   * Release a Session's resident host agent from memory (durable log stays,
+   * re-loads on next open). Rejects with `session-busy` while a turn runs.
+   */
+  releaseSession: (sessionId: SessionId) => Promise<void>
+  /**
    * Reorder a session inside its Workspace account (DOM-insertBefore
    * semantics: omitted anchor appends to the end). The view refreshes from
    * the Host response/changed frame; failures leave the order unchanged.

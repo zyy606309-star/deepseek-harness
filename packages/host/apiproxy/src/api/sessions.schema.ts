@@ -352,3 +352,13 @@ export const sessionCancelRequestSchema = z.object({
 export const sessionCancelValueSchema = z.object({
   accepted: z.literal(true),
 }) satisfies z.ZodType<Wire<ResponseValue<'session.cancel'>>>
+
+/** session.dispose request payload. */
+export const sessionDisposeRequestSchema = z.object({
+  sessionId: sessionIdSchema,
+}) satisfies z.ZodType<Wire<RequestPayload<'session.dispose'>>>
+
+/** session.dispose response value. */
+export const sessionDisposeValueSchema = z.object({
+  released: z.boolean(),
+}) satisfies z.ZodType<Wire<ResponseValue<'session.dispose'>>>

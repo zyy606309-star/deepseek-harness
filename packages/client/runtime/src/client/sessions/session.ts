@@ -365,6 +365,16 @@ export class Session implements SessionFace {
     return { ok: true, value: { matched: result.value !== undefined } }
   }
 
+  /** Release this session's resident host agent (durable log stays; re-loads on next open). */
+  async dispose(): Promise<RpcResult<{ released: boolean }>> {
+    try {
+      const { result } = await this.api.sessions.dispose({ sessionId: this.sessionId })
+      return result
+    } catch (error) {
+      return transportError(error)
+    }
+  }
+
   /** First open: pull the tail page (idempotent — in-flight/already-open returns the existing promise). */
   open(): Promise<void> {
     if (this.openState === 'open') return Promise.resolve()
@@ -591,7 +601,6 @@ export class Session implements SessionFace {
   }
 
   /** No-op because session instances remain resident. */
-  dispose(): void {}
 
   /** Rebuild the current window after a low-frequency Definition or view registration change. */
   rebuildConversationRegistry(): void {

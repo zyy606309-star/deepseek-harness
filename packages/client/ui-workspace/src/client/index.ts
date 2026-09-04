@@ -98,6 +98,15 @@ export function apply(ctx: ClientContext): void {
       await ctx.workspaces.insertBefore(workspaceId, beforeWorkspaceId)
     },
     archiveSession: async (sessionId) => { await ctx.workspaces.archiveSession(sessionId) },
+    releaseSession: async (sessionId) => {
+      const session = ctx.sessions.binding(sessionId)?.session
+      if (session === undefined) throw new Error(`unknown session "${sessionId}"`)
+      const result = await session.dispose()
+      if (!result.ok) throw new Error(result.error.message)
+      // Re-pull so the released session stays listed as a cold (unloaded) row
+      // instead of blinking out on the host/session-removed frame.
+      await ctx.sessions.refresh()
+    },
     insertSessionBefore: async (workspaceId, sessionId, beforeSessionId) => {
       await ctx.workspaces.insertSessionBefore(workspaceId, sessionId, beforeSessionId)
     },

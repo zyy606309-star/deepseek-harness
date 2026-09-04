@@ -137,6 +137,14 @@ export class FixtureSession implements SessionFace {
   rename(): never {
     throw new Error(`test session "${this.sessionId}": rename is not stubbed — supply it on the fixture's session face`)
   }
+
+  /**
+   * Fail-loud stub; supply `dispose` on the fixture's session face to exercise it.
+   * @returns never — always throws.
+   */
+  dispose(): never {
+    throw new Error(`test session "${this.sessionId}": dispose is not stubbed — supply it on the fixture's session face`)
+  }
 }
 
 /** One live test session: fixture-derived stores plus its minted scope state. */
@@ -185,7 +193,7 @@ export class TestSessions implements ISessions {
   /** Calls observed on the service-level face, newest last. */
   readonly calls: {
     method: 'open' | 'openSubagent' | 'setSubagentCatalogOpen' | 'refreshSubagents'
-      | 'clear' | 'search' | 'fork'
+      | 'refresh' | 'clear' | 'search' | 'fork'
     args: unknown[]
   }[] = []
 
@@ -437,6 +445,12 @@ export class TestSessions implements ISessions {
   /** Record a catalog refresh; fixture callers drive snapshots explicitly. */
   refreshSubagents(parentSessionId: SessionId): Promise<void> {
     this.calls.push({ method: 'refreshSubagents', args: [parentSessionId] })
+    return Promise.resolve()
+  }
+
+  /** Record a session-list re-pull; fixture callers drive snapshots explicitly. */
+  refresh(): Promise<void> {
+    this.calls.push({ method: 'refresh', args: [] })
     return Promise.resolve()
   }
 

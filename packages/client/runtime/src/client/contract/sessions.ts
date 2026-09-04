@@ -127,4 +127,10 @@ export interface ISessions {
    * @returns binding, or undefined for a session neither listed nor already scoped.
    */
   binding(id: SessionId): SessionBinding | undefined
+  /**
+   * Re-pull the session list from the Host (a release moves a session from
+   * attached back to cold, and the re-pull reflects that without dropping the
+   * durable row from the sidebar).
+   */
+  refresh(): Promise<void>
 }

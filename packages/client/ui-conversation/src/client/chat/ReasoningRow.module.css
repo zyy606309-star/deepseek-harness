@@ -66,12 +66,42 @@
 }
 
 .thinkBody {
-  padding: 4px 0 4px 22px;
+  /* Opaque rounded window: the expanded reasoning must sit on a solid
+     surface, not let the transcript/bubble background show through the long
+     text, and read as its own card rather than a strip hugging the column
+     edge. The base and border-1 alias tokens resolve to `transparent` under
+     the runtime theme, so the content-block surface (the same token behind
+     code frames and the tool cards) is used for the fill and an opaque static
+     neutral for the border — otherwise the window stays see-through. */
+  margin: 4px 8px 4px 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--dsw-static-neutral-800);
+  border-radius: 10px;
+  background: var(--dsw-alias-markdown-code-block);
   color: var(--dsw-alias-label-tertiary);
   font-size: calc(14px * var(--dsw-font-scale));
   line-height: 24px;
   white-space: pre-wrap;
   word-break: break-word;
+  /* A long reasoning transcript must not stretch the whole column: the
+     expanded body caps and scrolls inside its own surface, like the
+     tool-row expanded bodies (ToolRow bodyScroll/ioSection). */
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+/* Card-internal scrollbar: a 2px transparent border clips the thumb inward
+   so it floats off the rounded edge instead of hugging it (same treatment
+   as ToolRow's ioSection and TerminalBlock's output scroller). */
+.thinkBody::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 6px;
+}
+
+/* Track end-margins keep the thumb's travel out of the rounded corners. */
+.thinkBody::-webkit-scrollbar-track {
+  margin: 6px 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -83,14 +83,24 @@
    glass layer stays transparent and the sidebar keeps its theme fill. */
 :global(body[data-we-wallpaper]) .root {
   background: transparent !important;
-  /* Dark ink over the opaque light card (the reference look): the sidebar text
-     and icons go dark so they stay readable on the fixed pale surface, instead
-     of riding the theme's light-on-dark labels. */
-  color: rgb(32, 32, 38) !important;
-  --dsw-alias-label-primary: rgb(32, 32, 38) !important;
-  --dsw-alias-label-secondary: rgb(78, 80, 88) !important;
-  --dsw-alias-label-tertiary: rgb(120, 122, 130) !important;
+  /* Dark ink over the glass pane: the sidebar text and icons go dark so they
+     stay readable on the frosted surface against a busy wallpaper. Pushed
+     toward true black for strong contrast — the workspace header rides the
+     secondary ink and the session rows the primary — so the column reads bold
+     and crisp over the pale glass instead of receding into it. */
+  color: rgb(10, 10, 14) !important;
+  --dsw-alias-label-primary: rgb(10, 10, 14) !important;
+  --dsw-alias-label-secondary: rgb(44, 46, 54) !important;
+  --dsw-alias-label-tertiary: rgb(72, 74, 84) !important;
 }
+:global(body[data-we-wallpaper]) .root .newSession {
+  /* A soft real-fill surface — not the bright white that reads glaring — so
+     the top action stands out against the pale glass with the deepened ink
+     while staying muted. */
+  background: rgb(209, 211, 217) !important;
+  border-color: rgba(180, 180, 180, 0.45) !important;
+}
+
 :global(body[data-we-wallpaper]) .root::before {
   /* A frosted-glass pane that reads bright and clean (whiter, brighter, higher
      sat) but stays a translucent glass — not an opaque card: no drop shadow and
@@ -305,20 +315,6 @@
    secondary icon-button ink. */
 .collapsed .iconButton {
   color: var(--dsw-alias-label-primary);
-}
-
-.buildRevision {
-  display: inline-flex;
-  align-items: center;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 3px;
-  color: var(--dsw-alias-label-primary-inverted);
-  background: var(--dsw-alias-label-primary);
-  font-family: var(--ds-font-family-code);
-  font-size: 8px;
-  font-weight: 500;
-  line-height: 16px;
 }
 
 /* New Session: 38px bar, 12px radius (figma 133:7634 geometry, squared-off

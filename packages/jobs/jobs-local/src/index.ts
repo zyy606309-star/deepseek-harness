@@ -27,6 +27,9 @@ export const TASK_WAIT_TIMEOUT = 'TASK_WAIT_TIMEOUT'
 /** Default maximum number of active jobs in one exact-owner bucket. */
 const DEFAULT_MAX_CONCURRENT_TASKS_PER_OWNER = 10
 
+/** Default retention of a settled, reported job before it is reclaimed. */
+const DEFAULT_COMPLETED_RETAIN_MS = 60_000
+
 /** Configuration for the process-local job registry. */
 export interface Config {
   /**
@@ -34,6 +37,13 @@ export interface Config {
    * omission defaults to 10.
    */
   maxConcurrentJobsPerOwner?: number
+  /**
+   * How long a settled job keeps its record after it is reported (read, waited,
+   * killed, or teardown-cancelled) before lazy reclamation drops it from the
+   * store. A negative value retains terminal records forever. Omission defaults
+   * to 60 seconds.
+   */
+  completedRetainMs?: number
 }
 
 /** The registry's mutable per-job record (never handed out — see {@link LocalJobRegistry.snapshot}). */
@@ -95,10 +105,14 @@ export class LocalJobRegistry extends JobRegistry {
       .min(1)
       .max(Number.MAX_SAFE_INTEGER)
       .default(DEFAULT_MAX_CONCURRENT_TASKS_PER_OWNER),
+    completedRetainMs: z.number()
+      .default(DEFAULT_COMPLETED_RETAIN_MS),
   })
 
   /** Schemastery-defaulted active-job limit. */
   private readonly maxConcurrentJobsPerOwner: number
+  /** Retention window for a settled, reported job before lazy reclamation. */
+  private readonly completedRetainMs: number
   private store = new Map<JobId, TrackedTask>()
   private counters = new Map<string, number>()
   /**
@@ -124,6 +138,7 @@ export class LocalJobRegistry extends JobRegistry {
     super(ctx)
     // Schemastery validates and fills the default before constructing the service.
     this.maxConcurrentJobsPerOwner = (config as Required<Config>).maxConcurrentJobsPerOwner
+    this.completedRetainMs = (config as Required<Config>).completedRetainMs
     this.selfCtx = ctx
     ctx.effect(() => () => this.disposeAll(), 'jobs teardown')
   }
@@ -190,6 +205,7 @@ export class LocalJobRegistry extends JobRegistry {
   }
 
   list(caller?: Agent): JobSnapshot[] {
+    this.maybeReclaim()
     const session = caller?.id
     return [...this.store.values()]
       .filter(job => job.owner === undefined || job.owner.id === session)
@@ -197,12 +213,14 @@ export class LocalJobRegistry extends JobRegistry {
   }
 
   get(id: JobId, caller?: Agent): JobSnapshot {
+    this.maybeReclaim()
     const job = this.expect(id)
     this.assertAccess(job, caller)
     return this.snapshot(job)
   }
 
   read(id: JobId, caller?: Agent): JobRead {
+    this.maybeReclaim()
     const job = this.expect(id)
     this.assertAccess(job, caller)
     const text = job.readOutput !== undefined
@@ -403,6 +421,29 @@ export class LocalJobRegistry extends JobRegistry {
         this.selfCtx.logger.warn(`jobs: onJobsChanged listener threw: ${String(error)}`)
       }
     }
+  }
+
+  /**
+   * Lazy reclamation: drop settled, reported jobs whose retention window has
+   * elapsed and announce each affected owner (or `undefined` for an unowned
+   * drop). A job is never reclaimed while it still has live waiters, even if
+   * its window elapsed, because those waits are obligated to resolve against
+   * the terminal snapshot. Reads terminate the window for a reported job that
+   * was previously unreported, so a job the user just read keeps its record for
+   * the configured window rather than being dropped on the next scan.
+   * @param now - epoch ms used for the retention comparison; injectable for tests.
+   */
+  private maybeReclaim(now: number = Date.now()): void {
+    if (this.completedRetainMs < 0) return
+    const reclaimed = new Set<Agent | undefined>()
+    for (const [id, job] of this.store) {
+      if (!isTerminal(job.status) || job.waiters > 0) continue
+      if (job.finishedAt === undefined) continue
+      if (now - job.finishedAt <= this.completedRetainMs) continue
+      this.store.delete(id)
+      reclaimed.add(job.owner)
+    }
+    for (const owner of reclaimed) this.notifyChanged(owner)
   }
 
   /**

@@ -27,6 +27,16 @@
   - 特征 7 inline hook 检测、特征 8 Frida 痕迹、特征 9 环境异常、特征 11 CRC/完整性
 - **整体应对**：先认「自毁签名」（低地址+sp/lr清零+回溯打空）→ 摸检测面（过反静态门槛）→ 源头 NOP 自毁点 + 按终止原语类兜底 + 页0 retstub + seccomp → 先冻看门狗再冻 main → 压住自毁让 App 跑起来 → 从 native heap（scudo:secondary）按 dex endian_tag 锚点脱业务 dex。
 
+- **企业版 / SecNeo 变种（`libDexHelper` 双层装载 + 检测器/执法器分离，实战补充）**：
+  - **双层装载**：磁盘 `libDexHelper.so` = **明文外层 loader ELF**（有有效 dynsym/PLT，可静态解析，但只有 loader 逻辑）+ **PT#3 内嵌的加密内层 ELF**；`JNI_OnLoad` 把内层 ELF 解密到**匿名 RX 内存**再运行，真正的检测逻辑全在内层 ELF（磁盘 so 上看不到，必须运行时 dump 内层 ELF）。内层 ELF 加密不是简单 XOR、非纯 zlib（解密核心被 OLLVM 混淆），动态绕过时**不必解出内层 ELF**，直接对运行时匿名 RX 段做内存 patch 即可。
+  - **检测链拆成「检测器 / 执法器」两级**（这是理解新版的关键）：
+    - **启动期 Frida 检测**：内层 verdict 位（如 `ctx[4]`）判脏 → 不注册业务 dex → 业务类加载时 `art::OatDexFile::FindClassDef` 崩在低地址（如 `0xa8`）。
+    - **attach 期 ptrace 检测**：主进程内自毁桩 `br 低地址`（清 SP/LR，制造 pc/sp/lr=0 的伪崩溃）。
+    - **运行期 root 检测**：由 **fork 出的独立看门狗子进程**执行，子进程**重新解密内层 ELF、基址与主进程不同**；检测到 root 后子进程 `br 低地址` 自毁 + `kill(-1,9)` 杀整个进程组——这是「主进程 patch 全净仍死 signal 9」的根因。
+  - **新版相对旧版新增检测函数**：旧版 root 检测只有两处 site，新版加了第三个检测器（某样本实测为 `0x36390`，宿主函数 `0x36030`）——**三串三查三 verdict 的 triple-check**：解密 MAGISK/ZYGOSK 等 3 个加密串各查一次，命中经 PLT 间接上报（`br [GOT]`），本身是**检测器不是执法器**。**版本差异只体现在「检测器数量/位置变」，执法链（gate + `kill(-1,9)` + `br` 自毁）不变**——因此绕过执法链后，新增检测器随之失效，思路与旧版基本相同，无需逐个 patch 新增检测器。
+  - **绕过配方（进程级，不隐藏 root）**：主进程内存 patch（中和全部内联 `kill(-1,9)`：`mov w1,#9→#0` + 自毁 gate `tbnz→b` + state 安全位）→ host 侧 `device.enumerate_processes()` 按同名枚举 + `device.kill(非主进程)` 击杀全部看门狗子进程。**击杀检测载体进程 = 让检测函数不再执行，符合函数级/进程级绕过，不碰环境层。**
+  - ⚠️ 偏移（`0xa8` / `0x79c` / `0x36390` 等）为**某样本实测值，随 build 变**；本画像只记「双层装载 + 检测器/执法器分离 + fork 看门狗 + 三重 root 检测」这些**结构特征**，具体地址以目标样本运行时 dump 为准。
+
 ### 娜迦（Naga，标志：`libmsaoaidsec.so`，JNI_OnLoad 日志标签 `NagaLinker v8.83`）
 
 - **代表性文章**：看雪 292547（娜迦杀进程）、291403（娜迦 Hook 时机）

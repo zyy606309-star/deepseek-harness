@@ -93,7 +93,7 @@ export function MessageImage({ attachment, load, variant, labels }: {
       >
         {src === null
           ? <span className={css.loading}>{labels.loading}</span>
-          : <img src={src} alt={label} style={fit === undefined ? undefined : { objectPosition: fit.objectPosition }} />}
+          : <img src={src} alt={label} loading="lazy" decoding="async" style={fit === undefined ? undefined : { objectPosition: fit.objectPosition }} />}
       </button>
       {open && src !== null && <ImageLightbox src={src} alt={label} labels={labels.lightbox} onClose={close} />}
     </>

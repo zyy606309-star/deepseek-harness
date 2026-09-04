@@ -9,46 +9,34 @@
 import { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { readdirSync } from 'node:fs'
-import { open, mkdir, readFile, readdir, realpath, link, rm, stat, truncate } from 'node:fs/promises'
+import { open, mkdir, readdir, realpath, link, rm, stat, truncate } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
-import { performance } from 'node:perf_hooks'
-import { scheduler } from 'node:timers/promises'
 import { randomBytes } from 'node:crypto'
 import {
   DEFAULT_PREPARED_SESSION_CACHE_SIZE, DEFAULT_WRITE_BATCH_MAX_DELAY_MS, MAX_WRITE_BATCH_DELAY_MS,
-  SessionPersistence, SessionPersistenceRevision, PersistenceCoordinator, SessionFormatUnsupportedError,
+  SessionPersistence, PersistenceCoordinator, SessionFormatUnsupportedError,
   type PersistenceBackend, type SessionLocation, type SessionPersistenceSnapshot,
   type SessionInspection, type SessionPersistenceRevision as PersistenceRevision, type SessionRawArtifact,
   type StoredPrefix,
 } from '@deepseek-ai/dsh-session-persistence'
 import type { SessionEvent, SessionId, SessionHeader, SessionPreparation } from '@deepseek-ai/dsh-session'
 import {
-  encodeSegment, eventLines, logPath, logSuffix, parseHeaderMeta, projectDir, scanLog, sessionDir,
-  SessionLogScanner, toHeaderLine,
+  eventLines, logPath, logSuffix, parseHeaderMeta, projectDir, sessionDir, toHeaderLine,
   type JsonlCompression,
 } from './format.ts'
 import {
-  compressZstdFrame, createZstdFrameDecoder, decompressZstdFrame, decompressZstdPrefix, scanZstdFrames,
+  compressZstdFrame, createZstdFrameDecoder, decompressZstdFrame, scanZstdFrames,
 } from './zstd.ts'
 import { ensureDurableDirectoryWin32, publishNewFileWin32 } from './win32.ts'
+import {
+  assertZstdHeaderFrame, fileRevision, isENOENT, readPrefixBuffer, readStableFile, readZstdPrefixBuffer,
+  resolveLogPath,
+} from './decode.ts'
 
 export type { JsonlCompression } from './format.ts'
 
 const DEFAULT_PACK_CHUNKS = true
 const DEFAULT_COMPRESSION: JsonlCompression = 'zstd'
-/**
- * Internal scheduling constant, not deployment configuration: balance
- * frame-boundary event-loop yields against `setImmediate` overhead. One frame
- * remains an indivisible synchronous decode.
- */
-const ZSTD_DECODE_YIELD_INTERVAL_MS = 500
-
-/** Assert that the independently decodable first frame contains only the header record. */
-function assertZstdHeaderFrame(plaintext: Buffer): void {
-  if (plaintext.length === 0 || plaintext.indexOf(0x0A) !== plaintext.length - 1) {
-    throw new Error('corrupt Zstandard session log: first frame is not exactly one header line')
-  }
-}
 
 /** Loader schema for the JSONL artifact's physical encoding. */
 export const JsonlCompressionSchema: z<JsonlCompression> = z.union([
@@ -88,29 +76,7 @@ interface JsonlTornMarker {
   recoveredEvents: SessionEvent[]
 }
 
-interface FileRevisionIdentity {
-  readonly dev: bigint
-  readonly ino: bigint
-  readonly size: bigint
-  readonly mtimeNs: bigint
-  readonly ctimeNs: bigint
-}
 
-/** Build the source-qualified revision shared by full and lightweight reads. */
-function fileRevision(identity: FileRevisionIdentity): PersistenceRevision {
-  return SessionPersistenceRevision([
-    identity.dev,
-    identity.ino,
-    identity.size,
-    identity.mtimeNs,
-    identity.ctimeNs,
-  ].join(':'))
-}
-
-/** Whether a filesystem error means absence; every non-ENOENT failure must surface. */
-function isENOENT(error: unknown): boolean {
-  return (error as NodeJS.ErrnoException | null)?.code === 'ENOENT'
-}
 
 /**
  * The JSONL persistence backend. Load as a plugin; it registers as
@@ -293,14 +259,7 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
     path: string,
     signal?: AbortSignal,
   ): Promise<{ buffer: Buffer; revision: PersistenceRevision }> {
-    for (;;) {
-      signal?.throwIfAborted()
-      const before = fileRevision(await stat(path, { bigint: true }))
-      const buffer = await readFile(path, { signal })
-      signal?.throwIfAborted()
-      const after = fileRevision(await stat(path, { bigint: true }))
-      if (before === after) return { buffer, revision: after }
-    }
+    return readStableFile(path, signal)
   }
 
   /**
@@ -318,16 +277,7 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
       if (this.compression === 'zstd') {
         prefix = await this.readZstdPrefix(buffer, signal)
       } else {
-        signal?.throwIfAborted()
-        const { meta, events, committedBytes } = scanLog(buffer)
-        signal?.throwIfAborted()
-        prefix = {
-          meta,
-          events,
-          ...committedBytes < buffer.byteLength
-            ? { tornMarker: { truncateTo: committedBytes, recoveredEvents: [] } }
-            : {},
-        }
+        prefix = await readPrefixBuffer(buffer, 'none', signal)
       }
     } catch (error: unknown) {
       // A parse-time format refusal predates any SessionHeader, so the
@@ -349,73 +299,7 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
     buffer: Buffer,
     signal?: AbortSignal,
   ): Promise<Omit<StoredPrefix<JsonlTornMarker>, 'revision'>> {
-    signal?.throwIfAborted()
-    const { frames, tornStart } = scanZstdFrames(buffer)
-    signal?.throwIfAborted()
-    if (frames.length === 0) throw new Error('empty or header-less Zstandard session log')
-
-    const decoder = createZstdFrameDecoder()
-    let yieldDeadline = performance.now() + ZSTD_DECODE_YIELD_INTERVAL_MS
-    try {
-      const decodedFrames = decoder.decode(buffer, frames)
-      signal?.throwIfAborted()
-      const headerFrame = decodedFrames.next()
-      signal?.throwIfAborted()
-      /* v8 ignore next -- a non-empty structural frame list makes the decoder yield its first frame or throw. */
-      if (headerFrame.done) throw new Error('empty or header-less Zstandard session log')
-      assertZstdHeaderFrame(headerFrame.value)
-      const scanner = new SessionLogScanner(headerFrame.value)
-
-      let remainingFrames = frames.length - 1
-      for (const plaintext of decodedFrames) {
-        signal?.throwIfAborted()
-        scanner.write(plaintext)
-        remainingFrames -= 1
-        if (remainingFrames > 0 && performance.now() >= yieldDeadline) {
-          await scheduler.yield()
-          signal?.throwIfAborted()
-          yieldDeadline = performance.now() + ZSTD_DECODE_YIELD_INTERVAL_MS
-        }
-      }
-      signal?.throwIfAborted()
-      const complete = scanner.checkpoint()
-      if (complete.committedBytes !== complete.inputBytes) {
-        throw new Error('corrupt Zstandard session log: complete frame contains a torn JSONL record')
-      }
-      if (tornStart === undefined) {
-        const prefix = scanner.finish()
-        return { meta: prefix.meta, events: prefix.events }
-      }
-
-      let recoveredPlaintext: Buffer = Buffer.alloc(0)
-      try {
-        signal?.throwIfAborted()
-        recoveredPlaintext = await decompressZstdPrefix(buffer.subarray(tornStart))
-      } catch {
-        /* v8 ignore next -- decoder failure plus concurrent abort is timing-dependent */
-        if (signal?.aborted) signal.throwIfAborted()
-        // A structurally incomplete final frame may end before Node's decoder can
-        // emit any plaintext; the complete prior frames remain recoverable.
-      }
-      signal?.throwIfAborted()
-      scanner.write(recoveredPlaintext)
-      const recoveredPrefix = scanner.finish()
-      signal?.throwIfAborted()
-      return {
-        meta: recoveredPrefix.meta,
-        events: recoveredPrefix.events,
-        tornMarker: {
-          truncateTo: tornStart,
-          recoveredEvents: recoveredPrefix.events.slice(complete.eventCount),
-        },
-      }
-    } catch (error) {
-      /* v8 ignore next -- decoder failure plus concurrent abort is timing-dependent */
-      if (signal?.aborted) signal.throwIfAborted()
-      throw error
-    } finally {
-      decoder.close()
-    }
+    return readZstdPrefixBuffer(buffer, signal)
   }
 
   /** Durably append a batch, lazily materializing the file when not yet present. */
@@ -772,26 +656,7 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
 
   /** Find the unique physical log for an id across every project directory. */
   private async findLog(id: SessionId, signal?: AbortSignal): Promise<string | undefined> {
-    const matches: string[] = []
-    for (const project of await this.listProjectDirs(signal)) {
-      signal?.throwIfAborted()
-      await this.rejectLegacyFlatArtifact(project, id, signal)
-      signal?.throwIfAborted()
-      const dir = join(project, encodeSegment(id))
-      const path = join(dir, `session${logSuffix(this.compression)}`)
-      const opposite = join(dir, `session${logSuffix(this.oppositeCompression())}`)
-      const oppositeExists = await this.exists(opposite)
-      signal?.throwIfAborted()
-      if (oppositeExists) throw this.encodingMismatch(opposite)
-      const pathExists = await this.exists(path)
-      signal?.throwIfAborted()
-      if (pathExists) matches.push(path)
-    }
-    if (matches.length > 1) {
-      throw new Error(`duplicate JSONL session id "${id}" appears in multiple project directories`)
-    }
-    signal?.throwIfAborted()
-    return matches[0]
+    return resolveLogPath(this.root, this.compression, id, signal)
   }
 
   /** Require an existing configured root to be a readable directory. */
@@ -884,21 +749,6 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
         const incompatible = join(dir, `session${logSuffix(this.oppositeCompression())}`)
         if (await this.exists(incompatible)) throw this.encodingMismatch(incompatible)
       }
-    }
-  }
-
-  private async rejectLegacyFlatArtifact(
-    project: string,
-    id: SessionId,
-    signal?: AbortSignal,
-  ): Promise<void> {
-    signal?.throwIfAborted()
-    const encoded = encodeSegment(id)
-    for (const compression of ['zstd', 'none'] as const) {
-      const path = join(project, encoded + logSuffix(compression))
-      const artifactExists = await this.exists(path)
-      signal?.throwIfAborted()
-      if (artifactExists) throw this.legacyLayout(path)
     }
   }
 

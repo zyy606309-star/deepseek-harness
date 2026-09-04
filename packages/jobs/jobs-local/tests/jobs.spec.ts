@@ -1135,3 +1135,78 @@ describe('LocalJobRegistry teardown change notifications', () => {
     expect(seen).toEqual([undefined, undefined, undefined])
   })
 })
+
+describe('LocalJobRegistry completed-job reclamation', () => {
+  /** Age one settled job's record so its retention window has elapsed. */
+  function ageJob(service: { store: Map<JobId, { finishedAt: number | undefined }> }, id: JobId, elapsedMs: number): void {
+    const job = service.store.get(id)
+    if (job === undefined) throw new Error(`missing test job ${id}`)
+    if (job.finishedAt === undefined) throw new Error(`test job ${id} has not settled`)
+    job.finishedAt = job.finishedAt - elapsedMs
+  }
+
+  it('keeps a settled, reported job within its retention window', async () => {
+    const ctx = await harness({ completedRetainMs: 60_000 })
+    const p = producer()
+    const id = ctx.jobs.start(p.spec)
+    p.settle({ status: 'completed', detail: 'exit code: 0' })
+    await tick()
+    // A terminal read reports the job; the record is still present and readable.
+    expect(ctx.jobs.read(id).snapshot).toMatchObject({ status: 'completed', reported: true })
+    expect(ctx.jobs.list()).toHaveLength(1)
+  })
+
+  it('lazily reclaims a settled, reported job once its window elapses', async () => {
+    const ctx = await harness({ completedRetainMs: 5_000 })
+    const p = producer()
+    const id = ctx.jobs.start(p.spec)
+    p.settle({ status: 'completed', detail: 'exit code: 0' })
+    await tick()
+    expect(ctx.jobs.read(id).snapshot).toMatchObject({ status: 'completed', reported: true })
+
+    // Age the record past the window; the next read/list reclaims it, so that
+    // read now fails loud like any unknown job.
+    const service = ctx.jobs as unknown as { store: Map<JobId, { finishedAt: number | undefined }> }
+    ageJob(service, id, 10_000)
+    expect(() => ctx.jobs.read(id)).toThrow(`unknown job ${id}`)
+    expect(ctx.jobs.list()).toEqual([])
+  })
+
+  it('reclaims a settled job on age even when no read ever reported it', async () => {
+    const ctx = await harness({ completedRetainMs: 5_000 })
+    const p = producer()
+    const id = ctx.jobs.start(p.spec)
+    p.settle({ status: 'completed', detail: 'exit code: 0' })
+    await tick()
+    // The completion notice is delivered by onJobDone at settlement; the job is
+    // never explicitly read, so `reported` stays false. Age elapses the window
+    // and the record is reclaimed regardless — otherwise a settled job the
+    // owner never reads would stay in the store forever.
+    const service = ctx.jobs as unknown as { store: Map<JobId, { finishedAt: number | undefined; reported: boolean }> }
+    expect(service.store.get(id)?.reported).toBe(false)
+    expect(service.store.has(id)).toBe(true)
+    ageJob(service, id, 10_000)
+    ctx.jobs.list()
+    expect(service.store.has(id)).toBe(false)
+  })
+
+  it('announces an owner-granular change when it reclaims one of that owner jobs', async () => {
+    const ctx = await harness({ completedRetainMs: 5_000 })
+    const owner = stubAgent(ctx, 'alice')
+    ctx.agents.register(owner)
+    const seen: (string | undefined)[] = []
+    ctx.jobs.onJobsChanged(changed => void seen.push(changed?.id))
+    const p = producer({ owner })
+    const id = ctx.jobs.start(p.spec)
+    p.settle({ status: 'completed' })
+    await tick()
+    expect(ctx.jobs.read(id, owner).snapshot).toMatchObject({ status: 'completed', reported: true })
+
+    const service = ctx.jobs as unknown as { store: Map<JobId, { finishedAt: number | undefined }> }
+    ageJob(service, id, 10_000)
+    ctx.jobs.list(owner)
+    expect(seen).toContain('alice')
+    expect(ctx.jobs.list(owner)).toEqual([])
+    await disposeAgentScope(owner)
+  })
+})
