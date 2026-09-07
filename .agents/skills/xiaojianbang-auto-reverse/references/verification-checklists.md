@@ -112,9 +112,9 @@
 
 ## 定制系统脱壳验证
 
-仅当用户确认设备为「小肩膀定制系统」时适用（见 `references/custom-system.md`）：
+仅当设备为「小肩膀定制系统」（`19051FDF60018V`）时适用（见 `references/custom-system.md`、`references/environment.md`）：
 
-- 已先询问并记录设备是否为定制系统。
+- 已确认当前连接设备为定制系统设备 `19051FDF60018V`（非普通 root `11FAFS00000VYM`），并已在实验记录写明设备序列号。
 - 抽取式脱壳：`/data/local/tmp/<pkg>` 启用目录已建，App 已打开并等待足够时间（约 1 分钟）。
 - 产物目录 `/data/data/<pkg>/xiaojianbang/` 下 `.dex`、`.bin`、`.txt` 均已生成。
 - 只脱指定类时，`include_classes.txt` 已按"类名开头匹配"规则写入。

@@ -2,7 +2,7 @@
 
 ## 使用前提
 
-`dexfix_runner.py` 只用于小肩膀定制系统抽取式加固脱壳产物。使用前必须先按 `references/custom-system.md` 询问并记录设备是否为「小肩膀定制系统」。
+`dexfix_runner.py` 只用于小肩膀定制系统抽取式加固脱壳产物。使用前必须先按 `references/custom-system.md` 确认当前设备为定制系统设备 `19051FDF60018V`，并在实验记录写明设备序列号。
 
 ## dexfixer / dexfix_runner
 
