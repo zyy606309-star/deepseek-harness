@@ -16,6 +16,7 @@
 | rz-ghidra（伪代码） | `<RZ_GHIDRA_STATUS>`：未装（官方仅源码包、无 Windows 预编译）→ 伪代码走 Ghidra headless |
 | garlic（Java 反编译首选） | `<GARLIC_PATH>`，例如 `D:\garlic-build\garlic-main\build\garlic.exe`；C 实现、秒级反编译 apk/dex/class/jar |
 | garlic `-n`（ELF 分析） | 默认不用；仅用户明确要求时用（Windows 上 `librosemarylib.dll` 运行时加载有依赖坑） |
+| ASC（按需查询/引用查找） | `<ASC_DIR>`，例如 `D:\garlic-build\asc`（仓库根含 `main.py`、`src/asc_core/`）；纯 Python，依赖 `androguard` + `loguru`；与 garlic 互补（按需定位 vs 全量反编译），见 `tooling-and-paths.md` |
 | jadx（Java 反编译回退） | `<JADX_CLI>`，例如 `D:\tools\jadx-1.5.6\bin\jadx-cli.bat` |
 | jadx GUI | 不用（可选填 `<JADX_GUI>`） |
 | JDK（jadx wrapper 用） | `<JDK17>`，例如 `D:\openjdk-17_windows-x64_bin\jdk-17` |
@@ -30,6 +31,16 @@
 <GARLIC_PATH> <apk> -g          # 生成调用图（可选）
 ```
 > garlic 无需关 dex checksum（无 jadx 的 checksum 坑）。默认不用 `-n`；仅用户明确要求时才用。garlic 不可用时回退 jadx。
+
+### ASC 调用约定（按需查询/引用查找，与 garlic 互补）
+```bat
+python <ASC_DIR>\main.py getclass <apk> <类名> [-o out.java]
+python <ASC_DIR>\main.py findrefs <apk> string <值> [-o refs.txt]
+python <ASC_DIR>\main.py findrefs <apk> type <类名>
+python <ASC_DIR>\main.py findrefs <apk> method <方法名> [--class <类>] [--fuzzy-class]
+python <ASC_DIR>\main.py findrefs <apk> field <字段名> [--class <类>] [--fuzzy-class]
+```
+> 定位"某个类/谁引用了某方法或字符串"用 ASC；需要通读整个 App 的 Java 源码用 garlic。大 APK 先 ASC 定位，再 garlic/jadx 精读。
 
 ### jadx 调用约定（回退）
 ```bat

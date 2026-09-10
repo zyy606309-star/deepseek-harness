@@ -62,6 +62,20 @@ garlic 是 C 编译产物（Windows/macOS/Linux 各平台二进制），**不随
 - 编译产物 `build/garlic`(或 `garlic.exe`) 路径填入 `environment.md` 的 `<GARLIC_PATH>`。
 - garlic 的 `-n`（ELF 分析）默认不用；Windows 上 `librosemarylib` 运行时加载有依赖坑，仅用户明确要求时才试。
 
+## ASC 获取（不随技能分发）
+
+ASC（Droid ASC）是纯 Python 项目，**不随技能分发**（仓库含大型 `docs/*.mp4` 演示视频，不适合入仓）：
+
+```sh
+git clone https://github.com/MG1937/ASC.git
+pip install androguard loguru
+```
+
+- 仓库根目录含 `main.py` 与 `src/`，用系统 Python 直接运行 `python main.py ...`。
+- 依赖只有 `androguard` + `loguru`（其余为标准库）。
+- 克隆目录填入 `environment.md` 的 `<ASC_DIR>`。
+- 用法与分工（与 garlic 互补）见 `tooling-and-paths.md`。
+
 ## 默认行为
 
 - 已存在的工具目录和 runner 脚本会保留，不覆盖。
