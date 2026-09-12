@@ -1,0 +1,168 @@
+{
+  "fields": [
+    {
+      "path": "系统完整性 / 篡改检测",
+      "signals": ["tamper"],
+      "risk": "完整性是所有其他采集项的前提。如果系统已被篡改，那么任何字段的取值都只是“攻击者希望你看到的值”，风控必须先回答“我能否信任这台设备的自我陈述”。",
+      "detect": "自下而上验证信任链：Bootloader 状态 → Verified Boot → 分区哈希 → 系统关键文件 → APK 签名 → 运行时注入。上层校验必须在 native 层实现，否则会被 Java 层 Hook 绕过。",
+      "spoof": "Magisk DenyList、shamiko 等模块专门隐藏 root 痕迹，因此更可靠的是硬件级证明（Play Integrity / 硬件密钥认证）而非本地文件探测。",
+      "anomaly": "vbmeta.device_state=unlocked；veritymode=disabled；ro.build.tags 含 test-keys。",
+      "links": [{ "to": "设备唯一性 > 硬件信任根", "type": "根本依赖", "note": "本地检测可被绕过，硬件证明才是可信根" }]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > APK 签名",
+      "signals": ["tamper"],
+      "risk": "重打包应用会替换签名以插入自己的代码（改机、破解、外挂），签名校验失败意味着客户端逻辑已被改造。",
+      "detect": "GET_SIGNING_CERTIFICATES 取签名证书 SHA-256，与内置期望值在 native 层比对；同时校验 APK 自身文件哈希与 sourceDir 路径是否异常。",
+      "spoof": "Hook PackageManager 返回原始签名是标准套路，因此比对逻辑与期望值都应在 so 中并做完整性自检。",
+      "anomaly": "签名哈希不符；sourceDir 不在 /data/app 下；同一包名存在多个安装实例。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 应用行为 > 应用签名信息", "type": "同一判据" },
+        { "to": "系统完整性 / 篡改检测 > 注入框架检测", "type": "对抗关系" }
+      ]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > 分区元数据",
+      "signals": ["tamper"],
+      "risk": "system/vendor 分区若被重新挂载为可写，说明系统已被改动，Verified Boot 的保护已失效。",
+      "detect": "读 /proc/mounts 检查 system/vendor 挂载标志是否含 rw；检查 dm-verity 状态与 ro.boot.veritymode。",
+      "anomaly": "system 分区 rw 挂载；veritymode=disabled 或 eio；存在 overlayfs 覆盖系统目录。"
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > 分区内容哈希",
+      "signals": ["tamper"],
+      "risk": "对关键系统文件做哈希是识别定制 ROM 与注入的直接手段，同时也构成一个稳定的 ROM 指纹。",
+      "detect": "对固定清单文件（如 /system/build.prop、framework.jar、关键 so）取哈希并上报，服务端按机型+ROM 版本聚类，离群即异常。",
+      "spoof": "篡改者可 Hook 文件读取接口，故应使用 native syscall 直读并校验读取路径未被重定向。",
+      "anomaly": "同机型同 ROM 版本下哈希离群；文件大小与时间戳异常。"
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > 关键文件完整性",
+      "signals": ["tamper"],
+      "risk": "su、magisk、busybox 等文件的存在是 root 的直接证据；反之，正常系统不应有这些路径。",
+      "detect": "native 层 access()/stat() 探测常见路径（/system/xbin/su、/sbin/su、/data/adb/magisk 等），并检查 PATH 中可执行文件。",
+      "spoof": "Magisk 的 mount namespace 隔离会让目标应用看不到这些文件，因此需结合属性异常与 SELinux 状态。",
+      "anomaly": "命中任一 su/magisk 路径；/data/local/tmp 下存在可执行文件。",
+      "links": [{ "to": "Hook 框架 / 注入检测 > Magisk/Zygisk 特征检测", "type": "同族判据" }]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > 装包清单",
+      "signals": ["tamper", "multi"],
+      "risk": "已装应用清单同时刻画用户画像与作弊工具链，也可作为设备聚类维度（清单哈希相同=镜像批量部署）。",
+      "detect": "PackageManager 枚举（注意 Android 11+ 权限限制），对包名集合排序后取哈希上报。",
+      "anomaly": "清单命中改机/多开/root 管理器；清单哈希跨设备重复。",
+      "links": [{ "to": "自动化 / 群控检测 > 应用行为", "type": "同一数据源" }]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > 注入框架检测",
+      "signals": ["hook", "tamper"],
+      "risk": "注入框架的存在直接摧毁采集可信度，属于最高优先级的元风险。",
+      "detect": "扫描 /proc/self/maps 中可疑 so、检查 classloader 层级、探测 Xposed/Frida 特征（见 Hook 分类）。",
+      "links": [{ "to": "Hook 框架 / 注入检测", "type": "详见分类" }]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > ROM 一致性",
+      "signals": ["tamper", "emulator", "reset"],
+      "risk": "ROM 相关属性彼此高度耦合：fingerprint 里包含品牌、机型、版本、构建号、tags。任何改机工具只改其中几项就会破坏这种耦合。",
+      "detect": "解析 Build.FINGERPRINT 的各段，与 Build.BRAND/MODEL/DEVICE/ID/TAGS/VERSION 逐项交叉比对，再与内核版本、编译日期比对。",
+      "spoof": "成熟改机工具会同步改写全套属性，此时依靠服务端机型库（fingerprint → 应有 SoC/屏幕/传感器组合）反查更有效。",
+      "anomaly": "fingerprint 段与独立属性不一致；tags 含 test-keys；build type 为 userdebug/eng；内核编译日期晚于系统构建日期。",
+      "links": [
+        { "to": "设备唯一性 > 系统标签", "type": "同一数据源" },
+        { "to": "设备唯一性 > ro.build.type", "type": "同一数据源" },
+        { "to": "设备唯一性 > 品牌", "type": "一致性校验" }
+      ]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > ROM 一致性 > 系统指纹 (Fingerprint)",
+      "signals": ["tamper", "reset"],
+      "risk": "fingerprint 是机型的规范化身份串，也是改机检测的中枢字段。",
+      "detect": "Build.FINGERPRINT 与 ro.build.fingerprint 两处取值比对（Hook 常只改其一）。",
+      "anomaly": "两处取值不一致；fingerprint 格式非法；机型库中不存在该 fingerprint。"
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > ROM 一致性 > 内核版本",
+      "signals": ["tamper", "emulator"],
+      "risk": "内核版本字符串包含编译者、主机名与时间，自编译内核（常用于绕过检测）会在这里露出痕迹。",
+      "detect": "读 /proc/version，检查编译者与主机名是否为厂商官方格式。",
+      "anomaly": "编译者为个人用户名；含 KernelSU/-perf-g 等自编译标记；与 Android 版本不匹配的内核大版本。"
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > 安全证书",
+      "signals": ["debug", "tamper"],
+      "risk": "系统信任的证书集合被添加用户 CA，是抓包分析或流量改写的前置条件。",
+      "detect": "枚举 KeyStore 'AndroidCAStore' 中证书，统计用户来源 CA 数量；检查 /data/misc/user/0/cacerts-added。",
+      "anomaly": "用户 CA 数量 > 0；存在已知抓包工具证书（Charles/Fiddler/mitmproxy）。",
+      "links": [{ "to": "网络环境 / 代理检测 > SSL 证书链", "type": "同一判据" }]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > 分区内容哈希 > 字体缩放",
+      "signals": ["reset", "farm"],
+      "risk": "字体缩放、显示密度这类用户设置项组合起来构成弱指纹，且改机工具通常不会重置，可用于跨账号关联。",
+      "detect": "Settings.System FONT_SCALE、Configuration.fontScale、densityDpi 组合上报。",
+      "anomaly": "多个“不同设备”的设置组合完全一致。"
+    }
+  ],
+  "rules": [
+    {
+      "id": "R-TAMPER-001",
+      "name": "信任链破坏",
+      "level": "high",
+      "action": "禁止高价值操作（支付、提现、实名）",
+      "signals": ["tamper"],
+      "logic": "Bootloader 已解锁，或 dm-verity 关闭，或 build tags 含 test-keys",
+      "expr": "vbmeta_device_state = 'unlocked' OR veritymode != 'enforcing' OR build_tags ~ 'test-keys'",
+      "note": "这三项属系统级不可信声明，优先级高于任何业务规则。",
+      "fields": [
+        "设备唯一性 > ro.boot.vbmeta.device_state（Bootloader状态）",
+        "设备唯一性 > ro.boot.veritymode（系统校验模式）",
+        "系统完整性 / 篡改检测 > 分区元数据",
+        "设备唯一性 > 系统标签"
+      ]
+    },
+    {
+      "id": "R-TAMPER-002",
+      "name": "客户端重打包",
+      "level": "high",
+      "action": "立即终止会话并封禁设备",
+      "signals": ["tamper"],
+      "logic": "APK 签名哈希与期望值不符，或 sourceDir 异常，或包内 so 完整性校验失败",
+      "expr": "signature_sha256 != expected OR source_dir NOT LIKE '/data/app/%' OR so_integrity_failed",
+      "fields": [
+        "系统完整性 / 篡改检测 > APK 签名",
+        "自动化 / 群控检测 > 应用行为 > 应用签名信息",
+        "系统完整性 / 篡改检测 > 关键文件完整性"
+      ]
+    },
+    {
+      "id": "R-TAMPER-003",
+      "name": "ROM 属性不自洽",
+      "level": "high",
+      "action": "判定改机，设备维度处置",
+      "signals": ["tamper", "reset"],
+      "logic": "fingerprint 两处取值不一致，或 fingerprint 各段与独立属性冲突，或机型库中不存在该 fingerprint",
+      "expr": "fingerprint_java != fingerprint_prop OR fingerprint_segment_mismatch OR fingerprint NOT IN device_db",
+      "fields": [
+        "系统完整性 / 篡改检测 > ROM 一致性 > 系统指纹 (Fingerprint)",
+        "系统完整性 / 篡改检测 > ROM 一致性",
+        "设备唯一性 > 品牌",
+        "设备唯一性 > ro.product.device（设备型号）"
+      ]
+    },
+    {
+      "id": "R-TAMPER-004",
+      "name": "Root 环境",
+      "level": "medium",
+      "action": "限制敏感权益，提升风险分",
+      "signals": ["tamper"],
+      "logic": "命中 su/magisk 文件路径，或 SELinux 非 enforcing，或存在 Magisk 特征",
+      "expr": "su_path_hit OR selinux_status != 'enforcing' OR magisk_feature_hit",
+      "note": "Root 用户中存在大量正常玩机用户，宜限制而非直接封禁。",
+      "fields": [
+        "系统完整性 / 篡改检测 > 关键文件完整性",
+        "Hook 框架 / 注入检测 > SELinux 状态异常",
+        "Hook 框架 / 注入检测 > Magisk/Zygisk 特征检测"
+      ]
+    }
+  ]
+}

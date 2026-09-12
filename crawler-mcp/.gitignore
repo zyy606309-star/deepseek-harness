@@ -1,0 +1,12 @@
+# Python bytecode cache
+__pycache__/
+*.pyc
+
+# Runtime task artifacts: network captures, live transcripts, per-task output
+artifacts/
+
+# Local session data (never commit real credentials/cookies)
+data/
+**/config.local.json
+**/*cookie*.json
+**/*cookie*.txt

@@ -1,0 +1,237 @@
+{
+  "fields": [
+    {
+      "path": "系统完整性 / 篡改检测 > ROM 一致性 > build.prop 一致性",
+      "signals": ["tamper", "reset"],
+      "risk": "build.prop 是 ROM 身份的声明文件，改机工具的主战场。它内部的属性彼此高度耦合（品牌决定指纹格式、SoC 决定平台名、版本决定 SDK），单独改几项必然破坏耦合关系。",
+      "detect": "读取 /system/build.prop 与 /vendor/build.prop 原始文本，逐项解析后与运行时属性比对，并校验文件的 mtime 与哈希是否符合同机型基线。",
+      "spoof": "Magisk resetprop 只改内存中的属性值而不动文件，此时文件与运行时取值不一致正是破绽；反之直接改文件会破坏 dm-verity。",
+      "anomaly": "文件内容与运行时属性不一致；文件 mtime 晚于系统构建日期；属性项缺失或重复定义。",
+      "links": [
+        { "to": "系统完整性 / 篡改检测 > ROM 一致性 > System Property 多源一致性", "type": "验证手段" },
+        { "to": "系统完整性 / 篡改检测 > 分区元数据", "type": "同族判据" }
+      ]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > ROM 一致性 > System Property 多源一致性",
+      "signals": ["tamper", "hook"],
+      "risk": "同一属性有多条获取路径：Java 的 Build 类、SystemProperties 反射、native 的 __system_property_get、执行 getprop 命令、直读 build.prop 文件。篡改者很难同时覆盖所有路径，多源比对因此成为识别 Hook 与 resetprop 的通用手段——且不依赖任何特征串。",
+      "detect": "对关键属性（品牌、机型、指纹、tags、SoC）用四到五条路径分别取值，输出不一致项清单。native 路径应用 syscall 直读以规避 libc 层 Hook。",
+      "spoof": "Magisk resetprop 会同时影响属性服务的所有读取路径，但仍与 build.prop 文件内容不一致。",
+      "anomaly": "任一属性在不同路径下取值不同；native 与 Java 结论冲突。",
+      "links": [
+        { "to": "Hook 框架 / 注入检测 > Hook 命中列表", "type": "判定目标" },
+        { "to": "模拟器 / 虚拟环境 > QEMU 属性 > Build 类", "type": "同一手法" }
+      ]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > ROM 一致性 > ROM 签名（系统文件）",
+      "signals": ["tamper"],
+      "risk": "系统预装 APK 由厂商平台密钥签名。校验这些 APK 的签名能确认系统层是否被替换，且比校验单个文件哈希更稳定——哈希随版本变化，签名密钥长期不变。",
+      "detect": "解析 /system/framework/framework-res.apk 与 /system/app/*.apk 的签名证书，检查是否由厂商平台密钥签发以及是否统一。",
+      "anomaly": "签名为 AOSP test-keys；不同系统 APK 签名密钥不一致（部分被替换）；证书主体非厂商。",
+      "links": [
+        { "to": "系统完整性 / 篡改检测 > APK 签名", "type": "同一手法" },
+        { "to": "设备唯一性 > 系统标签", "type": "交叉验证" }
+      ]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > ROM 一致性 > Boot 镜像一致性",
+      "signals": ["tamper"],
+      "risk": "Magisk 通过 patch boot 镜像实现 systemless root，因此 boot/vendor_boot 分区哈希是识别 root 最接近根源的证据——即使上层痕迹被 DenyList 全部隐藏，被 patch 的镜像本身仍在。",
+      "detect": "native 层读取 /dev/block/by-name/boot 与 vendor_boot 分区内容计算哈希，与服务端按机型+ROM 版本聚类的基线比对（需权限，通常仅 root 环境可读——读不到本身是正常态）。",
+      "spoof": "读取分区需要权限，普通应用往往无法直接读；因此实际更多依赖 Verified Boot 状态与硬件证明，本项作为有权限时的强证据。",
+      "anomaly": "哈希在同机型同版本集群中离群；分区可读且内容含 magisk 特征串。",
+      "links": [
+        { "to": "系统完整性 / 篡改检测 > ROM 一致性 > Verified Boot 检测", "type": "互补判据", "note": "读不到分区时以 Verified Boot 状态兜底" },
+        { "to": "Hook 框架 / 注入检测 > Magisk/Zygisk 特征检测", "type": "同一目标" }
+      ]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > ROM 一致性 > Verified Boot 检测",
+      "signals": ["tamper"],
+      "risk": "Verified Boot 是 Android 从 Bootloader 起逐级校验的信任链。verifiedbootstate 与 flash.locked 两个属性直接给出信任链是否完整的结论，是判断“系统是否值得信任”成本最低的入口。",
+      "detect": "读 ro.boot.verifiedbootstate（期望 green）与 ro.boot.flash.locked（期望 1）；可靠做法是从 Key Attestation 证书扩展中读取 verifiedBootState 与 deviceLocked，属性可被改写而 attestation 不可。",
+      "anomaly": "verifiedbootstate 为 orange（已解锁）/yellow（自定义密钥）/red（校验失败）；flash.locked=0；属性缺失。",
+      "links": [
+        { "to": "设备唯一性 > 硬件信任根", "type": "可信来源", "note": "属性可被改写，attestation 中的同名字段不可" },
+        { "to": "设备唯一性 > ro.boot.vbmeta.device_state（Bootloader状态）", "type": "同一判据" }
+      ]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > ROM 一致性 > OTA 更新一致性",
+      "signals": ["tamper", "reset"],
+      "risk": "系统数据文件记录了应用安装历史与设备策略，其内容与系统声明的版本、时间线应当自洽。刷机与一键新机会留下时间线断裂的痕迹（如系统声称是新设备但 packages.xml 含大量历史记录，或反之）。",
+      "detect": "检查 /data/system/packages.xml 的 mtime 与条目数、/data/system/device_policies.xml、/cache/recovery 下的日志（recovery 刷机记录）。多数路径普通应用不可读，可读性本身即异常信号。",
+      "anomaly": "/cache/recovery 存在第三方 recovery 刷机日志；packages.xml 可被普通应用读取（权限异常）；文件时间线与系统构建/首次启动时间矛盾。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 应用行为 > apk第一次安装时间", "type": "时间线交叉验证" },
+        { "to": "自动化 / 群控检测 > 系统状态 > 系统运行时长 (Uptime)", "type": "时间线交叉验证" }
+      ]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > ROM 一致性 > ROM 文件完整性",
+      "signals": ["tamper"],
+      "risk": "对系统关键文件清单做哈希，是识别注入与替换的直接手段，同时构成稳定的 ROM 指纹用于机型聚类。",
+      "detect": "native 层对固定清单（app_process64、linker64、libc.so、libandroid_runtime.so、framework.jar 等）取哈希，服务端按机型+ROM 版本聚类后做离群检测。",
+      "spoof": "Hook 文件读取接口返回原始内容是常见对抗，故须用 syscall 直读并校验路径未被 bind mount 重定向。",
+      "anomaly": "哈希在同机型集群中离群；文件大小异常；/proc/mounts 显示这些路径被 overlay 或 bind mount 覆盖。",
+      "links": [
+        { "to": "系统完整性 / 篡改检测 > 分区内容哈希 > 系统文件", "type": "同一清单" },
+        { "to": "系统完整性 / 篡改检测 > 关键文件完整性", "type": "同族判据" }
+      ]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > 分区内容哈希 > 系统文件",
+      "signals": ["tamper", "hook"],
+      "risk": "这份清单是精心选择的：app_process64 是所有应用进程的入口，linker64 负责动态库加载，libc.so 是所有 syscall 的必经之路，libandroid_runtime.so 与 framework.jar 承载 framework 层实现。注入框架要生效，几乎必然触及其中之一。",
+      "detect": "native syscall 直读并计算哈希；同时检查这些文件的 inode 与挂载点，确认未被 overlayfs/bind mount 替换。",
+      "anomaly": "任一文件哈希与同机型基线不符；文件所在挂载点为 tmpfs/overlay（Magisk 的 systemless 手法）。",
+      "links": [
+        { "to": "系统完整性 / 篡改检测 > 注入框架检测", "type": "判定目标" },
+        { "to": "系统完整性 / 篡改检测 > 分区元数据", "type": "验证手段" }
+      ]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > ROM 一致性 > Kernel 一致性",
+      "signals": ["tamper", "emulator"],
+      "risk": "/proc/version 单行文本里包含内核版本、编译者、编译主机与编译时间，四项都应符合厂商官方格式。自编译内核（用于绕过检测或提供内核级 Hook）会在编译者与主机名上露出痕迹。",
+      "detect": "读 /proc/version 解析各字段，与机型库中该 ROM 版本的期望值比对；同时与 Build.VERSION、安全补丁日期做时间线校验。",
+      "anomaly": "编译者为个人用户名；主机名为 DESKTOP-xxx/ubuntu 一类；含 KernelSU/-dirty/-perf-g 自编译标记；内核编译日期晚于系统构建日期。",
+      "links": [
+        { "to": "系统完整性 / 篡改检测 > ROM 一致性 > 内核版本", "type": "同一数据源" },
+        { "to": "Hook 框架 / 注入检测 > 僵尸进程与内核模块", "type": "同族风险", "note": "自编译内核常配合加载自定义模块" }
+      ]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > ROM 一致性 > SELinux 状态",
+      "signals": ["tamper"],
+      "risk": "SELinux 降级为 permissive 通常是为了让注入与调试工具正常工作，属环境异常的低成本强信号。",
+      "detect": "读 /sys/fs/selinux/enforce（期望 1）与 ro.boot.selinux；同时检查 /sys/fs/selinux 是否存在（被卸载亦为异常）。",
+      "anomaly": "enforce 为 0；节点不存在或不可读；属性声明 permissive。",
+      "links": [{ "to": "Hook 框架 / 注入检测 > SELinux 状态异常", "type": "同一判据" }]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > ROM 一致性 > 证书一致性",
+      "signals": ["tamper", "debug"],
+      "risk": "系统 CA 集合应与 ROM 版本对应的官方集合一致。新增证书意味着可解密流量，缺失证书则暗示 ROM 被裁剪。",
+      "detect": "枚举 AndroidCAStore 计算证书指纹集合的哈希，与同 ROM 版本基线比对；单独统计用户来源 CA 数量。",
+      "anomaly": "集合哈希离群；用户 CA 数量 > 0；含已知抓包工具证书。",
+      "links": [
+        { "to": "系统完整性 / 篡改检测 > 安全证书", "type": "同一数据源" },
+        { "to": "网络环境 / 代理检测 > SSL 证书链", "type": "同族判据" }
+      ]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > ROM 一致性 > 分区完整性",
+      "signals": ["tamper"],
+      "risk": "分区布局与挂载状态反映系统是否被改造：只读分区被重挂为可写、出现非标准分区、或存在 overlay 覆盖，都说明系统完整性保护已失效。",
+      "detect": "读 /proc/mounts 与 /proc/partitions，检查 system/vendor/product 的挂载标志与文件系统类型，统计 overlay/tmpfs 覆盖点数量。",
+      "anomaly": "只读分区含 rw 标志；关键系统目录被 tmpfs/overlay 覆盖（Magisk systemless 特征）；出现非厂商标准分区。",
+      "links": [
+        { "to": "系统完整性 / 篡改检测 > 分区元数据", "type": "同一判据" },
+        { "to": "Hook 框架 / 注入检测 > Magisk/Zygisk 特征检测", "type": "判定目标" }
+      ]
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > 安全证书 > 系统证书参数 > 采集方式 > 检测用户安装证书",
+      "signals": ["debug", "proxy"],
+      "risk": "用户安装的 CA 存放在独立目录，其存在是中间人抓包的前置条件。目录非空即说明设备具备解密 HTTPS 流量的能力。",
+      "detect": "枚举 /data/misc/keychain/cacerts-added 与 /data/misc/user/0/cacerts-added（不同版本路径不同）；或通过 KeyStore 区分证书来源为 user 的条目。",
+      "anomaly": "目录非空；证书主体含 Charles/Fiddler/mitmproxy/Burp 等抓包工具标识。",
+      "links": [
+        { "to": "网络环境 / 代理检测 > SSL 证书链", "type": "同一判据" },
+        { "to": "Hook 框架 / 注入检测 > 证书列表", "type": "同一判据" }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "R-TAMPER-005",
+      "name": "属性多源不一致",
+      "level": "high",
+      "action": "判定注入或 resetprop，采集数据不可信",
+      "signals": ["tamper", "hook"],
+      "logic": "关键属性在 Java / native / getprop / build.prop 文件四条路径中出现取值分歧",
+      "expr": "prop_multi_source_mismatch_cnt >= 1",
+      "note": "不依赖任何特征串，是识别 Hook 与 Magisk resetprop 的通用手段；篡改者难以同时覆盖全部读取路径。",
+      "fields": [
+        "系统完整性 / 篡改检测 > ROM 一致性 > System Property 多源一致性",
+        "系统完整性 / 篡改检测 > ROM 一致性 > build.prop 一致性",
+        "模拟器 / 虚拟环境 > QEMU 属性 > Build 类"
+      ]
+    },
+    {
+      "id": "R-TAMPER-006",
+      "name": "Verified Boot 信任链失效",
+      "level": "high",
+      "action": "禁止支付、提现与实名类操作",
+      "signals": ["tamper"],
+      "logic": "verifiedbootstate 非 green 或 flash.locked 非 1，且以 Key Attestation 中的同名字段确认",
+      "expr": "verifiedbootstate != 'green' OR flash_locked != 1 OR attestation_verified_boot_state != 'Verified'",
+      "note": "优先采信 attestation 中的字段：系统属性可被 resetprop 改写，attestation 由 TEE 签名不可伪造。",
+      "fields": [
+        "系统完整性 / 篡改检测 > ROM 一致性 > Verified Boot 检测",
+        "设备唯一性 > 硬件信任根",
+        "设备唯一性 > ro.boot.vbmeta.device_state（Bootloader状态）"
+      ]
+    },
+    {
+      "id": "R-TAMPER-007",
+      "name": "系统关键文件被替换",
+      "level": "high",
+      "action": "终止会话，采集数据全部作废",
+      "signals": ["tamper", "hook"],
+      "logic": "app_process64/linker64/libc.so/framework.jar 等关键文件哈希离群，或其挂载点为 overlay/tmpfs",
+      "expr": "syslib_hash_outlier OR syslib_mount_type IN ('overlay','tmpfs')",
+      "note": "这份清单覆盖进程入口、动态链接、syscall 与 framework 实现，注入框架难以完全避开。overlay 覆盖是 Magisk systemless 的标志。",
+      "fields": [
+        "系统完整性 / 篡改检测 > 分区内容哈希 > 系统文件",
+        "系统完整性 / 篡改检测 > ROM 一致性 > ROM 文件完整性",
+        "系统完整性 / 篡改检测 > ROM 一致性 > 分区完整性"
+      ]
+    },
+    {
+      "id": "R-TAMPER-008",
+      "name": "系统 ROM 非官方签名",
+      "level": "high",
+      "action": "判定第三方 ROM，限制敏感权益",
+      "signals": ["tamper"],
+      "logic": "系统预装 APK 签名为 AOSP test-keys 或非厂商平台密钥，或不同系统 APK 签名密钥不统一",
+      "expr": "system_apk_signer = 'test-keys' OR system_apk_signer NOT IN vendor_keys OR system_apk_signer_distinct_cnt > 1",
+      "fields": [
+        "系统完整性 / 篡改检测 > ROM 一致性 > ROM 签名（系统文件）",
+        "设备唯一性 > 系统标签",
+        "系统完整性 / 篡改检测 > ROM 一致性 > Kernel 一致性"
+      ]
+    },
+    {
+      "id": "R-TAMPER-009",
+      "name": "自编译内核",
+      "level": "medium",
+      "action": "提升风险分，限制高价值操作",
+      "signals": ["tamper"],
+      "logic": "/proc/version 的编译者或主机名非厂商官方格式，或含自编译标记，或内核编译时间晚于系统构建时间",
+      "expr": "kernel_builder NOT IN vendor_builders OR kernel_version ~ 'KernelSU|-dirty' OR kernel_build_ts > rom_build_ts",
+      "fields": [
+        "系统完整性 / 篡改检测 > ROM 一致性 > Kernel 一致性",
+        "系统完整性 / 篡改检测 > ROM 一致性 > 内核版本",
+        "Hook 框架 / 注入检测 > 僵尸进程与内核模块"
+      ]
+    },
+    {
+      "id": "R-TAMPER-010",
+      "name": "刷机与时间线断裂",
+      "level": "medium",
+      "action": "按新设备保守处置，限制批量注册",
+      "signals": ["tamper", "reset"],
+      "logic": "存在第三方 recovery 刷机日志，或系统数据文件时间线与系统构建/首次启动时间矛盾",
+      "expr": "recovery_log_exists OR packages_xml_mtime < rom_build_ts OR first_install_ts < boot_ts",
+      "fields": [
+        "系统完整性 / 篡改检测 > ROM 一致性 > OTA 更新一致性",
+        "自动化 / 群控检测 > 应用行为 > apk第一次安装时间",
+        "自动化 / 群控检测 > 系统状态 > 系统运行时长 (Uptime)"
+      ]
+    }
+  ]
+}

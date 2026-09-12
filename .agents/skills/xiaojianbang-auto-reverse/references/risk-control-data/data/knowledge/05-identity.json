@@ -1,0 +1,293 @@
+{
+  "fields": [
+    {
+      "path": "设备唯一性",
+      "signals": ["reset", "multi", "farm"],
+      "risk": "设备唯一性是风控的坐标系：没有稳定的设备身份，黑名单、频次限制、关系图谱都无从落地。难点在于 Android 逐版本收紧标识权限（IMEI/序列号已不可读），因此现代方案必须从“读一个 ID”转为“多因子拼装 + 服务端锚定”。",
+      "detect": "分三层：强标识（OAID、硬件信任根证明）、软标识组合（机型属性+屏幕+传感器+ABI 等构成设备画像哈希）、服务端锚点（首次注册时下发并绑定多因子的设备 ID）。",
+      "spoof": "改机工具批量改写软标识，一键新机；对抗方式是提高被改字段数量与交叉约束，使改全所有字段且保持自洽的成本超过收益。",
+      "anomaly": "同一硬件画像对应多个设备 ID（改机）；同一设备 ID 短期内属性大幅变化；标识全部为空或默认占位值。",
+      "links": [
+        { "to": "设备唯一性 > 服务端锚点", "type": "核心方案" },
+        { "to": "设备唯一性 > 硬件信任根", "type": "核心方案" }
+      ]
+    },
+    {
+      "path": "设备唯一性 > 应用级 ID",
+      "signals": ["reset", "multi"],
+      "risk": "应用自建 ID（写入私有目录/SP）成本最低但生命周期最短，卸载或清数据即失效，只适合作辅助锚点。",
+      "detect": "首次启动生成 UUID 存私有目录，并冗余到外部存储/MediaStore（Android 10+ 受限）以提升存活率。",
+      "anomaly": "同一硬件画像下 ID 频繁翻新，说明反复清数据或多开。",
+      "links": [{ "to": "设备唯一性 > Android ID", "type": "同族标识" }]
+    },
+    {
+      "path": "设备唯一性 > 硬件序列号",
+      "signals": ["reset"],
+      "risk": "Build.SERIAL 曾是稳定硬件标识，Android 10+ 起普通应用返回 UNKNOWN，实际价值大幅下降。",
+      "detect": "Build.getSerial()（需 READ_PRIVILEGED_PHONE_STATE）或读 ro.serialno / ro.boot.serialno 属性。",
+      "anomaly": "值为 unknown/0123456789ABCDEF 等占位；属性与 API 返回不一致（改机痕迹）。"
+    },
+    {
+      "path": "设备唯一性 > IMEI",
+      "signals": ["reset", "multi"],
+      "risk": "IMEI 是历史上最强的设备标识，但 Android 10+ 已完全禁止普通应用读取，现今更多作为历史数据的关联键与合规风险点。",
+      "detect": "TelephonyManager.getImei()（需特权权限）；新应用应改用 OAID + 服务端锚点。",
+      "anomaly": "值为全 0 或 15 位规律串；同一 IMEI 关联大量账号。",
+      "links": [{ "to": "设备唯一性 > OAID", "type": "替代方案", "note": "国内 Android 生态的官方补位标识" }]
+    },
+    {
+      "path": "设备唯一性 > MAC",
+      "signals": ["reset", "farm"],
+      "risk": "WiFi MAC 曾是稳定标识，Android 6+ 起随机化，现返回 02:00:00:00:00:00；但网关 MAC 与 BSSID 仍是有效的环境聚类维度。",
+      "detect": "NetworkInterface wlan0 硬件地址（多为占位值）；转而采集网关 MAC（/proc/net/arp）做同网段聚类。",
+      "anomaly": "MAC 为真实值（说明系统被改或系统级权限异常）；网关 MAC 跨账号大量复用。",
+      "links": [
+        { "to": "网络环境 / 代理检测 > ARP 表", "type": "替代方案" },
+        { "to": "网络环境 / 代理检测 > 网卡枚举", "type": "同一数据源" }
+      ]
+    },
+    {
+      "path": "设备唯一性 > OAID",
+      "signals": ["reset", "multi"],
+      "risk": "OAID 是移动安全联盟推出的匿名设备标识，在国内 Android 生态是现阶段最可用的强标识，但用户可在系统设置中重置。",
+      "detect": "通过 MSA SDK 或厂商接口获取 OAID/VAID/AAID，注意区分是否支持与是否被限制。",
+      "anomaly": "OAID 全 0 或不支持；同一硬件画像对应多个 OAID（重置行为）；OAID 短期高频变化。"
+    },
+    {
+      "path": "设备唯一性 > 服务端锚点",
+      "signals": ["reset", "multi", "farm"],
+      "risk": "客户端任何标识都可被改写，唯一不可篡改的是服务端记录。核心思路：首次接触时下发 device_token，并把它与当次采集的多因子指纹一起入库；后续即使部分因子被改，仍可通过相似度匹配回溯到同一物理设备。",
+      "detect": "服务端保存 (token, 多因子指纹向量)；每次上报做加权相似度匹配（机型/屏幕/传感器集合/CPU 组合权重高，可变项权重低），超阈值即认定同一设备。",
+      "spoof": "改机工具改全字段可造出新设备，但相似度模型能捕捉“属性组合从未在真实机型库中出现”这类离群。",
+      "anomaly": "token 缺失但指纹与历史设备高度相似（清数据重装）；同一指纹簇下 token 数量异常增长。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 系统状态", "type": "指纹因子" },
+        { "to": "模拟器 / 虚拟环境 > 传感器", "type": "指纹因子" },
+        { "to": "设备唯一性 > 屏幕", "type": "指纹因子" },
+        { "to": "网络环境 / 代理检测 > WiFi 环境", "type": "指纹因子" }
+      ]
+    },
+    {
+      "path": "设备唯一性 > 硬件信任根",
+      "signals": ["tamper", "reset"],
+      "risk": "TEE 中的硬件密钥可产生带证书链的签名，攻击者无法在用户态伪造，是对抗改机与模拟器的终局手段。",
+      "detect": "Android Keystore 生成 StrongBox/TEE 密钥并做 Key Attestation，校验证书链是否由 Google 硬件根签发；或使用 Play Integrity API 的 device 完整性判定。",
+      "spoof": "只能靠泄露的厂商密钥或降级到软件实现；因此需检查 attestation 的 security level 是否为 TrustedEnvironment/StrongBox。",
+      "anomaly": "attestation security level 为 Software；证书链校验失败；设备不支持硬件证明。",
+      "links": [{ "to": "系统完整性 / 篡改检测", "type": "可信根" }]
+    },
+    {
+      "path": "设备唯一性 > Android ID",
+      "signals": ["reset", "multi"],
+      "risk": "Android ID（SSAID）在 Android 8+ 起按 应用签名+用户 隔离，恢复出厂或清数据会变化，属中等强度标识。",
+      "detect": "Settings.Secure.ANDROID_ID。",
+      "anomaly": "值为 9774d56d682e549c（已知模拟器默认值）或全 0；同一硬件画像下频繁变化。"
+    },
+    {
+      "path": "设备唯一性 > SIM卡",
+      "signals": ["multi", "cloudphone"],
+      "risk": "SIM 相关标识把设备与手机号（也就是真实身份）连接起来，是识别卡池与批量注册的关键维度。多卡槽信息还能提升设备指纹的区分度。",
+      "detect": "SubscriptionManager 枚举卡槽，取运营商、卡状态；号码类信息应通过服务端短信验证获得而非本地读取（权限受限且合规敏感）。",
+      "anomaly": "无 SIM 但业务依赖手机号；同设备短期更换多卡；卡池号段集中。",
+      "links": [{ "to": "网络环境 / 代理检测 > 网络链路 > SIM 卡状态", "type": "同一数据源" }]
+    },
+    {
+      "path": "设备唯一性 > 屏幕",
+      "signals": ["emulator", "reset", "farm"],
+      "risk": "屏幕参数组合（分辨率、密度、状态栏/导航栏高度、刷新率）是高区分度且改机工具常忽略的指纹因子，也能暴露虚拟环境的非标配置。",
+      "detect": "DisplayMetrics 取宽高与 density/densityDpi，反射或系统资源取状态栏与导航栏高度，Display.getRefreshRate 取刷新率。",
+      "anomaly": "分辨率与机型标称不符；density 与 densityDpi 不自洽；刷新率恒为 60.0 而机型为高刷；状态栏高度为 0（无系统 UI 的容器环境）。",
+      "links": [
+        { "to": "设备唯一性 > 服务端锚点", "type": "指纹因子" },
+        { "to": "设备唯一性 > 品牌", "type": "一致性校验" }
+      ]
+    },
+    {
+      "path": "设备唯一性 > 品牌",
+      "signals": ["reset", "tamper"],
+      "risk": "品牌/型号/制造商三元组是改机第一改的字段，也是所有一致性校验的基准：它决定了这台设备“应该”具备什么硬件。",
+      "detect": "Build.BRAND/MODEL/MANUFACTURER 与对应 ro.product.* 属性两路取值比对，再与服务端机型库反查应有的 SoC、屏幕、传感器集合。",
+      "anomaly": "Java API 与系统属性取值不一致；机型库中不存在该型号；型号为小米但输入法/预装应用属华为体系。",
+      "links": [
+        { "to": "系统完整性 / 篡改检测 > ROM 一致性", "type": "一致性校验" },
+        { "to": "模拟器 / 虚拟环境 > CPU 真实性", "type": "一致性校验" }
+      ]
+    },
+    {
+      "path": "设备唯一性 > 硬件平台",
+      "signals": ["emulator", "tamper"],
+      "risk": "ABI 列表直接暴露 CPU 架构，是模拟器（x86 翻译层）最简单的识别口。",
+      "detect": "Build.SUPPORTED_ABIS / SUPPORTED_32_BIT_ABIS / SUPPORTED_64_BIT_ABIS 与 ro.product.cpu.abilist 比对。",
+      "anomaly": "含 x86/x86_64 而品牌为国产手机；仅有 32 位 ABI 而系统为 Android 12+。"
+    },
+    {
+      "path": "设备唯一性 > 处理器型号",
+      "signals": ["emulator", "tamper"],
+      "risk": "SoC 型号是机型的硬约束，必须与 CPU 核心组合、GPU 型号三方一致。",
+      "detect": "Build.HARDWARE、ro.board.platform、ro.soc.model（Android 12+），与 /proc/cpuinfo 推导结果比对。",
+      "anomaly": "三方互相矛盾；SoC 型号为 goldfish/ranchu/unknown。"
+    },
+    {
+      "path": "设备唯一性 > 系统标签",
+      "signals": ["tamper"],
+      "risk": "ro.build.tags 是判断 ROM 是否官方签名的最短路径：release-keys 为官方，test-keys 为自编译或改机。",
+      "detect": "Build.TAGS 与 ro.build.tags 双取。",
+      "anomaly": "含 test-keys 或 dev-keys。"
+    },
+    {
+      "path": "设备唯一性 > ro.build.type",
+      "signals": ["tamper", "debug"],
+      "risk": "user 为量产系统，userdebug/eng 为工程系统，后者默认开放 root 与调试能力。",
+      "detect": "读 ro.build.type 属性与 Build.TYPE。",
+      "anomaly": "取值为 userdebug/eng。"
+    },
+    {
+      "path": "设备唯一性 > ro.build.tags",
+      "signals": ["tamper"],
+      "risk": "与系统标签同源，作为独立属性取值可与 Java API 比对，识别单侧改写。",
+      "detect": "getprop ro.build.tags 与 Build.TAGS 比对。",
+      "anomaly": "两处不一致，说明有一侧被 Hook。"
+    },
+    {
+      "path": "设备唯一性 > ro.boot.vbmeta.device_state（Bootloader状态）",
+      "signals": ["tamper"],
+      "risk": "Bootloader 解锁是刷入自定义 ROM 与 root 的前置条件，locked/unlocked 是二值化的高置信信号。",
+      "detect": "读 ro.boot.vbmeta.device_state 或 ro.boot.flash.locked；可靠做法是用 Key Attestation 中的 bootloader 状态字段。",
+      "anomaly": "unlocked；或属性缺失（被隐藏）。",
+      "links": [{ "to": "设备唯一性 > 硬件信任根", "type": "可信来源", "note": "属性可被改写，attestation 不可" }]
+    },
+    {
+      "path": "设备唯一性 > ro.boot.veritymode（系统校验模式）",
+      "signals": ["tamper"],
+      "risk": "dm-verity 是系统分区完整性的强制校验，disabled 说明系统分区已可被任意修改。",
+      "detect": "读 ro.boot.veritymode，期望值 enforcing。",
+      "anomaly": "disabled/eio/logging。"
+    },
+    {
+      "path": "设备唯一性 > ro.product.cpu.abilist（CPU ABI 列表）",
+      "signals": ["emulator"],
+      "risk": "属性侧的 ABI 列表用于与 Java API 结果比对，防止单侧伪造。",
+      "detect": "getprop ro.product.cpu.abilist 与 Build.SUPPORTED_ABIS 比对。",
+      "anomaly": "两处不一致；含 x86 系列。"
+    },
+    {
+      "path": "设备唯一性 > ro.build.host（Google 构建服务器）",
+      "signals": ["tamper"],
+      "risk": "构建主机名在官方 ROM 中遵循厂商固定命名，自编译 ROM 会显示个人主机名。",
+      "detect": "读 ro.build.host / ro.build.user。",
+      "anomaly": "主机名为个人机器名（如 ubuntu、DESKTOP-xxx）。"
+    },
+    {
+      "path": "设备唯一性 > 安全补丁",
+      "signals": ["tamper", "reset"],
+      "risk": "安全补丁日期与 Android 版本、构建日期存在强约束，也反映设备真实维护状态。",
+      "detect": "Build.VERSION.SECURITY_PATCH，与 ro.build.date 及 Android 版本发布时间线比对。",
+      "anomaly": "补丁日期早于系统版本发布日；日期为未来时间；与同机型集群显著不符。"
+    },
+    {
+      "path": "设备唯一性 > 摄像头 ID",
+      "signals": ["emulator", "cloudphone"],
+      "risk": "摄像头数量与参数（分辨率、焦距、光圈、物理尺寸）是机型硬约束，虚拟环境往往只有 1 个或 0 个虚拟摄像头。",
+      "detect": "CameraManager.getCameraIdList 逐个取 CameraCharacteristics（传感器尺寸、焦距、支持的分辨率组合）。",
+      "anomaly": "摄像头数量与机型标称不符；焦距/物理尺寸为 0；参数在多设备间完全一致。"
+    },
+    {
+      "path": "设备唯一性 > 基带版本",
+      "signals": ["emulator", "cloudphone"],
+      "risk": "基带（射频固件）版本是真实通信硬件的产物，虚拟环境通常为空或 unknown。",
+      "detect": "Build.getRadioVersion() / gsm.version.baseband 属性。",
+      "anomaly": "为空、unknown 或 1.0.0.0；与机型/运营商定制不符。"
+    },
+    {
+      "path": "设备唯一性 > SD 卡序列号",
+      "signals": ["reset", "farm"],
+      "risk": "外部存储卷 UUID 在部分设备上稳定，可作为辅助锚点；同时批量镜像部署会出现 UUID 重复。",
+      "detect": "StorageManager 枚举卷取 UUID（Android 高版本受限），或读 /proc/partitions 与卷标。",
+      "anomaly": "多设备卷 UUID 相同。"
+    },
+    {
+      "path": "设备唯一性 > NFC 标识",
+      "signals": ["emulator", "cloudphone"],
+      "risk": "NFC 硬件存在性是机型硬约束，虚拟环境几乎不实现。",
+      "detect": "NfcAdapter.getDefaultAdapter() 是否为 null，以及 FEATURE_NFC 的 PackageManager 声明。",
+      "anomaly": "机型标称支持 NFC 但适配器为 null（或反之）。"
+    }
+  ],
+  "rules": [
+    {
+      "id": "R-ID-001",
+      "name": "一键新机（改机重置）",
+      "level": "high",
+      "action": "设备族群封禁并回溯关联账号",
+      "signals": ["reset"],
+      "logic": "服务端指纹相似度 > 0.9 匹配到历史设备，但客户端强标识（OAID/Android ID/应用级 ID）全部翻新",
+      "expr": "fingerprint_similarity > 0.9 AND oaid_changed AND ssaid_changed AND app_id_missing",
+      "note": "改机工具能改标识，改不掉硬件画像组合，这是识别一键新机的主路径。",
+      "fields": [
+        "设备唯一性 > 服务端锚点",
+        "设备唯一性 > OAID",
+        "设备唯一性 > Android ID",
+        "设备唯一性 > 应用级 ID",
+        "设备唯一性 > 屏幕"
+      ]
+    },
+    {
+      "id": "R-ID-002",
+      "name": "机型属性伪造",
+      "level": "high",
+      "action": "拒绝新用户权益，转人工",
+      "signals": ["reset", "tamper"],
+      "logic": "Java API 与系统属性取值冲突，或 fingerprint 对应机型库中的硬件规格与实采不符",
+      "expr": "api_prop_mismatch_cnt >= 2 OR device_db_spec_mismatch",
+      "fields": [
+        "设备唯一性 > 品牌",
+        "设备唯一性 > ro.build.tags",
+        "设备唯一性 > ro.product.cpu.abilist（CPU ABI 列表）",
+        "设备唯一性 > 处理器型号",
+        "设备唯一性 > 摄像头 ID"
+      ]
+    },
+    {
+      "id": "R-ID-003",
+      "name": "硬件证明缺失",
+      "level": "medium",
+      "action": "限制免密支付与大额提现",
+      "signals": ["tamper", "emulator"],
+      "logic": "Key Attestation security level 为 Software 或证书链校验失败，或 Play Integrity 未通过 device 完整性",
+      "expr": "attestation_level = 'Software' OR attestation_chain_invalid OR integrity_verdict != 'MEETS_DEVICE_INTEGRITY'",
+      "fields": [
+        "设备唯一性 > 硬件信任根",
+        "设备唯一性 > ro.boot.vbmeta.device_state（Bootloader状态）"
+      ]
+    },
+    {
+      "id": "R-ID-004",
+      "name": "虚拟环境硬件缺失（标识侧）",
+      "level": "medium",
+      "action": "标记疑似云手机，限制批量注册",
+      "signals": ["cloudphone", "emulator"],
+      "logic": "基带版本为空/unknown，且无 NFC，且摄像头参数缺失，且无 SIM",
+      "expr": "baseband IN ('','unknown') AND nfc_adapter IS NULL AND camera_focal_len = 0 AND sim_state = 'ABSENT'",
+      "fields": [
+        "设备唯一性 > 基带版本",
+        "设备唯一性 > NFC 标识",
+        "设备唯一性 > 摄像头 ID",
+        "设备唯一性 > SIM卡"
+      ]
+    },
+    {
+      "id": "R-MULTI-001",
+      "name": "单设备多账号",
+      "level": "medium",
+      "action": "限制同设备账号数，权益仅首个账号可领",
+      "signals": ["multi"],
+      "logic": "同一设备锚点关联账号数 > 5，或同一硬件画像簇下 24 小时内新注册账号数 > 10",
+      "expr": "account_cnt_per_device > 5 OR new_account_cnt_24h_per_fingerprint > 10",
+      "fields": [
+        "设备唯一性 > 服务端锚点",
+        "设备唯一性 > 应用级 ID",
+        "设备唯一性 > SIM卡"
+      ]
+    }
+  ]
+}

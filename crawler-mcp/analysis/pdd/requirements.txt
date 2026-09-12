@@ -1,0 +1,3 @@
+requests>=2.31
+# Optional, only for pdd_anti_content_browser.py:
+pyppeteer>=2.0

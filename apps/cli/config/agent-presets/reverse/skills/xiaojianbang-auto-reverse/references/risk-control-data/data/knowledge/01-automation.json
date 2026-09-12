@@ -1,0 +1,460 @@
+{
+  "fields": [
+    {
+      "path": "自动化 / 群控检测 > 自动点击器",
+      "signals": ["automation", "farm"],
+      "risk": "自动点击器把人的手指替换为程序事件源。人手的操作在时间与空间上都带噪声，程序不带；这一差异是自动化判定最稳的地基。",
+      "detect": "组合三类证据：事件注入通道（无障碍 / adb shell input / uinput 虚拟设备）、时序统计（间隔方差、峰度）、空间统计（坐标聚簇、轨迹直线度）。",
+      "spoof": "高级脚本会给间隔与坐标加高斯抖动，此时单指标失效，需依赖压力/面积等物理量与轨迹曲率联合判定。",
+      "anomaly": "间隔标准差趋 0、坐标像素级重复、连续操作无休息段、日活时长超 20 小时。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 无障碍服务", "type": "实现依赖", "note": "无障碍是脚本注入点击最常用的合法通道" },
+        { "to": "自动化 / 群控检测 > 触控数据", "type": "证据来源", "note": "触控物理量是区分真手指与注入事件的核心" },
+        { "to": "模拟器 / 虚拟环境 > 输入设备", "type": "交叉验证", "note": "uinput 虚拟输入设备会出现在 /proc/bus/input/devices" },
+        { "to": "自动化 / 群控检测 > 启动来源 > adb / 自动化启动", "type": "同源特征", "note": "adb 驱动的点击往往伴随 adb 拉起进程" }
+      ]
+    },
+    {
+      "path": "自动化 / 群控检测 > 自动点击器 > 操作频次",
+      "signals": ["automation"],
+      "risk": "单位时间操作量超过人类生理上限，是脚本最直接的暴露面。",
+      "detect": "滑动窗口统计每分钟点击/滑动/页面跳转次数，取 P99 与人群基线对比。",
+      "anomaly": "每分钟点击 > 120 次；连续 30 分钟无 3 秒以上空闲。",
+      "links": [{ "to": "自动化 / 群控检测 > 自动点击器 > 点击间隔", "type": "同族指标" }]
+    },
+    {
+      "path": "自动化 / 群控检测 > 自动点击器 > 点击间隔",
+      "signals": ["automation"],
+      "risk": "人手间隔服从长尾分布（对数正态），脚本 sleep 固定值或均匀分布，分布形态即身份。",
+      "detect": "采集相邻事件时间差序列，计算标准差、变异系数 CV 与直方图熵；也可做 FFT 找固定周期峰。",
+      "spoof": "random(200,400) 会产出均匀分布，仍与人手长尾不符，可用 KS 检验区分。",
+      "anomaly": "CV < 0.1；间隔取值集合极小（如仅 300/301ms）；出现明显固定频率谱峰。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 自动点击器 > 无障碍监听",
+      "signals": ["automation"],
+      "risk": "脚本用无障碍监听界面变化以决定下一步动作，监听行为本身可被观测。",
+      "detect": "AccessibilityManager 获取已启用服务列表与其 capabilities，重点看是否声明 canRetrieveWindowContent、canPerformGestures。",
+      "links": [{ "to": "自动化 / 群控检测 > 无障碍服务 > 采集方式 > 检测服务能力", "type": "实现细节" }]
+    },
+    {
+      "path": "自动化 / 群控检测 > 自动点击器 > 黑名单 > isUserAMonkey | com.cygery.repetitouch.pro | com.cyjh.mobileanjian | com.touchsprite.android | com.cjzs123.zhushou | com.touchspriteent.android | com.zidongdianji | org.autojs.autojspro | org.autojs.autojs | com.zdanjian.zdanjian | com.zdnewproject | com.ifengwoo.zyjdkj | com.angel.nrzs | com.cyjh.mobileanjian.vip | com.shumai.shudaxia | fun.tooling.clicker.cn | com.dianjiqi | com.miaodong.autoactionssss | com.mxz.wxautojiafujinderen | com.touchelf.app | com.stardust.scriptdroid | com.adinall.autoclick | com.i_cool.auto_clicker | com.kongshan.aidianji | com.xptech.catclicker | com.tingniu.autoclick | com.yicu.yichujifa | com.smallyin.autoclick | com.ksxkq.autoclick | com.x2.clicker | com.scott.autoclickhelper | com.auyou.auyouwzs",
+      "signals": ["automation", "debug"],
+      "risk": "ActivityManager.isUserAMonkey() 与自动点击器黑名单包名共同构成确定性自动化信号。",
+      "detect": "直接调用 ActivityManager.isUserAMonkey()，并与已知自动点击器黑名单包名交叉校验。",
+      "spoof": "Hook 该 API 返回 false 是常见对抗手段，故需与 Hook 检测联合。",
+      "links": [{ "to": "Hook 框架 / 注入检测 > Hook 命中列表", "type": "对抗关系", "note": "该 API 是 Hook 高频目标，返回值需交叉校验" }]
+    },
+    {
+      "path": "自动化 / 群控检测 > 模拟定位",
+      "signals": ["gps_spoof"],
+      "risk": "位置决定权益（地域券、同城单、打卡）。模拟定位直接击穿地域风控。",
+      "detect": "Location.isFromMockProvider()、开发者选项中的 mock location app、以及位置与基站/WiFi/IP 的地理一致性。",
+      "spoof": "改机工具在 framework 层重写 Location 对象，isFromMockProvider 恒为 false，此时只能靠交叉验证。",
+      "anomaly": "经纬度小数位过于规整、位置瞬移速度 > 300km/h、GPS 定位但卫星数为 0。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 模拟定位 > 位置+传感器交叉验证", "type": "验证手段" },
+        { "to": "自动化 / 群控检测 > 模拟定位 > 基站与wifi校验", "type": "验证手段" },
+        { "to": "传感器与物理环境特征 > 位置与环境 > Gps经纬度", "type": "同一数据源" },
+        { "to": "网络环境 / 代理检测 > 基站", "type": "交叉验证", "note": "基站 LAC/CID 反查地理位置，与 GPS 比对" }
+      ]
+    },
+    {
+      "path": "自动化 / 群控检测 > 模拟定位 > 开发者模式检测（允许位置模拟）",
+      "signals": ["gps_spoof", "debug"],
+      "risk": "开启“允许模拟位置”是使用低级伪造工具的前置条件。",
+      "detect": "Settings.Secure ALLOW_MOCK_LOCATION（API 23 前）/ AppOpsManager 检查 OP_MOCK_LOCATION 授权应用。",
+      "anomaly": "存在被授予模拟定位权限的第三方应用。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 模拟定位 > GPS信号特征",
+      "signals": ["gps_spoof", "emulator"],
+      "risk": "真实 GNSS 有卫星数、信噪比、星历这些副产物，伪造位置通常只写坐标不写副产物。",
+      "detect": "GnssStatus 读卫星数量、每颗星 Cn0DbHz、使用状态；比对定位精度与卫星数是否自洽。",
+      "anomaly": "精度 5m 但可见卫星 0 颗；所有卫星信噪比完全相同；室内长期获得高精度定位。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 模拟定位 > 位置+传感器交叉验证",
+      "signals": ["gps_spoof", "cloudphone"],
+      "risk": "位置在动而设备静止，或反之，是伪造最难圆的谎。物理世界的自洽性无法用单点改写伪造。",
+      "detect": "位移速度与加速度计积分、磁力计朝向变化、气压计海拔变化做一致性回归。",
+      "anomaly": "位置持续移动但加速度计恒为 (0,0,9.8)；海拔变化 100m 而气压无变化。",
+      "links": [{ "to": "传感器与物理环境特征 > 惯性传感器", "type": "数据依赖" }]
+    },
+    {
+      "path": "自动化 / 群控检测 > 模拟定位 > 基站与wifi校验",
+      "signals": ["gps_spoof", "farm"],
+      "risk": "基站与 WiFi BSSID 构成物理位置的第二信源，且是群控设备聚集的强证据。",
+      "detect": "CellInfo 的 MCC/MNC/LAC/CID 反查、ScanResult 的 BSSID 列表比对 GPS 位置。",
+      "anomaly": "GPS 在深圳而基站 MCC/MNC 属外省；同一 BSSID 下挂载数百设备。",
+      "links": [{ "to": "网络环境 / 代理检测 > WiFi 环境", "type": "同一数据源" }]
+    },
+    {
+      "path": "自动化 / 群控检测 > 无障碍服务",
+      "signals": ["automation", "screen"],
+      "risk": "无障碍是 Android 上唯一无需 root 即可读全屏内容并注入手势的官方通道，因此也是自动化脚本的主干道。",
+      "detect": "枚举已启用服务包名做黑白名单匹配，并检查其 capabilities 与 eventTypes 是否远超正常辅助用途。",
+      "spoof": "改包名、伪装为输入法或壁纸服务；因此应以能力位而非包名为主判据。",
+      "anomaly": "启用的无障碍服务非系统白名单、且声明 canPerformGestures。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 输入法列表", "type": "同类通道", "note": "输入法同样可读输入内容并注入" },
+        { "to": "自动化 / 群控检测 > 启动来源 > Accessibility 自动拉起", "type": "行为后果" }
+      ]
+    },
+    {
+      "path": "自动化 / 群控检测 > 无障碍服务 > 采集方式 > 检测服务能力",
+      "signals": ["automation"],
+      "risk": "能力位比包名稳定：脚本可以换名字，但不能放弃它需要的能力。",
+      "detect": "AccessibilityServiceInfo.getCapabilities() 检查 CAPABILITY_CAN_PERFORM_GESTURES / RETRIEVE_WINDOW_CONTENT / REQUEST_FILTER_KEY_EVENTS。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 输入法列表",
+      "signals": ["automation", "cloudphone", "farm"],
+      "risk": "输入法集合是环境类型的指纹：真机预装厂商输入法，云手机/模拟器常只有 AOSP 输入法或自动化专用输入法。",
+      "detect": "InputMethodManager.getInputMethodList() 与 getEnabledInputMethodList()，取完整 ID（包名+类名）做集合比对。",
+      "anomaly": "仅有 com.android.inputmethod.latin；出现 ADB Keyboard（com.android.adbkeyboard）等自动化输入法。",
+      "links": [
+        { "to": "模拟器 / 虚拟环境 > 输入设备", "type": "交叉验证" },
+        { "to": "设备唯一性 > 品牌", "type": "一致性校验", "note": "小米机型却无小米输入法，属预装不一致" }
+      ]
+    },
+    {
+      "path": "自动化 / 群控检测 > 输入法列表 > 采集信息 > 剪切板内容",
+      "signals": ["automation", "multi"],
+      "risk": "批量注册与刷单流程常用剪贴板搬运手机号、验证码、邀请码，内容形态即流程指纹。",
+      "detect": "ClipboardManager 读主剪贴板文本（注意 Android 10+ 仅前台可读、且属敏感权限，应做合规评估）。",
+      "anomaly": "剪贴板长期驻留邀请码/口令格式串；多设备剪贴板内容同构。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 传感器噪声",
+      "signals": ["emulator", "cloudphone", "farm"],
+      "risk": "真实 MEMS 传感器永远在抖，抖动的幅度与分布是硅片的物理指纹。虚拟环境要么没有传感器，要么给出恒定值或完美正弦。",
+      "detect": "以 100Hz 采样加速度计/陀螺仪 3 秒，计算各轴方差、自相关、量化步长；同时枚举传感器列表看厂商与版本是否为已知虚拟实现。",
+      "spoof": "云手机注入录制的真机传感器流，此时看数据是否周期性重放、以及与触控事件的时间相关性。",
+      "anomaly": "方差为 0；厂商为 Goldfish/Google Inc.；传感器列表缺失陀螺仪与磁力计；数据序列可整段重复。",
+      "links": [
+        { "to": "模拟器 / 虚拟环境 > 传感器", "type": "同一判据" },
+        { "to": "传感器与物理环境特征 > 惯性传感器", "type": "数据来源" }
+      ]
+    },
+    {
+      "path": "自动化 / 群控检测 > 触控数据",
+      "signals": ["automation", "cloudphone"],
+      "risk": "手指是有面积、有压力、有轨迹曲率的钝物。注入事件通常只有坐标，压力与面积为常量或缺省。",
+      "detect": "MotionEvent 取 getPressure/getSize/getToolMajor/getToolType，以及 historical points 还原真实采样轨迹。",
+      "spoof": "构造事件时填入随机 pressure，可用取值集合基数与设备型号典型分布比对识别。",
+      "anomaly": "pressure 恒为 1.0 或 0.0、size 恒定、toolType 为 UNKNOWN、轨迹为完美直线（曲率 ≈ 0）、无 historical points。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 触控数据 > 按压触控数据", "type": "细化指标" },
+        { "to": "自动化 / 群控检测 > 自动点击器", "type": "判定目标" }
+      ]
+    },
+    {
+      "path": "自动化 / 群控检测 > 触控数据 > 点击坐标",
+      "signals": ["automation", "farm"],
+      "risk": "同一按钮的人工点击落点呈二维正态散布，脚本落点是一个点或一条网格。",
+      "detect": "按控件聚合落点，计算协方差矩阵与去重率；跨设备比对同一账号族的落点是否重合。",
+      "anomaly": "同一控件落点去重后不足 3 个；多设备落点像素级一致。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 触控数据 > 滑动位移",
+      "signals": ["automation"],
+      "risk": "人手滑动是先加速后减速的贝塞尔曲线，脚本 swipe 是匀速直线。",
+      "detect": "对滑动路径重采样，拟合速度曲线，计算加速度符号变化次数与轨迹曲率积分。",
+      "anomaly": "速度恒定、路径两点直线、起止点固定。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 触控数据 > 按压触控数据",
+      "signals": ["automation", "cloudphone"],
+      "risk": "压力与接触面积依赖真实电容屏采样，是虚拟环境最难补齐的一维。",
+      "detect": "统计 pressure/size 的取值基数、分布与设备型号基线是否匹配。",
+      "anomaly": "取值基数为 1；size 与 pressure 完全线性相关（合成痕迹）。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 触控数据 > 点击频率",
+      "signals": ["automation"],
+      "risk": "频率异常同时暴露脚本节奏与设备被复用的强度。",
+      "detect": "单位时间事件计数 + 事件间隔熵。",
+      "anomaly": "点击频率恒定、日累计点击数远超人群 P99。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 前台 Activity",
+      "signals": ["automation", "screen"],
+      "risk": "页面路径反映意图。脚本会跳过引导页、直达目标页，形成人类不可能的最短路径。",
+      "detect": "Activity 生命周期回调串成序列，比对正常用户路径图；同时检查窗口焦点与可见性。",
+      "anomaly": "无浏览直接进入下单页；Activity 停留时长恒定；窗口长期无焦点却持续产生操作。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 前台 Activity > 悬浮窗覆盖", "type": "同族风险" },
+        { "to": "自动化 / 群控检测 > 应用行为 > Activity 生命周期状态", "type": "数据来源" }
+      ]
+    },
+    {
+      "path": "自动化 / 群控检测 > 前台 Activity > 悬浮窗覆盖",
+      "signals": ["automation", "screen"],
+      "risk": "悬浮窗既是脚本控制面板，也是点击劫持载体。",
+      "detect": "FLAG_WINDOW_IS_OBSCURED / PARTIALLY_OBSCURED、以及枚举拥有 SYSTEM_ALERT_WINDOW 权限的应用。",
+      "anomaly": "关键操作页出现被遮挡标记；非白名单应用持有悬浮窗权限并处于运行态。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 启动来源",
+      "signals": ["automation", "farm"],
+      "risk": "启动方式暴露驱动者。人从桌面图标启动，脚本从 shell、无障碍或链接批量拉起。",
+      "detect": "Intent referrer、调用方包名（getCallingPackage）、父进程链 /proc/self/stat 的 ppid 追溯、启动耗时。",
+      "anomaly": "父进程为 sh/adbd；referrer 为空且非桌面拉起；一分钟内同一来源拉起数十次。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 启动来源 > adb / 自动化启动", "type": "细化" },
+        { "to": "调试 / 反跟踪 > USB 调试状态", "type": "交叉验证" }
+      ]
+    },
+    {
+      "path": "自动化 / 群控检测 > 启动来源 > adb / 自动化启动",
+      "signals": ["automation", "farm", "debug"],
+      "risk": "adb am start 是群控最省事的拉起方式，父进程链会留下痕迹。",
+      "detect": "递归读取 /proc/<ppid>/cmdline 直至 init，命中 adbd/sh/uiautomator 即判定。",
+      "anomaly": "进程链包含 adbd；ADB_ENABLED=1 且非开发者自用场景。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 启动来源 > Accessibility 自动拉起",
+      "signals": ["automation"],
+      "risk": "无障碍服务可代替用户点击桌面图标，绕开“来源为空”的检测。",
+      "detect": "启动时刻与无障碍事件时间戳做毫秒级关联；检查启用服务列表。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 采集耗时",
+      "signals": ["hook", "emulator", "debug"],
+      "risk": "采集函数的执行耗时是一把免费的探针：被 Hook 会变慢，跑在模拟器上会变慢，被调试会异常抖动。",
+      "detect": "对关键采集函数打点 System.nanoTime 差值，与设备型号基线比较；用 elapsedRealtime 与 currentTimeMillis 交叉验证时间是否被改写。",
+      "anomaly": "单函数耗时超基线 10 倍；本地时间与 NTP 偏差过大；uptime 与开机时间不自洽。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 采集耗时 > 外网 NTP 时间同步", "type": "验证手段" },
+        { "to": "Hook 框架 / 注入检测 > Frida", "type": "判定目标", "note": "Hook 带来的额外栈帧显著抬高耗时" }
+      ]
+    },
+    {
+      "path": "自动化 / 群控检测 > 采集耗时 > 时间轮盘校验",
+      "signals": ["hook", "reset"],
+      "risk": "改机与脚本常改本地时间来重置冷却期或伪造注册时长。",
+      "detect": "同时采集 currentTimeMillis、elapsedRealtime、uptimeMillis、SystemClock.currentThreadTimeMillis，检查四者增长关系是否自洽。",
+      "anomaly": "本地时间回拨；uptime 大于开机至今时长。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 采集耗时 > 外网 NTP 时间同步",
+      "signals": ["reset", "proxy"],
+      "risk": "以服务端/NTP 时间为准锚，才能识别本地时间伪造。",
+      "detect": "请求 NTP 或使用服务端响应头时间，计算与本地时间偏差并上报。",
+      "anomaly": "偏差绝对值 > 5 分钟且非时区问题。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 录屏与截屏检测",
+      "signals": ["screen", "farm"],
+      "risk": "录屏推流是远控与代操作的通道，也是内容盗取渠道。scrcpy/minicap 一类工具会在进程与性能上留痕。",
+      "detect": "MediaProjection 状态、DisplayManager 检查虚拟显示、进程扫描 minicap/scrcpy-server/vysor、以及渲染帧率异常反推。",
+      "anomaly": "存在非系统 VirtualDisplay；进程列表命中投屏工具；GPU 负载与用户可见操作不匹配。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 应用行为 > 应用安装列表", "type": "证据来源" },
+        { "to": "模拟器 / 虚拟环境 > GPU 与渲染", "type": "交叉验证" }
+      ]
+    },
+    {
+      "path": "自动化 / 群控检测 > 系统状态",
+      "signals": ["emulator", "farm", "reset"],
+      "risk": "系统运行态是难以批量伪造的“生活痕迹”。农场设备通常长期不关机、内存占用固定、磁盘近空。",
+      "detect": "SystemClock.elapsedRealtime 取 uptime、读 /proc/meminfo 与 StatFs 取分区容量、ActivityManager 取运行服务。",
+      "anomaly": "uptime 数月不重启；data 分区可用容量与总容量比例在多设备间完全一致；运行服务集合跨设备同构。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 系统状态 > 设备启动标识 > /proc/sys/kernel/random/uuid", "type": "细化" },
+        { "to": "设备唯一性 > 服务端锚点", "type": "聚类依据" }
+      ]
+    },
+    {
+      "path": "自动化 / 群控检测 > 系统状态 > 系统运行时长 (Uptime)",
+      "signals": ["farm", "emulator"],
+      "risk": "uptime 与首次安装时间、账号注册时间构成时间三角，能识别“新机秒注册”与“僵尸常开机”。",
+      "detect": "elapsedRealtime()；结合开机时刻（当前时间 - uptime）在设备间聚类。",
+      "anomaly": "开机时刻在多设备间落在同一分钟（集群统一上电）；uptime < 60s 却已完成完整业务流程。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 系统状态 > 设备启动标识 > /proc/sys/kernel/random/uuid",
+      "signals": ["farm", "reset"],
+      "risk": "每次读取产生随机 UUID，可用于同一进程内的会话锚点；而 boot_id 类标识则在一次开机周期内稳定，可识别重启与重置。",
+      "detect": "读取 /proc/sys/kernel/boot_id（稳定）与 random/uuid（随机），区分用途后再上报。",
+      "anomaly": "boot_id 在短时间内频繁变化，暗示反复重启抹痕。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 系统状态 > 内存状态",
+      "signals": ["emulator", "cloudphone"],
+      "risk": "虚拟环境内存总量常为整数 GB 且跨实例一致，真机因厂商预留而带零碎值。",
+      "detect": "/proc/meminfo MemTotal/MemAvailable，与机型标称容量比对。",
+      "anomaly": "MemTotal 恰为 2048MB/4096MB 整值；同一机型跨设备 MemTotal 完全一致。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 电量异常",
+      "signals": ["farm", "emulator", "cloudphone"],
+      "risk": "电池是纯物理器件。农场设备常年插电，云手机根本没有电池，虚拟环境给出恒定值。",
+      "detect": "BatteryManager 广播取 level/status/voltage/temperature/plugged，做时间序列观察。",
+      "anomaly": "电量恒 100% 且长期充电中；温度恒为 0 或 25.0℃；电压为 0 或整数值；电量只升不降。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 电量异常 > 电池温度", "type": "细化" },
+        { "to": "模拟器 / 虚拟环境 > QEMU 属性", "type": "同族判据" }
+      ]
+    },
+    {
+      "path": "自动化 / 群控检测 > 电量异常 > 电池温度",
+      "signals": ["emulator", "farm"],
+      "risk": "温度随负载升降是真实硬件的呼吸曲线，虚拟环境往往写死。",
+      "detect": "EXTRA_TEMPERATURE（单位 0.1℃）多次采样看变化幅度。",
+      "anomaly": "多次采样温度完全不变；高负载运行温度不升。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 电量异常 > 充电状态",
+      "signals": ["farm"],
+      "risk": "USB 集群供电导致设备永远处于 USB 充电态，是真机农场的典型旁证。",
+      "detect": "EXTRA_PLUGGED 判断 AC/USB/WIRELESS。",
+      "anomaly": "长期 USB 充电 + ADB 开启 + 电量 100%，三者同现基本可定性为集群设备。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 应用行为",
+      "signals": ["automation", "tamper", "multi"],
+      "risk": "装了什么、什么时候装的、从哪装的，共同刻画用户画像与作弊工具链。",
+      "detect": "PackageManager 枚举安装包（Android 11+ 受 queryAllPackages 限制，需申明权限或按需查询）、取 firstInstallTime/lastUpdateTime/installerPackageName 与签名。",
+      "anomaly": "命中改机/多开/脚本工具包名；大批应用 firstInstallTime 完全相同（镜像刷机）；安装来源为 adb（installer 为 null）。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 应用行为 > 应用安装列表", "type": "细化" },
+        { "to": "系统完整性 / 篡改检测 > 装包清单", "type": "同一数据源" },
+        { "to": "自动化 / 群控检测 > 应用行为 > 某个包名 p1 的 安装来源", "type": "细化" }
+      ]
+    },
+    {
+      "path": "自动化 / 群控检测 > 应用行为 > 应用安装列表",
+      "signals": ["automation", "screen", "tamper"],
+      "risk": "工具链黑名单是命中率最高、解释性最强的规则来源：按键精灵、多开分身、Magisk 管理器、投屏服务端。",
+      "detect": "包名精确匹配 + so/文件路径特征匹配（minicap、minitouch、scrcpy-server.odex、uiautomator-stub.jar 等）。",
+      "spoof": "改包名与随机化路径；因此文件特征应与行为特征（无障碍能力、虚拟输入设备）联合使用。",
+      "anomaly": "命中黑名单包名或文件；同一批设备安装列表哈希一致。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 应用行为 > apk第一次安装时间",
+      "signals": ["reset", "farm"],
+      "risk": "首次安装时间是设备与账号关系的时间锚，用于识别“新装即刷”与批量镜像。",
+      "detect": "PackageInfo.firstInstallTime，与账号注册时间、uptime 联合。",
+      "anomaly": "安装到注册间隔 < 30 秒；跨设备 firstInstallTime 相同到秒。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 应用行为 > 某个包名 p1 的 安装来源",
+      "signals": ["automation", "tamper"],
+      "risk": "正常渠道有 installer 包名（应用商店），adb 安装与 pm install 则为空，是自动化部署的痕迹。",
+      "detect": "getInstallerPackageName / getInstallSourceInfo（API 30+）。",
+      "anomaly": "installer 为 null 或 com.android.shell。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 应用行为 > 应用签名信息",
+      "signals": ["tamper"],
+      "risk": "签名是应用身份的根。签名不符即重打包，采集数据全部不可信。",
+      "detect": "PackageManager GET_SIGNING_CERTIFICATES 取证书链哈希，与内置期望值在 native 层比对。",
+      "links": [{ "to": "系统完整性 / 篡改检测 > APK 签名", "type": "同一判据" }]
+    }
+  ],
+  "rules": [
+    {
+      "id": "R-AUTO-001",
+      "name": "机械节奏点击",
+      "level": "high",
+      "action": "拦截并要求滑块验证",
+      "signals": ["automation"],
+      "logic": "点击间隔变异系数 CV < 0.1 且 5 分钟内点击数 ≥ 300 且 触控 pressure 取值基数 ≤ 1",
+      "expr": "click_interval_cv < 0.1 AND click_cnt_5m >= 300 AND pressure_distinct <= 1",
+      "note": "三条独立维度同现，误伤极低；单独 CV 异常只做观察。",
+      "fields": [
+        "自动化 / 群控检测 > 自动点击器 > 点击间隔",
+        "自动化 / 群控检测 > 自动点击器 > 操作频次",
+        "自动化 / 群控检测 > 触控数据 > 按压触控数据"
+      ]
+    },
+    {
+      "id": "R-AUTO-002",
+      "name": "无障碍脚本注入",
+      "level": "high",
+      "action": "拦截关键动作（下单、提现）",
+      "signals": ["automation"],
+      "logic": "启用的无障碍服务不在系统白名单 且 声明 canPerformGestures 且 业务动作与无障碍事件时间差 < 50ms",
+      "expr": "acc_service_nonwhitelist AND acc_can_perform_gestures AND abs(action_ts - acc_event_ts) < 50",
+      "fields": [
+        "自动化 / 群控检测 > 无障碍服务",
+        "自动化 / 群控检测 > 无障碍服务 > 采集方式 > 检测服务能力",
+        "自动化 / 群控检测 > 启动来源 > Accessibility 自动拉起"
+      ]
+    },
+    {
+      "id": "R-AUTO-003",
+      "name": "ADB 驱动批量操作",
+      "level": "high",
+      "action": "设备维度封禁",
+      "signals": ["automation", "farm"],
+      "logic": "父进程链命中 adbd/sh 或 installer 为 com.android.shell，且 USB 调试开启，且长期 USB 充电",
+      "expr": "(ppid_chain ~ 'adbd|/system/bin/sh' OR installer IN (null,'com.android.shell')) AND adb_enabled = 1 AND battery_plugged = 'USB'",
+      "fields": [
+        "自动化 / 群控检测 > 启动来源 > adb / 自动化启动",
+        "调试 / 反跟踪 > USB 调试状态",
+        "自动化 / 群控检测 > 电量异常 > 充电状态",
+        "自动化 / 群控检测 > 应用行为 > 某个包名 p1 的 安装来源"
+      ]
+    },
+    {
+      "id": "R-FARM-001",
+      "name": "真机农场集群",
+      "level": "high",
+      "action": "设备族群批量处置",
+      "signals": ["farm"],
+      "logic": "同一 WiFi BSSID 或出口 IP 下设备数 > 20，且开机时刻聚集在同一分钟，且安装列表哈希相同",
+      "expr": "device_cnt_per_bssid > 20 AND boot_ts_cluster_minute AND install_list_hash_dup",
+      "fields": [
+        "自动化 / 群控检测 > 系统状态 > 系统运行时长 (Uptime)",
+        "自动化 / 群控检测 > 应用行为 > 应用安装列表",
+        "网络环境 / 代理检测 > WiFi 环境",
+        "自动化 / 群控检测 > 电量异常 > 充电状态"
+      ]
+    },
+    {
+      "id": "R-GPS-001",
+      "name": "位置伪造",
+      "level": "high",
+      "action": "地域权益不发放",
+      "signals": ["gps_spoof"],
+      "logic": "isFromMockProvider 为真，或（GPS 与基站/IP 归属地跨省 且 加速度计静止但位置移动）",
+      "expr": "mock_provider = 1 OR (geo_mismatch_province AND accel_var < 0.01 AND gps_speed > 5)",
+      "fields": [
+        "自动化 / 群控检测 > 模拟定位",
+        "自动化 / 群控检测 > 模拟定位 > 位置+传感器交叉验证",
+        "自动化 / 群控检测 > 模拟定位 > 基站与wifi校验",
+        "自动化 / 群控检测 > 模拟定位 > GPS信号特征"
+      ]
+    },
+    {
+      "id": "R-SCREEN-001",
+      "name": "远控投屏代操作",
+      "level": "medium",
+      "action": "二次人机验证",
+      "signals": ["screen"],
+      "logic": "存在非系统 VirtualDisplay 或命中投屏工具进程/文件，且触控事件缺失 historical points",
+      "expr": "(virtual_display_nonsystem OR proc_hit_screen_tools) AND touch_history_cnt = 0",
+      "fields": [
+        "自动化 / 群控检测 > 录屏与截屏检测",
+        "自动化 / 群控检测 > 触控数据",
+        "自动化 / 群控检测 > 应用行为 > 应用安装列表"
+      ]
+    },
+    {
+      "id": "R-TIME-001",
+      "name": "本地时间伪造",
+      "level": "medium",
+      "action": "以服务端时间重算冷却，标记观察",
+      "signals": ["reset"],
+      "logic": "本地时间与 NTP 偏差 > 5 分钟，或 uptime 大于开机至今时长",
+      "expr": "abs(local_ts - ntp_ts) > 300 OR uptime > (ntp_ts - boot_ts)",
+      "fields": [
+        "自动化 / 群控检测 > 采集耗时 > 时间轮盘校验",
+        "自动化 / 群控检测 > 采集耗时 > 外网 NTP 时间同步"
+      ]
+    }
+  ]
+}

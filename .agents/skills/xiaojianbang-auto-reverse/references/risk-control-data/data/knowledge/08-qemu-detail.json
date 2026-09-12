@@ -1,0 +1,168 @@
+{
+  "fields": [
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 系统属性",
+      "signals": ["emulator"],
+      "risk": "AOSP 模拟器的系统属性保留了 goldfish/ranchu 虚拟平台的原始标识。这些属性是内核与 HAL 层写入的，改机工具通常只覆盖 Build 类 Java API，忽略属性侧，因此两侧比对能识别“伪装成真机的模拟器”。",
+      "detect": "native 层 __system_property_get 读取 ro.kernel.qemu、ro.hardware、ro.product.model，避免走 Java 层 SystemProperties（易被 Hook）。",
+      "spoof": "商业模拟器（雷电、MuMu、逍遥）已清理或改写这些属性，单靠此项漏报率高，需与 CPU/GPU 特征联合。",
+      "anomaly": "ro.kernel.qemu=1；ro.hardware 为 goldfish/ranchu；ro.product.model 含 sdk/Emulator/Android SDK built for。",
+      "links": [
+        { "to": "模拟器 / 虚拟环境 > QEMU 属性 > Build 类", "type": "交叉验证", "note": "属性侧与 Java API 侧取值应完全一致，不一致即有一侧被改写" },
+        { "to": "设备唯一性 > ro.boot.hardware（硬件平台）", "type": "同一数据源" }
+      ]
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > Build 类",
+      "signals": ["emulator"],
+      "risk": "Build 类字段是 Java 层最易读取也最易被 Hook 的机型标识。它的价值不在于单独取值，而在于与属性侧、与机型库三方比对形成的约束。",
+      "detect": "读 Build.BOARD/BRAND/DEVICE/HARDWARE/MODEL/PRODUCT，逐项与对应 ro.product.* 属性比对，再查服务端机型库是否存在该组合。",
+      "anomaly": "BOARD=unknown；BRAND/DEVICE=generic；HARDWARE=goldfish；MODEL 或 PRODUCT 含 sdk；Java 值与属性值不一致。",
+      "links": [
+        { "to": "设备唯一性 > 品牌", "type": "同一数据源" },
+        { "to": "系统完整性 / 篡改检测 > ROM 一致性 > System Property 多源一致性", "type": "验证手段" }
+      ]
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 电话身份信息",
+      "signals": ["emulator"],
+      "risk": "模拟器的电话子系统是软件模拟的，IMEI/IMSI/手机号都取自固定的默认值表。这类固定值是零误伤的确定性证据——真实设备不可能命中。尤其模拟器手机号按 155552155xx 序列递增分配给多实例，命中即可同时判定模拟器与多开。",
+      "detect": "采集 IMEI/IMSI/运营商名与号码（注意 Android 10+ 读取受限，可改用服务端号码验证与运营商名比对），与已知默认值表匹配。",
+      "anomaly": "IMEI 为全 0 或 e21833235b6eef10；IMSI 为 310260000000000；运营商名为 android；手机号落在 155552155xx 序列。",
+      "links": [
+        { "to": "设备唯一性 > IMEI", "type": "同一数据源" },
+        { "to": "网络环境 / 代理检测 > 网络链路", "type": "交叉验证", "note": "运营商名为 android 而声称蜂窝网络即冲突" }
+      ]
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 电话身份信息 > 手机号",
+      "signals": ["emulator", "multi"],
+      "risk": "AOSP 模拟器按实例序号分配 155552155xx 号码（5554、5556 递增），号码本身就编码了实例编号，可用于识别同一宿主上并行运行的模拟器数量。",
+      "detect": "TelephonyManager.getLine1Number() 或服务端记录的注册号码，匹配 155552155\\d{2} 正则。",
+      "anomaly": "命中该号段；同一出口 IP 下出现多个连续号段号码（多实例并行）。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 网络特征",
+      "signals": ["emulator"],
+      "risk": "模拟器的网络栈由宿主转发，表现为使用 eth0 而非 wlan0/rmnet，且服务端口绑定在 0.0.0.0 上（宿主需要访问）。真机的移动网络接口命名与绑定策略与此不同。",
+      "detect": "读 /proc/net/tcp 与 /proc/net/tcp6 解析监听地址，结合 NetworkInterface 枚举接口名。",
+      "anomaly": "存在 eth0 且无 wlan0/rmnet；监听地址为 0.0.0.0 的异常端口（如 5555 adb）。",
+      "links": [
+        { "to": "网络环境 / 代理检测 > 网卡枚举", "type": "同一判据" },
+        { "to": "调试 / 反跟踪 > USB 调试状态", "type": "同族特征", "note": "模拟器默认开放 5555 端口无线调试" }
+      ]
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 文件系统 / 内核伪文件特征",
+      "signals": ["emulator"],
+      "risk": "虚拟平台需要宿主与客户机通信的通道（管道、socket）以及配套的调试库，这些文件在真机上根本不存在。文件探测比属性读取更难绕过——属性可以改写返回值，文件要么删掉（可能破坏模拟器功能）要么就在那里。",
+      "detect": "native 层用 access()/stat() 逐一探测路径清单，避免走 Java File API（易被 Hook）；按厂商分组统计命中数。",
+      "spoof": "定制模拟器会重命名管道与 socket，因此清单需持续维护；同时可辅以“目录项数量异常”与 /proc/mounts 中的可疑文件系统类型。",
+      "anomaly": "命中任一 QEMU/Genymotion 专属路径即可定性；/proc/tty/drivers 或 /proc/cpuinfo 内容含 goldfish。",
+      "links": [
+        { "to": "模拟器 / 虚拟环境 > CPU 真实性 > Features", "type": "交叉验证" },
+        { "to": "Hook 框架 / 注入检测 > 检测位置", "type": "实现要求", "note": "文件探测必须在 native 层做，否则被 Java 层 Hook 直接绕过" }
+      ]
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 文件系统 / 内核伪文件特征 > Genymotion 特征",
+      "signals": ["emulator"],
+      "risk": "Genymotion 是基于 VirtualBox 的商业模拟器，常见于自动化测试与作弊工具链，其专属 socket 与 QEMU 系不同，需单独列入清单。",
+      "detect": "探测 /dev/socket/genyd 与 /dev/socket/baseband_genyd；辅以 VirtualBox 的 MAC OUI（08:00:27）与虚拟硬件标识。",
+      "anomaly": "命中任一 genyd socket。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > 传感器 > 加速度/陀螺仪等：固定间隔（如 0.8s）+ 完全恒定值（论文测出标准差 ≈0.003）",
+      "signals": ["emulator", "cloudphone"],
+      "risk": "模拟器的传感器由定时器驱动而非硬件中断，因此回调间隔精确等距（如恒定 0.8s），数值标准差趋近于 0（实测约 0.003，远低于真实 MEMS 的噪声水平）。这两个统计量给出了可量化的判定阈值，比“有没有传感器”更抗对抗。",
+      "detect": "注册 SENSOR_DELAY_FASTEST 采样 3-5 秒，记录每次回调的时间戳与三轴数值，计算间隔抖动（相邻间隔的标准差）与数值标准差。",
+      "anomaly": "回调间隔抖动 ≈ 0（真实硬件因调度存在毫秒级抖动）；三轴数值标准差 < 0.01；采样率不随 delay 参数变化。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 传感器噪声", "type": "同一判据" },
+        { "to": "传感器与物理环境特征 > 惯性传感器 > 加速度计", "type": "同一数据源" }
+      ]
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > 传感器 > 注册失败 或 onSensorChanged 值/间隔无变化",
+      "signals": ["emulator", "cloudphone"],
+      "risk": "传感器注册失败（registerListener 返回 false）或注册成功但从不回调，说明传感器只是列表里的一个空壳。这是虚拟环境“声明支持但未实现”的典型表现。",
+      "detect": "registerListener 返回值检查 + 设定超时（如 2 秒）判断是否收到回调；对比 getSensorList 声明的传感器数量与实际能产生数据的数量。",
+      "anomaly": "注册返回 false；声明存在但超时无回调；声明数量与可用数量差异显著。"
+    }
+  ],
+  "rules": [
+    {
+      "id": "R-EMU-005",
+      "name": "QEMU 伪文件命中",
+      "level": "high",
+      "action": "拒绝服务",
+      "signals": ["emulator"],
+      "logic": "命中 QEMU/Genymotion 专属文件、设备节点或管道，或 /proc/cpuinfo 与 /proc/tty/drivers 含 goldfish",
+      "expr": "qemu_file_hit OR genymotion_socket_hit OR procfs_content ~ 'goldfish'",
+      "note": "文件类证据比属性类更难绕过：属性可改返回值，管道与 socket 是模拟器运行的必要设施。检测须在 native 层实现。",
+      "fields": [
+        "模拟器 / 虚拟环境 > QEMU 属性 > 文件系统 / 内核伪文件特征",
+        "模拟器 / 虚拟环境 > QEMU 属性 > 文件系统 / 内核伪文件特征 > Genymotion 特征",
+        "模拟器 / 虚拟环境 > QEMU 属性 > 系统属性"
+      ]
+    },
+    {
+      "id": "R-EMU-006",
+      "name": "模拟器默认身份值",
+      "level": "high",
+      "action": "拒绝注册与权益发放",
+      "signals": ["emulator", "multi"],
+      "logic": "IMEI/IMSI/运营商名命中模拟器默认值，或手机号落在 155552155xx 序列",
+      "expr": "imei IN ('000000000000000','e21833235b6eef10') OR imsi = '310260000000000' OR operator_name = 'android' OR phone ~ '^155552155\\d{2}$'",
+      "note": "固定默认值属零误伤证据；手机号序列还能反推同一宿主上并行的实例数。",
+      "fields": [
+        "模拟器 / 虚拟环境 > QEMU 属性 > 电话身份信息",
+        "模拟器 / 虚拟环境 > QEMU 属性 > 电话身份信息 > 手机号",
+        "设备唯一性 > IMEI"
+      ]
+    },
+    {
+      "id": "R-EMU-007",
+      "name": "属性与 API 双源冲突",
+      "level": "high",
+      "action": "判定改机或注入，采集数据不可信",
+      "signals": ["emulator", "tamper", "hook"],
+      "logic": "Build 类 Java 取值与对应 ro.product.* 属性不一致，或机型库中不存在该组合",
+      "expr": "build_prop_mismatch_cnt >= 1 OR device_combo NOT IN device_db",
+      "note": "改机工具多只 Hook Java 层，属性侧比对是低成本高收益的识别口。",
+      "fields": [
+        "模拟器 / 虚拟环境 > QEMU 属性 > Build 类",
+        "模拟器 / 虚拟环境 > QEMU 属性 > 系统属性",
+        "系统完整性 / 篡改检测 > ROM 一致性 > System Property 多源一致性"
+      ]
+    },
+    {
+      "id": "R-EMU-008",
+      "name": "传感器定时器驱动特征",
+      "level": "high",
+      "action": "判定虚拟环境，限制权益",
+      "signals": ["emulator", "cloudphone"],
+      "logic": "传感器回调间隔抖动 ≈ 0，或数值标准差 < 0.01，或注册成功但超时无回调",
+      "expr": "callback_interval_jitter < 1e-3 OR sensor_value_stddev < 0.01 OR (register_ok AND callback_cnt = 0)",
+      "note": "真实 MEMS 受硬件中断与系统调度影响，不可能给出零抖动等距回调。阈值来自实测（标准差约 0.003）。",
+      "fields": [
+        "模拟器 / 虚拟环境 > 传感器 > 加速度/陀螺仪等：固定间隔（如 0.8s）+ 完全恒定值（论文测出标准差 ≈0.003）",
+        "模拟器 / 虚拟环境 > 传感器 > 注册失败 或 onSensorChanged 值/间隔无变化",
+        "自动化 / 群控检测 > 传感器噪声"
+      ]
+    },
+    {
+      "id": "R-EMU-009",
+      "name": "模拟器网络栈特征",
+      "level": "medium",
+      "action": "提升风险分，联合其他判据定性",
+      "signals": ["emulator"],
+      "logic": "存在 eth0 而无 wlan0/rmnet，且存在绑定 0.0.0.0 的异常监听端口",
+      "expr": "has_eth0 AND NOT has_wlan_or_rmnet AND listen_addr_any_cnt > 0",
+      "fields": [
+        "模拟器 / 虚拟环境 > QEMU 属性 > 网络特征",
+        "网络环境 / 代理检测 > 网卡枚举"
+      ]
+    }
+  ]
+}

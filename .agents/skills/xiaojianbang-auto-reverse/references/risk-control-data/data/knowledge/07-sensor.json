@@ -1,0 +1,186 @@
+{
+  "fields": [
+    {
+      "path": "传感器与物理环境特征",
+      "signals": ["cloudphone", "emulator", "farm"],
+      "risk": "传感器是设备与物理世界的接口，也是虚拟环境最难跨越的鸿沟。它的风控价值有三层：证明设备真实存在（有噪声）、证明有人在使用（噪声与操作相关）、以及作为硬件指纹（每颗 MEMS 的零偏与刻度误差都不同）。",
+      "detect": "高频采样（≥50Hz）取时间序列而非单点值，分析方差、自相关、量化步长与轴间相关性；同时与触控事件、位置变化做时间相关性回归。",
+      "spoof": "云手机注入真机录制流是当前最强对抗，识别点在于重放的周期性与“传感器活动和触控事件无因果关系”。",
+      "anomaly": "所有轴方差为 0；数据可整段重复；用户在点击屏幕但加速度计毫无扰动。",
+      "links": [
+        { "to": "自动化 / 群控检测 > 传感器噪声", "type": "同一判据" },
+        { "to": "模拟器 / 虚拟环境 > 传感器", "type": "同一判据" }
+      ]
+    },
+    {
+      "path": "传感器与物理环境特征 > 惯性传感器",
+      "signals": ["cloudphone", "emulator", "automation"],
+      "risk": "加速度计与陀螺仪构成设备姿态的实时描述。手持设备永远有微幅抖动（心跳、呼吸、肌肉张力），支架固定的农场设备则近乎静止但仍有环境振动，虚拟环境干脆为零。三者可分辨。",
+      "detect": "100Hz 采样 3-5 秒，计算三轴方差、合加速度均值（应接近 9.8）、频域主峰（人手抖动集中在 4-12Hz）。",
+      "anomaly": "合加速度不等于重力常数；方差为 0 或恒定；三轴数值完全相同；采样间隔精确等距（真实硬件有抖动）。",
+      "links": [
+        { "to": "传感器与物理环境特征 > 惯性传感器 > 加速度计", "type": "细化" },
+        { "to": "自动化 / 群控检测 > 模拟定位 > 位置+传感器交叉验证", "type": "验证用途" }
+      ]
+    },
+    {
+      "path": "传感器与物理环境特征 > 惯性传感器 > 加速度计",
+      "signals": ["cloudphone", "farm"],
+      "risk": "最普及的传感器，也是零偏指纹（每颗芯片的静态偏移）的主要来源，可用于设备识别。",
+      "detect": "静置时取三轴均值作为零偏特征，取方差作为噪声特征，二者组合上报作为硬件指纹因子。",
+      "anomaly": "零偏恰为 0（理想值不存在于真实硬件）；多设备零偏完全一致。"
+    },
+    {
+      "path": "传感器与物理环境特征 > 惯性传感器 > 陀螺仪",
+      "signals": ["cloudphone", "emulator"],
+      "risk": "陀螺仪成本较高，中低端机型与虚拟环境常缺失，缺失本身就是判据。",
+      "detect": "getDefaultSensor(TYPE_GYROSCOPE) 是否为 null，并与机型标称配置比对。",
+      "anomaly": "旗舰机型缺陀螺仪；存在但数值恒为 0。"
+    },
+    {
+      "path": "传感器与物理环境特征 > 惯性传感器 > 磁力计",
+      "signals": ["cloudphone", "gps_spoof"],
+      "risk": "磁力计读数受地磁与周边金属影响，同一物理位置的多台设备读数相近，可用于验证“设备是否真在它声称的地方”。",
+      "detect": "TYPE_MAGNETIC_FIELD 取三轴，计算磁场总强度（地表约 25-65μT）并与所在纬度期望值比对。",
+      "anomaly": "总强度为 0 或远超地磁范围；数值恒定不随设备转动变化。"
+    },
+    {
+      "path": "传感器与物理环境特征 > 位置与环境",
+      "signals": ["gps_spoof", "cloudphone"],
+      "risk": "位置类数据是权益发放的直接依据，必须与环境传感器互相印证，单独的经纬度不足以采信。",
+      "detect": "同时采集 GPS 经纬度/精度/速度/海拔、气压计、光感、距离传感器，做物理自洽性检查（海拔 vs 气压、室内外 vs 光照、通话 vs 距离）。",
+      "anomaly": "海拔 3000m 而气压为标准海平面值；深夜室外定位但光感读数为强光恒定值。",
+      "links": [{ "to": "自动化 / 群控检测 > 模拟定位", "type": "验证对象" }]
+    },
+    {
+      "path": "传感器与物理环境特征 > 位置与环境 > Gps经纬度",
+      "signals": ["gps_spoof"],
+      "risk": "经纬度本身即业务判据，同时其数值形态（小数位数、变化模式）能暴露伪造。",
+      "detect": "LocationManager/FusedLocationProvider 取坐标，检查 isFromMockProvider、provider 来源与精度自洽性。",
+      "anomaly": "小数位过少（如仅 4 位）或末位恒为 0；坐标长期完全不变；轨迹为直线等距点。"
+    },
+    {
+      "path": "传感器与物理环境特征 > 位置与环境 > 定位精度",
+      "signals": ["gps_spoof", "cloudphone"],
+      "risk": "精度值与定位来源、卫星数存在物理约束，伪造者常忽略这个副产品。",
+      "detect": "Location.getAccuracy() 与 provider、卫星数联合校验。",
+      "anomaly": "network provider 却给出 3m 精度；精度值恒定为整数（如恒 10.0）。"
+    },
+    {
+      "path": "传感器与物理环境特征 > 位置与环境 > 速度信息",
+      "signals": ["gps_spoof", "automation"],
+      "risk": "速度可校验位置序列的物理可能性，用于识别瞬移与轨迹合成。",
+      "detect": "Location.getSpeed() 与相邻坐标推算速度比对，二者应一致。",
+      "anomaly": "两种速度差异显著；推算速度超交通工具上限；速度非 0 但加速度计静止。"
+    },
+    {
+      "path": "传感器与物理环境特征 > 位置与环境 > 气压计",
+      "signals": ["cloudphone", "gps_spoof"],
+      "risk": "气压计可独立推算海拔，是校验 GPS 高度的第二信源；虚拟环境几乎不实现。",
+      "detect": "TYPE_PRESSURE 取值，用标准大气公式换算海拔与 GPS 海拔比对。",
+      "anomaly": "传感器缺失但机型标称支持；读数恒为 1013.25（标准值硬编码）。"
+    },
+    {
+      "path": "传感器与物理环境特征 > 位置与环境 > 光传感器",
+      "signals": ["cloudphone", "farm"],
+      "risk": "环境光读数反映设备是否真的在被人使用（口袋里、桌面上、手持面向屏幕），农场设备常年固定光照，读数恒定。",
+      "detect": "TYPE_LIGHT 时间序列采样，观察是否随时间与用户操作变化。",
+      "anomaly": "读数恒定；与本地时间的昼夜规律矛盾；缺失该传感器。"
+    },
+    {
+      "path": "传感器与物理环境特征 > 位置与环境 > 距离传感器",
+      "signals": ["cloudphone", "emulator"],
+      "risk": "接近传感器是通话场景的必需硬件，虚拟环境常缺失或恒定。",
+      "detect": "TYPE_PROXIMITY 取值与最大量程，观察通话过程中是否变化。",
+      "anomaly": "缺失；读数恒定为最大值。"
+    },
+    {
+      "path": "传感器与物理环境特征 > 生物特征",
+      "signals": ["cloudphone", "emulator", "reset"],
+      "risk": "生物识别硬件的存在性与已注册状态，是“真人拥有的日常设备”的强证明：农场与云手机通常未注册指纹或根本无硬件。同时可作为高价值操作的本地二次验证。",
+      "detect": "BiometricManager.canAuthenticate(BIOMETRIC_STRONG) 区分「无硬件/不可用/未注册/可用」四态；结合 PackageManager FEATURE_FINGERPRINT 与机型标称比对。",
+      "anomaly": "机型标称有指纹但报告无硬件；硬件可用但从未注册；输入设备列表中无指纹节点。",
+      "links": [
+        { "to": "模拟器 / 虚拟环境 > 输入设备", "type": "交叉验证", "note": "真机应有 fts/goodix 等指纹输入节点" },
+        { "to": "设备唯一性 > 硬件信任根", "type": "同族能力", "note": "生物识别绑定的密钥可做强证明" }
+      ]
+    },
+    {
+      "path": "传感器与物理环境特征 > 生物特征 > 指纹识别硬件信息",
+      "signals": ["cloudphone", "farm"],
+      "risk": "已注册指纹说明设备有真实主人在日常使用，未注册则是批量设备的常态。",
+      "detect": "BiometricManager 四态判定 + FingerprintManager.hasEnrolledFingerprints()（旧 API）。",
+      "anomaly": "标称支持但未注册，且伴随无 SIM、电量恒满。"
+    },
+    {
+      "path": "传感器与物理环境特征 > 生物特征 > 人脸识别硬件信息",
+      "signals": ["cloudphone", "emulator"],
+      "risk": "结构光/3D 人脸硬件是特定机型的硬约束，可用于机型一致性校验。",
+      "detect": "PackageManager FEATURE_FACE / BiometricManager 能力查询，与机型库标称比对。",
+      "anomaly": "声称为支持面容的机型但无对应硬件能力。"
+    }
+  ],
+  "rules": [
+    {
+      "id": "R-SENSOR-001",
+      "name": "传感器数据合成",
+      "level": "high",
+      "action": "判定虚拟环境，拒绝权益",
+      "signals": ["cloudphone", "emulator"],
+      "logic": "加速度计三轴方差为 0，或合加速度偏离重力常数，或采样间隔完全等距",
+      "expr": "accel_var_sum < 1e-6 OR abs(accel_magnitude_mean - 9.8) > 2 OR sample_interval_jitter = 0",
+      "note": "真实 MEMS 不可能给出零方差与完美等距采样，这是物理层面的硬约束。",
+      "fields": [
+        "传感器与物理环境特征 > 惯性传感器",
+        "传感器与物理环境特征 > 惯性传感器 > 加速度计",
+        "自动化 / 群控检测 > 传感器噪声"
+      ]
+    },
+    {
+      "path_note": "以下规则依赖跨分类字段",
+      "id": "R-SENSOR-002",
+      "name": "传感器数据重放",
+      "level": "high",
+      "action": "标记云手机注入，限制批量行为",
+      "signals": ["cloudphone"],
+      "logic": "传感器序列存在周期性重复（自相关峰值 > 0.95），或传感器活动与触控事件无时间相关性",
+      "expr": "sensor_autocorr_peak > 0.95 OR corr(sensor_activity, touch_event) < 0.1",
+      "fields": [
+        "自动化 / 群控检测 > 传感器噪声",
+        "传感器与物理环境特征",
+        "自动化 / 群控检测 > 触控数据"
+      ]
+    },
+    {
+      "id": "R-SENSOR-003",
+      "name": "物理环境不自洽",
+      "level": "medium",
+      "action": "地域与位置类权益不发放",
+      "signals": ["gps_spoof", "cloudphone"],
+      "logic": "GPS 海拔与气压推算海拔差 > 200m，或位置移动但磁力计朝向恒定，或速度非 0 而加速度计静止",
+      "expr": "abs(gps_alt - baro_alt) > 200 OR (gps_moving AND mag_variance < 0.01) OR (gps_speed > 3 AND accel_var < 0.01)",
+      "fields": [
+        "传感器与物理环境特征 > 位置与环境 > 气压计",
+        "传感器与物理环境特征 > 位置与环境 > 速度信息",
+        "传感器与物理环境特征 > 惯性传感器 > 磁力计",
+        "传感器与物理环境特征 > 位置与环境 > Gps经纬度"
+      ]
+    },
+    {
+      "id": "R-FARM-002",
+      "name": "无主设备（批量养号）",
+      "level": "medium",
+      "action": "限制新用户权益与批量注册",
+      "signals": ["farm", "cloudphone"],
+      "logic": "未注册生物识别，且无 SIM 卡，且光感读数恒定，且电量恒满充电中",
+      "expr": "NOT biometric_enrolled AND sim_state = 'ABSENT' AND light_variance = 0 AND battery_level = 100 AND is_charging",
+      "note": "四项均为“没有真实主人在日常使用”的旁证，组合后置信度足以限制权益。",
+      "fields": [
+        "传感器与物理环境特征 > 生物特征 > 指纹识别硬件信息",
+        "传感器与物理环境特征 > 位置与环境 > 光传感器",
+        "网络环境 / 代理检测 > 网络链路 > SIM 卡状态",
+        "自动化 / 群控检测 > 电量异常 > 充电状态"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+# dsh-mcp-client profile composition patch. This makes the package a valid
+# DSH profile bundle (dsh.bundle.patch) and contributes ONE crawler-mcp row
+# wired to the local crawler-mcp Python server. The server's concrete
+# transport config is user-specific (the crawler-mcp directory path), so the
+# row here declares only id + name; the running profile's cordis.patch.yml
+# supplies the full config as a config override on the same id.
+- insert:
+    - id: crawler-mcp
+      name: '@deepseek-ai/dsh-mcp-client'

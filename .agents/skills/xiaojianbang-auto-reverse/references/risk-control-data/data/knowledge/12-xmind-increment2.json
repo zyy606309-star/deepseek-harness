@@ -1,0 +1,324 @@
+{
+  "fields": [
+    {
+      "path": "自动化 / 群控检测 > 自动点击器 > 黑名单",
+      "signals": [
+        "automation",
+        "debug"
+      ],
+      "risk": "自动点击器黑名单把猴子压测、脚本点击器与自动化工具包名直接暴露出来，是比单纯点击节奏更稳定的工具链证据。",
+      "detect": "枚举已安装包名、启动器与测试框架标记，并与 ActivityManager.isUserAMonkey() / isRunningInTestHarness() 交叉校验。",
+      "anomaly": "命中 monkey 相关标志，或黑名单包名出现、被前台拉起、与触控事件高度同步。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 自动点击器 > 黑名单 > isUserAMonkey | com.cygery.repetitouch.pro | com.cyjh.mobileanjian | com.touchsprite.android | com.cjzs123.zhushou | com.touchspriteent.android | com.zidongdianji | org.autojs.autojspro | org.autojs.autojs | com.zdanjian.zdanjian | com.zdnewproject | com.ifengwoo.zyjdkj | com.angel.nrzs | com.cyjh.mobileanjian.vip | com.shumai.shudaxia | fun.tooling.clicker.cn | com.dianjiqi | com.miaodong.autoactionssss | com.mxz.wxautojiafujinderen | com.touchelf.app | com.stardust.scriptdroid | com.adinall.autoclick | com.i_cool.auto_clicker | com.kongshan.aidianji | com.xptech.catclicker | com.tingniu.autoclick | com.yicu.yichujifa | com.smallyin.autoclick | com.ksxkq.autoclick | com.x2.clicker | com.scott.autoclickhelper | com.auyou.auyouwzs",
+      "signals": [
+        "automation",
+        "debug"
+      ],
+      "risk": "黑名单叶子列出了具体的自动点击器/猴子工具包名；一旦命中，说明当前设备大概率处于脚本、压测或自动化控制链路中。",
+      "detect": "按包名黑名单、启动服务名与系统测试标志交叉检查，避免仅靠单一包名造成漏报。",
+      "anomaly": "黑名单中任一工具包名存在，或 monkey 测试开关被触发。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 录屏与截屏检测 > 黑名单",
+      "signals": [
+        "screen",
+        "automation"
+      ],
+      "risk": "录屏与截屏黑名单用于识别远控、投屏与自动化录制链路。scrcpy、uiautomator2、Total Control 这类工具会显著改变屏幕控制模式。",
+      "detect": "枚举屏幕投射、录屏服务、前台进程与安装包名，检查是否存在受控投屏或脚本调试工具。",
+      "anomaly": "命中录屏/截屏工具黑名单，或出现持续投屏但缺少正常触控轨迹。"
+    },
+    {
+      "path": "自动化 / 群控检测 > 录屏与截屏检测 > 黑名单 > com.github.uiautomator | com.github.uiautomator2 | com.sigma_rt.totalcontrol | com.genymobile.scrcpy",
+      "signals": [
+        "screen",
+        "automation"
+      ],
+      "risk": "黑名单叶子列出常见录屏、截屏和远控工具；它们本质上都意味着屏幕内容可能被外部程序接管。",
+      "detect": "按包名、进程名和投屏服务名做黑白名单交叉比对。",
+      "anomaly": "出现 scrcpy、uiautomator2、Total Control 等黑名单工具。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 特征文件",
+      "signals": [
+        "emulator",
+        "cloudphone"
+      ],
+      "risk": "QEMU 特征文件是模拟器最难完全抹平的运行痕迹之一，通常会落在 /system/bin、/system/lib、/data/property 等位置。",
+      "detect": "扫描已知模拟器文件、库、脚本与属性落点，统计命中数量而不是只看单个文件。",
+      "anomaly": "命中一批互相独立的模拟器特征文件，或同批设备文件指纹完全一致。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 特征文件 > /system/bin/ldinit | /system/bin/ldmountsf | /system/lib/libldutils.so | /system/bin/microvirt-prop | /system/lib/libdroid4x.so | /system/bin/windroyed | /system/lib/libnemuVMprop.so | /system/bin/microvirtd | /system/bin/nox-prop | /system/lib/libnoxspeedup.so | /data/property/persist.nox.simulator_version | /data/misc/profiles/ref/com.bignox.google.installer | /data/misc/profiles/ref/com.bignox.app.store.hd | /system/bin/ttVM-prop | /system/bin/droid4x-prop | /system/bin/duosconfig | /system/etc/xxzs_prop.sh | /system/etc/mumu-configs/device-prop-configs/mumu.config | /boot/bstsetup.env | /boot/bstmods | /system/xbin/bstk | /data/bluestacks.prop | /data/data/com.anrovmconfig | /data/data/com.bluestacks.appmart | /data/data/com.bluestacks.home | /data/data/com.microvirt.market | /dev/nemuguest | /data/data/com.microvirt.toolst | /data/data/com.mumu.launcher | /data/data/com.mumu.store | /data/data/com.netease.mumu.cloner | /system/bin/bstshutdown | /sys/module/bstinput | /sys/class/misc/bstXqpb | /system/phoenixos | /xbin/phoenix_compat | /init.dundi.rc | /system/etc/init.dundi.sh | /data/data/com.ddmnq.dundidevhelper | /init.andy.cloud.rc | /system/bin/xiaopiVM-prop | /system/bin/XCPlayer-prop | /system/lib/liblybox_prop.so | /system/bin/tencent_virtual_input | /vendor/bin/init.tencent.sh | /data/youwave_id | /dev/vboxguest | /dev/vboxuser | /sys/bus/pci/drivers/vboxguest | /sys/class/bdi/vboxsf-c | /sys/class/misc/vboxguest | /sys/class/misc/vboxuser | /sys/devices/virtual/bdi/vboxsf-c | /sys/devices/virtual/misc/vboxguest | /sys/devices/virtual/misc/vboxuser | /sys/module/vboxguest | /sys/module/vboxsf | /sys/module/vboxvideo | /system/bin/androVM-vbox-sf | /system/bin/androVM_setprop | /system/bin/get_androVM_host | /system/bin/mount.vboxsf | /system/etc/init.androVM.sh | /system/etc/init.buildroid.sh | /system/lib/vboxguest.ko | /system/lib/vboxsf.ko | /system/lib/vboxvideo.ko | /system/xbin/mount.vboxsf | /dev/goldfish_pipe | /sys/devices/virtual/misc/goldfish_pipe | /sys/module/goldfish_audio | /sys/module/goldfish_battery | /sys/module/kvm_intel/ | /sys/module/kvm_amd/ | /init.android_x86_64.rc | /init.android_x86.rc | /init.androidVM_x86.rc | /init.intel.rc | /init.vbox2345_x86.rc",
+      "signals": [
+        "emulator",
+        "cloudphone"
+      ],
+      "risk": "特征文件叶子记录的是模拟器工具链留下的具体文件名；这些文件一旦出现，说明运行环境并非普通真机。",
+      "detect": "按文件存在性和路径特征做 native 扫描。",
+      "anomaly": "命中任一已知模拟器特征文件。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 字段特征（system）",
+      "signals": [
+        "emulator",
+        "tamper",
+        "hook"
+      ],
+      "risk": "字段特征反映的是系统属性层的 QEMU 伪装痕迹。真机和模拟器在 ro.product.*、ro.hardware、ro.debuggable 等字段上通常不会同时一致。",
+      "detect": "同时读取 Build 类与底层 ro.* 属性，对比 Java / native 两路结果与设备常识库。",
+      "anomaly": "Build 与 ro 属性冲突、字段值为 default/generic/sdk，或一组属性组合只在模拟器中出现。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 字段特征（system） > init.svc.microvirtd | bst.version | ro.phoenix.version.code | ro.phoenix.version.codename | init.svc.droid4x | microvirt.memu_version | microvirt.imsi | microvirt.simserial | ro.px.version.build | ro.phoenix.os.branch | init.svc.su_kpbs_daemon | init.svc.noxd | init.svc.ttVM_x86-setup | init.svc.xxkmsg | ro.bild.remixos.version | microvirt.mut | init.svc.ldinit | sys.tencent.os_version | sys.tencent.android_id | ro.genymotion.version | init.svc.pkVM_x86-setup | ro.andy.version | ro.build.version.release | ro.product.model | ro.product.brand | ro.boot.bootloader | ro.build.version.securitypatch | ro.build.version.incremental | gsm.version.baseband | gsm.version.ril-impl | ro.build.fingerprint | ro.build.description | ro.build.product | ro.boot.vbmeta.digest | ro.hardware | ro.product.name | ro.product.board | ro.recovery_id | ro.expect.recovery_id | ro.board.platform | ro.product.manufacturer | ro.product.device | sys.usb.state | ro.setupwizard.mode | ro.build.id | ro.build.tags | ro.build.type | ro.debuggable",
+      "signals": [
+        "emulator",
+        "tamper",
+        "hook"
+      ],
+      "risk": "这个长叶子列出的是具体系统属性键，代表 QEMU 伪装最常落脚的字段集合。",
+      "detect": "读取对应系统属性并与机型、ABI、GPU、签名和硬件常识交叉验证。",
+      "anomaly": "系统属性集合中出现 default/generic/sdk/goldfish 等高一致性组合。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 挂载目录",
+      "signals": [
+        "emulator",
+        "cloudphone"
+      ],
+      "risk": "QEMU 挂载目录暴露了宿主机与虚拟机之间的共享通道，例如共享目录、应用映射目录与平台配置目录。",
+      "detect": "读取 mount/StatFs 结果，聚合共享目录、桥接目录和平台私有目录的命中情况。",
+      "anomaly": "出现多个共享挂载目录，或挂载布局与标准 Android 真机差异明显。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 挂载目录 > /mnt/shared/Sharefolder | /tiantian.conf | /data/share1 | /hardware_device.conf | /mnt/shared/products | /mumu_hardware.conf | /Andy.conf | /mnt/windows/BstSharedFolder | /bst.conf | /mnt/shared/Applications | /ld.conf",
+      "signals": [
+        "emulator",
+        "cloudphone"
+      ],
+      "risk": "挂载目录叶子是具体的共享目录/配置目录清单；这些目录往往对应模拟器与宿主之间的数据通道。",
+      "detect": "检查挂载点是否落在已知模拟器共享目录集合中。",
+      "anomaly": "命中 /mnt/shared、BstSharedFolder、share1 这类共享挂载路径。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 虚拟机软件",
+      "signals": [
+        "emulator",
+        "cloudphone"
+      ],
+      "risk": "虚拟机软件黑名单列的是 Android 模拟器和虚拟容器的品牌/产品名。命中这类软件通常意味着设备已经被虚拟化。",
+      "detect": "枚举已安装应用、启动器与系统属性，检查 VMOS、X8、51 等已知虚拟机软件。",
+      "anomaly": "同一设备同时安装多个虚拟机软件，或启动器类包名与系统角色不匹配。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 虚拟机软件 > 黑名单",
+      "signals": [
+        "emulator",
+        "cloudphone"
+      ],
+      "risk": "虚拟机软件黑名单列的是 Android 模拟器和虚拟容器的品牌/产品名。命中这类软件通常意味着设备已经被虚拟化。",
+      "detect": "枚举已安装应用、启动器与系统属性，检查 VMOS、X8、51 等已知虚拟机软件。",
+      "anomaly": "同一设备同时安装多个虚拟机软件，或启动器类包名与系统角色不匹配。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 虚拟机软件 > 黑名单 > VMOS虚拟机",
+      "signals": [
+        "emulator",
+        "cloudphone"
+      ],
+      "risk": "黑名单叶子是具体虚拟机软件包名/产品名，属于强信号。",
+      "detect": "按包名与应用签名匹配黑名单。",
+      "anomaly": "命中 VMOS、X8 沙箱、51 虚拟机或虚拟精灵。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 虚拟机软件 > 黑名单 > X8沙箱",
+      "signals": [
+        "emulator",
+        "cloudphone"
+      ],
+      "risk": "黑名单叶子是具体虚拟机软件包名/产品名，属于强信号。",
+      "detect": "按包名与应用签名匹配黑名单。",
+      "anomaly": "命中 VMOS、X8 沙箱、51 虚拟机或虚拟精灵。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 虚拟机软件 > 黑名单 > 51虚拟机",
+      "signals": [
+        "emulator",
+        "cloudphone"
+      ],
+      "risk": "黑名单叶子是具体虚拟机软件包名/产品名，属于强信号。",
+      "detect": "按包名与应用签名匹配黑名单。",
+      "anomaly": "命中 VMOS、X8 沙箱、51 虚拟机或虚拟精灵。"
+    },
+    {
+      "path": "模拟器 / 虚拟环境 > QEMU 属性 > 虚拟机软件 > 黑名单 > 虚拟精灵和虚拟大师",
+      "signals": [
+        "emulator",
+        "cloudphone"
+      ],
+      "risk": "黑名单叶子是具体虚拟机软件包名/产品名，属于强信号。",
+      "detect": "按包名与应用签名匹配黑名单。",
+      "anomaly": "命中 VMOS、X8 沙箱、51 虚拟机或虚拟精灵。"
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > 文件创建时间",
+      "signals": [
+        "tamper",
+        "reset"
+      ],
+      "risk": "文件创建时间能暴露还原、克隆和批量初始化后的文件分布。真机长期使用的媒体与资源文件不会呈现完全整齐的时间格局。",
+      "detect": "比较文件创建时间、安装时间、媒体库时间和目录批量分布，观察是否出现批量重置或复刻。",
+      "anomaly": "大量文件创建时间相同，或文件时间全部晚于应用安装时间但又声称是长期使用设备。"
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > 文件创建时间 > 采集来源",
+      "signals": [
+        "tamper",
+        "reset"
+      ],
+      "risk": "文件创建时间能暴露还原、克隆和批量初始化后的文件分布。真机长期使用的媒体与资源文件不会呈现完全整齐的时间格局。",
+      "detect": "比较文件创建时间、安装时间、媒体库时间和目录批量分布，观察是否出现批量重置或复刻。",
+      "anomaly": "大量文件创建时间相同，或文件时间全部晚于应用安装时间但又声称是长期使用设备。"
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > 文件创建时间 > 采集来源 > /sdcard/ 或者相册目录的一些创建时间",
+      "signals": [
+        "tamper",
+        "reset"
+      ],
+      "risk": "这个叶子记录的是特定目录中的创建时间采样，常用于判断是否发生过拷贝、恢复或批量灌机。",
+      "detect": "读取目录/文件元数据并与设备生命周期比较。",
+      "anomaly": "相册或 /sdcard 目录中的文件创建时间呈现批量同秒分布。"
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > 改机黑名单",
+      "signals": [
+        "tamper",
+        "reset",
+        "hook"
+      ],
+      "risk": "改机黑名单列的是改机、换机、伪装机型和属性注入工具；它们直接面向设备身份与属性伪造。",
+      "detect": "枚举应用包名、Xposed 相关模块与属性伪造工具，交叉检查机型、品牌、序列号与签名链。",
+      "anomaly": "黑名单工具存在于设备上，或设备属性变化与这些工具的行为模式一致。"
+    },
+    {
+      "path": "系统完整性 / 篡改检测 > 改机黑名单 > com.yztc.studio.plugin | com.soft.apk008v | com.uwish.app | zpp.wjy.xxsq | com.bigsing.changer | zap.fh.wipe | com.sollyu.xposed.hook.model | com.soft.apk008Tool | com.doubee.ig | com.variable.apkhook | com.addeasy.fastest | com.xenice.mask | com.shyl.artifact | com.android1500.androidfaker",
+      "signals": [
+        "tamper",
+        "reset",
+        "hook"
+      ],
+      "risk": "黑名单叶子是具体改机/属性伪造工具；命中即可视为设备身份被人为干预。",
+      "detect": "按包名与安装痕迹做黑白名单匹配。",
+      "anomaly": "命中换机/改机/伪装类工具包名。"
+    }
+  ],
+  "rules": [
+    {
+      "id": "R-AUTO-005",
+      "name": "自动点击器黑名单命中",
+      "level": "high",
+      "action": "拦截关键动作并要求强人机验证",
+      "signals": [
+        "automation",
+        "debug"
+      ],
+      "logic": "monkey/脚本工具包名命中黑名单，或 isUserAMonkey / test harness 标志异常",
+      "expr": "monkey_black_hit OR user_is_monkey OR test_harness = 1",
+      "fields": [
+        "系统完整性 / 篡改检测 > 改机黑名单",
+        "系统完整性 / 篡改检测 > 改机黑名单 > com.yztc.studio.plugin | com.soft.apk008v | com.uwish.app | zpp.wjy.xxsq | com.bigsing.changer | zap.fh.wipe | com.sollyu.xposed.hook.model | com.soft.apk008Tool | com.doubee.ig | com.variable.apkhook | com.addeasy.fastest | com.xenice.mask | com.shyl.artifact | com.android1500.androidfaker"
+      ],
+      "note": "黑名单与系统测试标志合用，可以覆盖单纯改返回值的弱对抗。"
+    },
+    {
+      "id": "R-SCREEN-002",
+      "name": "录屏与截屏工具黑名单",
+      "level": "medium",
+      "action": "降低屏幕控制信任分并要求复核",
+      "signals": [
+        "screen",
+        "automation"
+      ],
+      "logic": "屏幕录制、投屏或截屏工具包名命中黑名单，且触控轨迹缺失或由远程控制接管",
+      "expr": "screen_black_hit OR remote_control_pkg_hit",
+      "fields": [
+        "自动化 / 群控检测 > 录屏与截屏检测 > 黑名单",
+        "自动化 / 群控检测 > 录屏与截屏检测 > 黑名单 > com.github.uiautomator | com.github.uiautomator2 | com.sigma_rt.totalcontrol | com.genymobile.scrcpy"
+      ],
+      "note": "录屏和截屏工具本身不一定是恶意，但一旦与脚本/远控同现，极易变成代操作通道。"
+    },
+    {
+      "id": "R-EMU-010",
+      "name": "QEMU 文件与挂载特征命中",
+      "level": "high",
+      "action": "判定模拟器/云手机高风险",
+      "signals": [
+        "emulator",
+        "cloudphone"
+      ],
+      "logic": "命中 QEMU 特征文件、共享挂载目录或虚拟机软件黑名单中的任一类证据",
+      "expr": "qemu_file_hit OR qemu_mount_hit OR vm_software_black_hit",
+      "fields": [
+        "系统完整性 / 篡改检测 > 改机黑名单",
+        "系统完整性 / 篡改检测 > 改机黑名单 > com.yztc.studio.plugin | com.soft.apk008v | com.uwish.app | zpp.wjy.xxsq | com.bigsing.changer | zap.fh.wipe | com.sollyu.xposed.hook.model | com.soft.apk008Tool | com.doubee.ig | com.variable.apkhook | com.addeasy.fastest | com.xenice.mask | com.shyl.artifact | com.android1500.androidfaker"
+      ],
+      "note": "文件、挂载目录与虚拟机软件是三条相对独立的证据链，组合后误伤率很低。"
+    },
+    {
+      "id": "R-EMU-011",
+      "name": "QEMU 系统字段不自洽",
+      "level": "high",
+      "action": "判定模拟器/改机环境，采集数据不可信",
+      "signals": [
+        "emulator",
+        "tamper",
+        "hook"
+      ],
+      "logic": "系统属性、Build 类与底层 ro.* 字段不一致，或出现 default/generic/sdk/goldfish 组合",
+      "expr": "prop_mismatch_cnt >= 1 OR qemu_field_pattern_hit = 1",
+      "fields": [
+        "模拟器 / 虚拟环境 > QEMU 属性 > 字段特征（system）",
+        "模拟器 / 虚拟环境 > QEMU 属性 > 字段特征（system） > init.svc.microvirtd | bst.version | ro.phoenix.version.code | ro.phoenix.version.codename | init.svc.droid4x | microvirt.memu_version | microvirt.imsi | microvirt.simserial | ro.px.version.build | ro.phoenix.os.branch | init.svc.su_kpbs_daemon | init.svc.noxd | init.svc.ttVM_x86-setup | init.svc.xxkmsg | ro.bild.remixos.version | microvirt.mut | init.svc.ldinit | sys.tencent.os_version | sys.tencent.android_id | ro.genymotion.version | init.svc.pkVM_x86-setup | ro.andy.version | ro.build.version.release | ro.product.model | ro.product.brand | ro.boot.bootloader | ro.build.version.securitypatch | ro.build.version.incremental | gsm.version.baseband | gsm.version.ril-impl | ro.build.fingerprint | ro.build.description | ro.build.product | ro.boot.vbmeta.digest | ro.hardware | ro.product.name | ro.product.board | ro.recovery_id | ro.expect.recovery_id | ro.board.platform | ro.product.manufacturer | ro.product.device | sys.usb.state | ro.setupwizard.mode | ro.build.id | ro.build.tags | ro.build.type | ro.debuggable"
+      ],
+      "note": "系统字段是模拟器最常见伪装层，Java 与 native 双路比对更稳。"
+    },
+    {
+      "id": "R-TAMPER-011",
+      "name": "文件创建时间批量异常",
+      "level": "medium",
+      "action": "限制注册/登录/权益发放",
+      "signals": [
+        "tamper",
+        "reset"
+      ],
+      "logic": "文件创建时间大量同秒集中，或与安装/使用历史明显不匹配",
+      "expr": "file_create_ts_cluster OR file_create_ts_after_install_cluster",
+      "fields": [
+        "系统完整性 / 篡改检测 > 改机黑名单",
+        "系统完整性 / 篡改检测 > 改机黑名单 > com.yztc.studio.plugin | com.soft.apk008v | com.uwish.app | zpp.wjy.xxsq | com.bigsing.changer | zap.fh.wipe | com.sollyu.xposed.hook.model | com.soft.apk008Tool | com.doubee.ig | com.variable.apkhook | com.addeasy.fastest | com.xenice.mask | com.shyl.artifact | com.android1500.androidfaker"
+      ],
+      "note": "文件时间是一种很难完全伪装的批量复刻痕迹，尤其适合识别恢复机和灌机。"
+    },
+    {
+      "id": "R-TAMPER-012",
+      "name": "改机工具黑名单命中",
+      "level": "high",
+      "action": "判定改机/属性伪造环境",
+      "signals": [
+        "tamper",
+        "reset",
+        "hook"
+      ],
+      "logic": "改机、换机、伪装机型或属性注入工具命中黑名单",
+      "expr": "device_spoofer_black_hit = 1",
+      "fields": [
+        "系统完整性 / 篡改检测 > 改机黑名单",
+        "系统完整性 / 篡改检测 > 改机黑名单 > com.yztc.studio.plugin | com.soft.apk008v | com.uwish.app | zpp.wjy.xxsq | com.bigsing.changer | zap.fh.wipe | com.sollyu.xposed.hook.model | com.soft.apk008Tool | com.doubee.ig | com.variable.apkhook | com.addeasy.fastest | com.xenice.mask | com.shyl.artifact | com.android1500.androidfaker"
+      ],
+      "note": "这类工具直接作用于设备身份与属性，是身份风控的高风险证据。"
+    }
+  ]
+}

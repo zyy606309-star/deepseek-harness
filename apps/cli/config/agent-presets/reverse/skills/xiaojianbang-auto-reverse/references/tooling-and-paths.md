@@ -1,0 +1,118 @@
+# 工具链与路径规范
+
+## 目录
+
+- 常用工具
+- 宿主机平台
+- 目录建议
+- Frida 监控要点
+- syscall-filter 使用要点
+- stealth-hook 使用要点
+- Dump/fix/静态导出要点
+- 动态验证上限
+
+## 常用工具
+
+环境检查按需触发：不要在任务开始前统一检查所有工具。只有准备运行对应工具、脚本或能力时，才检查它的路径、版本、设备权限和内核/ABI 条件；未使用的工具不检查、不阻塞。
+
+- Frida：启动、附加、constructor hook、dlopen 监控、runtime patch、参数/返回值验证。
+- frida-server：目标设备上的 server，例如 `/data/local/tmp/fsarm64`。
+- xiaojianbang-syscall-filter：定位 direct syscall、kill、SIGSEGV、faccessat、匿名 RX。
+- xiaojianbang-stealth-hook：Android 内核无痕 HWBP hook，用于强反 Frida/强完整性场景下验证参数、返回值和 patch 候选。
+- garlic：Java/Kotlin 层反编译**首选**（C 实现、秒级，反编译 apk/dex/class/jar，无需关 checksum）。用法：`garlic <apk> -o <out>`；`-s` 输出 smali（可选）；`-g` 生成调用图（可选）。**默认不用 `-n`**（ELF 分析，Windows 上 librosemarylib 加载有依赖坑）；仅用户明确要求时才用 `-n` 并记录。路径作为环境事实见 `environment.md`。
+- ASC（Droid ASC，按需查询/引用查找，纯 Python）：Java/DEX 层**按需定位**工具，与 garlic **互补而非替代**——garlic 全量反编译（适合通读整个 App），ASC 不做全量预处理、把 APK 当数据库按需查询（适合大 APK 只想知道"某个类在哪、谁引用了这个方法/字符串/字段"）。依赖 `androguard` + `loguru`。
+  - `python <ASC>/main.py getclass <apk> <类名> [-o out.java]`：定位目标类 → 只抽取相关 DEX → 内存中重建最小 DEX → 反编译该类（毫秒级）。
+  - `python <ASC>/main.py findrefs <apk> <string|type|method|field> <值> [-o refs.txt]`：跨全部 DEX 查交叉引用；`method`/`field` 可加 `--class <类>` / `--fuzzy-class`。
+  - 典型用法：**先用 ASC 精确定位（谁调用、哪里引用）→ 再用 garlic/jadx 全量反编译精读**；大 APK（几百 MB）不必等全量反编译。
+  - 类名格式：`Lcom/pkg/Class;` 或 `com.pkg.Class`（`getclass` 两种都接受）。
+  - `--gui` 需图形环境，本模式用命令行，不用 GUI。
+  - ASC 是第三方工具，**不随技能分发**；获取方式与路径见 `environment.md`。
+- jadx：Java/Kotlin 层反编译**回退**（garlic 不可用时）。**强约束：调用 jadx 必须关闭 dex checksum 校验**，命令行加 `-Pdex-input.verify-checksum=no`（如 `jadx -Pdex-input.verify-checksum=no app.apk`）。本模式用命令行版 `jadx`/`jadx-cli`，不用 GUI。
+- rizin：`.so` 静态分析默认使用。PATH、项目目录、已有记录和常见安装路径找不到时，必须先做宿主机全盘搜索；全盘仍找不到才询问用户路径。伪代码用 Ghidra headless 回退（`references/rizin-tools.md`）；只有用户明确要求用 IDA 时，才切换到 IDA + `INP.py`，并在实验记录中说明原因。
+- Ghidra headless：伪代码回退（`rizin_export.py --ghidra-support`），不是反汇编主工具。
+- OLLVM_Deobfuscator：处理 OLLVM 或非标准控制流；混淆函数必须在语义分析和 patch 候选前先还原，优先使用并按需修改项目副本 `third_party/OLLVM_Deobfuscator/`。
+- adb/logcat：进程控制、日志采集、重启设备、清理状态。
+
+只有本轮需要使用 `adb`、rizin、`garlic`、`jadx` 等工具且找不到位置时，才检查 `PATH`、项目 `scripts/`、`third_party/`、已有实验记录和常见安装路径；若本轮确实需要 `garlic`、`jadx` 或 rizin 且仍未命中，必须继续做宿主机全盘搜索，不要凭空假设路径。全盘搜索命令、范围、候选和结果写入实验记录；全盘仍找不到时才询问用户路径。用户明确说没有 `garlic`、`jadx` 或 rizin 后，才能切换对应回退工具。
+
+`garlic`/`jadx`/rizin/ASC 全盘搜索建议：
+- Windows：枚举本机文件系统盘，搜索 `garlic.exe`、`jadx.bat`、`jadx*.bat`、`rizin.exe`、`rz-bin.exe`、`main.py`（ASC 仓库根目录特征文件 `src/asc_core`）；可跳过回收站、系统卷信息、网络盘和无权限目录。
+- Linux/macOS：用 `find` 或 `mdfind/locate` 搜索 `garlic`、`jadx`、`rizin`、`rz-bin`；可跳过 `/proc`、`/sys`、`/dev`、网络挂载和无权限目录。
+
+本模式默认用 `rizin_export.py` 导出（需要伪代码时加 `--ghidra-support`），见 `references/rizin-tools.md`。只有用户明确要用 IDA 时，才探测常见 IDA `plugins` 目录并复制/安装 `INP.py`，用 `--install-ida-plugin`、`--ida-root` 或 `--ida-plugin-dir` 控制。
+
+## 宿主机平台
+
+宿主机支持 Windows、Linux 和 macOS。跨平台优先使用本 Skill 的 Python wrapper；`.sh` 脚本只作为 Linux/macOS/WSL/Git Bash 入口。
+
+## 目录建议
+
+通用工程建议：
+
+```text
+docs/
+logs/
+dumps/
+scripts/
+third_party/
+so/
+```
+
+当前案例中已验证过的依赖放置方式：
+
+```text
+third_party/xiaojianbang-syscall-filter/
+third_party/OLLVM_Deobfuscator/
+third_party/xiaojianbang-stealth-hook/
+```
+
+外部依赖进入项目时应复制到工程内，而不是只引用绝对路径。文档中保留原路径和复制后路径。
+
+## Frida 监控要点
+
+- 早期 so：hook constructor，不只轮询模块名。
+- 加密、自解密、壳化或运行时重建 so：优先在 `soinfo::call_constructors` 或等价 constructor 入口命中时 dump/fix。
+- 后续 so：同时 hook `dlopen/android_dlopen_ext`。
+- 对会早期自解密或 mmap 匿名 RX 的目标 so，必须监控 `mmap/mprotect` 和 maps。
+- Frida spawn 长时间卡住或无法启动时，先检查设备是否锁屏；尝试唤醒、解锁，必要时 `adb reboot` 后重测。
+
+## syscall-filter 使用要点
+
+采集时记录：
+
+- 启动命令。
+- 目标包名和进程名。
+- filter 配置。
+- 输出日志路径。
+- 关键 syscall 摘录。
+- 与 Frida/logcat 的时间线对应关系。
+
+如果 syscall-filter 证明 direct syscall 命中，而 Frida libc hook 没看到调用，应在文档中明确说明这是绕过 libc hook 的 direct syscall。
+
+检测输出里的 `libcapture` 和 `libtrace` 字符串默认是小肩膀定制系统轮询噪声，不作为目标 App 检测结论；只有和目标调用栈、pc/lr、文件访问或崩溃时间线相互印证时才升级为有效证据。
+
+## stealth-hook 使用要点
+
+`xiaojianbang-stealth-hook` 适合 Frida/inline hook 影响目标行为时使用：
+
+- 仅在准备使用 stealth-hook 前确认 APatch/KernelPatch、KPM 加载状态和目标设备 arm64/GKI 条件。
+- 记录 `pid`、`so`、`offset`、`dump-size`、是否 `replace-ret`、是否 `modify-arg`。
+- 只 hook 低频目标函数或基本块入口；不要 hook 高频 libc 通用函数。
+- 每轮验证结束后执行 `--unhook` 或确认 Ctrl+C 已自动清理。
+- 通过 `scripts/stealth_hook_android.py` 运行时，工具优先使用工程内 `third_party/xiaojianbang-stealth-hook`。
+
+## Dump/fix/静态导出要点
+
+dump、fix、静态导出的产物路径、运行命令、检测代码明细和关键结论必须写入实验记录；不要求为每个 dump 维护额外长字段表，但不得遗漏已分析出的检测代码。本模式默认用 `rizin_export.py` 导出（需要伪代码时加 `--ghidra-support`），输出到 `artifacts/inp/<模块名>_export_for_ai/` 或 `artifacts/inp/<模块名>_deollvm_export_for_ai/`；只有用户明确要用 IDA 时才用 `INP.py`。
+
+强约束：dump/fix 完成后、静态分析前先做"匿名内存加载执行检查"（完整条款见 `workflow-standards.md` §5）；检查结果、命令、证据路径和相关检测代码写入实验记录，未完成前禁止凭磁盘/dump so 的 `.text` 下检测链结论或 patch。
+- rizin 导出后先执行 `workflow-standards.md` §6 的"函数范围确认"；范围不正常时修正函数范围并重新导出，再进入检测链分析。
+- 函数范围确认后若发现 OLLVM/CFF、dispatcher 状态机、间接跳转/调用、虚假控制流或魔改状态变量，先用项目副本 OLLVM_Deobfuscator 还原（详见 `workflow-standards.md` §8）；项目没有副本时先复制/安装 Skill 内置工具到项目目录，工具不适配时修改项目副本代码并记录，不直接改 Skill 原始工具。
+
+崩溃定位闭环必须包含 syscall-filter 定位、确认 so/匿名内存落点、加密/壳化/自解密/运行时重建判断、必要的 MemDumper dump/fix 运行期 so 或真实可执行段、rizin 静态代码分析和 patch 验证。闪退/崩溃/退出案例进入静态分析后，必须先分析 `.init`、`.init_array`/constructor、`JNI_OnLoad`/RegisterNatives，再分析匿名内存映射、CRC/完整性校验、崩溃点所在函数及上下游；未完成前禁止动态验证。同一 so、同一函数、同一检测链或同一调度链内，动态验证失败累计 3 次后，必须暂停验证并回到目标 so 与可疑匿名段代码的完整函数分析。
+
+## 动态验证上限
+
+可以按静态分析结论成组调整 patch、hook、runner 覆盖和隐藏策略；调整依据、所用工具、运行命令、代码改动、检测代码明细、结果和下一步都要写入实验记录。
+
+同一 so、同一函数、同一检测链或同一调度链内，动态 hook/patch/runner 覆盖等有效测试失败累计 3 次后，禁止继续新增或扩大动态变量；必须先完成 so 和可疑匿名段的 dump/fix、匿名内存检查、rizin 导出、函数范围确认、CRC 检查和完整函数分析。
