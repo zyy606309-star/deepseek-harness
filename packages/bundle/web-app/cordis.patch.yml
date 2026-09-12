@@ -78,6 +78,12 @@
     - id: session-reference
       name: '@deepseek-ai/dsh-session-reference'
 
+    # Conversation/workspace rewind: per-turn actions (rewind, delete,
+    # regenerate), the composer compact button, and durable pre-edit file
+    # checkpoints. The package owns both the host command and the browser UI.
+    - id: dsh-session-timeline
+      name: '@deepseek-ai/dsh-session-timeline'
+
     - id: file-reference-local
       name: '@deepseek-ai/dsh-file-reference-local'
 

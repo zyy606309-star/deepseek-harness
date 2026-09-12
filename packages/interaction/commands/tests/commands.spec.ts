@@ -3,7 +3,7 @@ import { Context } from '@deepseek-ai/cordis'
 import { createScope } from '@deepseek-ai/dsh-scope'
 import type { Scope } from '@deepseek-ai/dsh-scope'
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
+import SessionStore, { SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
 import CommandRuntime, { CommandDefinitionId, parseCommand, type CommandDefinition } from '@deepseek-ai/dsh-commands'
 import { AttachmentStore } from '@deepseek-ai/dsh-attachment'
 
@@ -322,6 +322,27 @@ describe('CommandRuntime', () => {
     // Direct log-only appends: no turn is opened for the pair on an idle log.
     expect(agent.session.snapshotEvents().map(event => event.type)).toEqual([
       'command/run', 'command/done',
+    ])
+  })
+
+  it('skips command/done when the handler truncated the matching command/run', async () => {
+    const ctx = await mount()
+    const { agent } = await mintAgentScope(ctx, 'a')
+    agent.session.append('turn/start', { turn: 1 })
+    ctx.commands.register({
+      name: 'cut',
+      description: 'Truncate',
+      handler: (invocation) => {
+        invocation.agent.session.truncate(SessionLogOffset(1))
+        return { kind: 'success', text: 'cut' }
+      },
+    })
+
+    const execution = await ctx.commands.execute(agent, '/cut', [], new AbortController().signal)
+
+    expect(execution?.result).toEqual({ kind: 'success', text: 'cut' })
+    expect(agent.session.snapshotEvents().map(event => event.type)).toEqual([
+      'turn/start',
     ])
   })
 

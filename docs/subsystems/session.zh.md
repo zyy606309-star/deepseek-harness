@@ -391,7 +391,8 @@ interface SurfaceFoldResult {
 
 ```ts public-api
 /**
- * An event-sourced session: an append-only log of {@link SessionEvent}s.
+ * An event-sourced session: a contiguous log of {@link SessionEvent}s.
+ * Ordinary writes append; {@link truncate} is the destructive prefix rewrite.
  *
  * Plain class (not a Service) — create live instances via
  * `ctx.sessions.create()` and detached instances via {@link create}.
@@ -508,6 +509,19 @@ declare class Session {
    * @returns true when the event belongs to this Session rather than its parent.
    */
   isOwnSeq(seq: SessionSeq): boolean;
+  /**
+   * Find the beginning of the logical turn containing one visible event.
+   * Deletion is turn-granular so the retained prefix never ends inside a turn.
+   * @param seq - visible event sequence in the turn to remove.
+   * @returns the first event sequence of the containing turn.
+   */
+  deletionStart(seq: SessionSeq): SessionLogOffset;
+  /**
+   * Remove the selected turn and every later event from this live log.
+   * Persistence must already contain the same prefix before this method runs.
+   * @param length - retained event-prefix length.
+   */
+  truncate(length: SessionLogOffset): void;
   /** The next event's sequence number — always the log length (the `seq = log.length` contiguity contract). */
   get seq(): SessionLogOffset;
   /**

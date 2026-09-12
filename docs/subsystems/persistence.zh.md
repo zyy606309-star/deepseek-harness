@@ -66,8 +66,9 @@ interface SessionHandle extends AsyncDisposable {
 
   /**
    * Append a contiguous batch continuing the current logical end. The first
-   * event's `seq` MUST equal the stored next-seq; committed events are never
-   * rewritten. Persistence is best-effort: on resolution the batch is
+   * event's `seq` MUST equal the stored next-seq. Ordinary appends never
+   * rewrite committed events; an explicit persistence `truncate` is the
+   * destructive exception. Persistence is best-effort: on resolution the batch is
    * accepted, ordered, and visible to reads on this backend instance, but
    * only a resolved {@link flush} promises it survives a crash — a backend
    * may buffer or batch physical writes behind append. Rejects with

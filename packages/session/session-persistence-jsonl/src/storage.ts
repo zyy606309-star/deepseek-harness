@@ -48,6 +48,12 @@ export interface JsonlHandleStorage {
   persistHeader(header: SessionHeader, inheritedEventCount: SessionLogOffset): Promise<void>
   /** Truncate a torn physical tail before the first new append lands. */
   truncateTornTail(header: SessionHeader, truncateTo: number): Promise<void>
+  /** Rewrite the current generation with an earlier contiguous event prefix. */
+  rewrite(
+    header: SessionHeader,
+    inheritedEventCount: SessionLogOffset,
+    events: readonly SessionEvent[],
+  ): Promise<void>
   /** Resolve the current-generation artifact path, or `undefined` when absent. */
   resolveCurrentLog(id: SessionId, signal?: AbortSignal): Promise<string | undefined>
   /** Read and validate the stored log at `path`, including its established event aliasing state. */
@@ -192,6 +198,44 @@ export class JsonlSessionHandle implements SessionHandle {
     return this.run('append', async () => {
       options?.signal?.throwIfAborted()
       await this.persistContiguous(batch)
+    })
+  }
+
+  /**
+   * Replace the current generation with an earlier contiguous prefix.
+   * @param length - number of events to retain.
+   * @returns resolution after the rewritten prefix is durable.
+   */
+  async truncate(length: SessionLogOffset): Promise<void> {
+    return this.run('truncate', async () => {
+      if (this.access !== 'write') throw new SessionReadOnlyError(this.id, 'truncate')
+      if (!Number.isSafeInteger(length) || length < 0) {
+        throw new TypeError(`truncate length must be a non-negative safe integer, got ${String(length)}`)
+      }
+      if (length < this.state.inheritedEventCount || length > this.state.cursor) {
+        throw new RangeError(`session truncation length ${String(length)} is outside the writable log prefix`)
+      }
+      if (length === this.state.cursor) return
+      let source: SessionHandleReadResult
+      if (this.state.primed !== undefined) {
+        source = this.state.primed
+      } else if (!this.state.materialized) {
+        source = { eventState: 'detached', events: [] }
+      } else {
+        const path = await this.storage.resolveCurrentLog(this.id)
+        if (path === undefined) throw new SessionPersistenceNotFoundError(this.id)
+        source = await this.storage.readStoredLog(path, this.id)
+      }
+      if (source.events.length !== this.state.cursor) {
+        throw new Error(`session "${this.id}": stored log length changed while destructive deletion was preparing`)
+      }
+      await this.storage.rewrite(this.header, this.state.inheritedEventCount, source.events.slice(0, length))
+      this.state.cursor = length
+      this.state.materialized = true
+      this.state.primed = { eventState: source.eventState, events: source.events.slice(0, length) }
+      this.state.tornTruncateTo = undefined
+      this.state.recoveredTail = undefined
+      this.observedLength = length
     })
   }
 
@@ -455,6 +499,16 @@ export class JsonlBackendTracker {
    */
   hasPending(id: SessionId): boolean {
     return this.pending.has(id)
+  }
+
+  /**
+   * Return the active writer for one session, if this process owns it.
+   * @param id - the session to resolve.
+   * @returns the active writer, or undefined while no writer is open.
+   */
+  writerOf(id: SessionId): JsonlSessionHandle | undefined {
+    const writer = this.writers.get(id)
+    return writer === null ? undefined : writer
   }
 
   /**

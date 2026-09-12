@@ -336,7 +336,9 @@ export class CommandRuntime extends TypertRemoteService {
    * before the handler is invoked and `command/done` after settlement (a
    * thrown or aborted handler settles as `kind: 'error'`). Both are direct
    * log-only appends — no turn wraps them, and persistence drains them at
-   * ordinary checkpoints. Admission misses (syntax or unknown name) log
+   * ordinary checkpoints. If the handler truncated the matching
+   * `command/run` out of the log, `command/done` is skipped so the pair
+   * cannot become an orphan. Admission misses (syntax or unknown name) log
    * nothing — they never entered a handler. A `command/run` append failure
    * fails the execution loud; a `command/done` append failure on the
    * handler-failure path is contained so the handler's own error stays the
@@ -452,13 +454,21 @@ export class CommandRuntime extends TypertRemoteService {
    * Append one log-only lifecycle event directly: no turn is opened for it and
    * no flush is forced — persistence observes the eager `session/event` path
    * and drains at ordinary checkpoints and teardown, like every other
-   * standalone plugin event.
+   * standalone plugin event. `command/done` is omitted when the matching
+   * `command/run` is no longer in the log.
    */
   private appendLifecycle<T extends 'command/run' | 'command/done'>(
     session: Session,
     type: T,
     data: SessionEventMap[T],
-  ): SessionEvent<T> {
+  ): SessionEvent<T> | undefined {
+    if (type === 'command/done') {
+      const commandId = (data as SessionEventMap['command/done']).commandId
+      const hasRun = session.snapshotEvents().some(
+        event => event.type === 'command/run' && event.data.commandId === commandId,
+      )
+      if (!hasRun) return undefined
+    }
     // Both admitted types are log-only (non-surface), but TypeScript does not
     // reduce Session.append's conditional rest parameter through a generic
     // type parameter. Preserve the proven two-argument call shape.
