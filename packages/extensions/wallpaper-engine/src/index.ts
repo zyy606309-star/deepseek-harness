@@ -33,11 +33,12 @@ import {
 } from 'node:fs'
 import { join, resolve, normalize, basename } from 'node:path'
 import { execFileSync } from 'node:child_process'
-import { settingsNamespace } from '@deepseek-ai/dsh-settings'
 import z from '@deepseek-ai/schemastery'
 
-/** Durable settings namespace holding the user's wallpaper selection. */
-const WE_SETTINGS_NS = settingsNamespace('wallpaper-engine')
+/** Durable settings namespace holding the user's wallpaper selection.
+ * Upstream 0.1.5 takes the namespace as a plain lowercase-hyphenated string
+ * (see dsh-settings `register`); the old `settingsNamespace()` factory is gone. */
+const WE_SETTINGS_NS = 'wallpaper-engine'
 
 /** Schema for the persisted selection (id + the four effect knobs). */
 const SelectionSchema = z.object({
