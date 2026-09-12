@@ -46,6 +46,13 @@ export interface TurnTailOwnerProps {
 /** Owner currency of finalized-assistant actions. */
 export interface AssistantActionOwnerProps {
   messageId: MessageId
+  seq: number
+}
+
+/** Owner currency for actions attached to one durable user message. */
+export interface UserActionOwnerProps {
+  seq: number
+  content: readonly unknown[]
 }
 
 /** Optional prose file-mention provider consumed by Chat. */
@@ -210,9 +217,17 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      */
     'conversation.chat.turnTail': { kind: 'chain'; scope: 'session'; owner: TurnTailOwnerProps }
     /**
+     * Ordered actions for one durable user or admitted-steering message. Each
+     * entry receives the message sequence and original content; a fresh `id`
+     * adds an action and reusing one replaces that entry. With no entries, the
+     * standard action row remains unchanged.
+     */
+    'conversation.chat.user-actions': { kind: 'list'; scope: 'session'; owner: UserActionOwnerProps }
+    /**
      * Ordered actions for one finalized assistant message. Each entry receives
-     * the durable message id; a fresh `id` adds an action and reusing one replaces
-     * that entry. With no entries, the standard action row remains unchanged.
+     * the durable message id and sequence; a fresh `id` adds an action and
+     * reusing one replaces that entry. With no entries, the standard action row
+     * remains unchanged.
      */
     'conversation.chat.assistant-actions': { kind: 'list'; scope: 'session'; owner: AssistantActionOwnerProps }
   }
