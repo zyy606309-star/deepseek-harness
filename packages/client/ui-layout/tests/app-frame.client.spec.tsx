@@ -221,11 +221,11 @@ describe('AppFrame', () => {
     expect(getByTestId('rightbar-content')).toBeTruthy()
   })
 
-  it('keeps the closed sidebar mounted at its 56px rail without a handle', () => {
+  it('keeps the closed sidebar mounted at its 80px rail without a handle', () => {
     const { frame, instance, sidebarOwner, getByTestId } = mountFrame()
     act(() => { instance.actions.toggleSidebar() })
-    expect(tracks(frame)).toEqual([56, 0])
-    expect(sidebarOwner()).toEqual({ collapsed: true, width: 56 })
+    expect(tracks(frame)).toEqual([80, 0])
+    expect(sidebarOwner()).toEqual({ collapsed: true, width: 80 })
     expect(getByTestId('sidebar-content')).toBeTruthy()
     expect(frame.querySelector('[data-side="sidebar"]')).toBeNull()
   })
@@ -276,7 +276,7 @@ describe('AppFrame normal width concessions', () => {
     expect(instance.getSnapshot().layoutInfo).toMatchObject({ rightbarShown: true, rightbar: 864 })
     act(() => { instance.actions.closeRightbar() })
     resize(455)
-    expect(tracks(frame)).toEqual([56, 0])
+    expect(tracks(frame)).toEqual([80, 0])
     resize(1920)
     expect(tracks(frame)).toEqual([420, 0])
   })
@@ -286,14 +286,14 @@ describe('AppFrame normal width concessions', () => {
     const { frame, instance, rightOwner } = mountFrame()
     act(() => { instance.actions.toggleSidebar() })
     expect(tracks(frame)).toEqual([280, 0])
-    expect(rightOwner()).toEqual({ width: 344, viewportWidth: 800, canShow: true })
+    expect(rightOwner()).toEqual({ width: 320, viewportWidth: 800, canShow: true })
     act(() => { instance.actions.openRightbar(true, false) })
-    expect(tracks(frame)).toEqual([56, 344])
+    expect(tracks(frame)).toEqual([80, 320])
     expect(instance.getSnapshot().layoutInfo).toMatchObject({ narrowExpanded: false, rightbar: 360 })
     expect(rightOwner().canShow).toBe(true)
   })
 
-  it.each([[756, 300, true], [755, 0, false]] as const)('reports eligibility at %ipx', (width, rightbar, canShow) => {
+  it.each([[780, 300, true], [779, 0, false]] as const)('reports eligibility at %ipx', (width, rightbar, canShow) => {
     frameWidth = width
     const { instance, rightOwner } = mountFrame()
     act(() => { instance.actions.toggleSidebar() })
@@ -313,13 +313,13 @@ describe('AppFrame normal width concessions', () => {
     resize(1024)
     expect(tracks(frame)[0]).toBe(400)
     resize(1023)
-    expect(tracks(frame)[0]).toBe(56)
+    expect(tracks(frame)[0]).toBe(80)
     act(() => { instance.actions.toggleSidebar() })
     expect(tracks(frame)[0]).toBe(400)
     resize(980)
     expect(tracks(frame)[0]).toBe(400)
     act(() => { instance.actions.toggleSidebar() })
-    expect(tracks(frame)[0]).toBe(56)
+    expect(tracks(frame)[0]).toBe(80)
     resize(1920)
     expect(tracks(frame)[0]).toBe(400)
   })
@@ -420,7 +420,7 @@ describe('AppFrame right panel presentation', () => {
     frameWidth = 700
     const { frame, instance, rightOwner } = mountFrame()
     act(() => { instance.actions.openRightbar(false, true) })
-    expect(tracks(frame)).toEqual([56, 0])
+    expect(tracks(frame)).toEqual([80, 0])
     expect(rightOwner()).toEqual({ width: 0, viewportWidth: 700, canShow: false })
     expect(instance.getSnapshot().layoutInfo.rightbarShown).toBe(true)
     expect(frame.querySelector('[data-side="rightbar"]')).toBeNull()

@@ -27,7 +27,16 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: var(--dsw-alias-label-primary, #0f1115);
-  background: var(--dsw-alias-bg-base, #fff);
+  /* Whole-page background lives on the body (the propagated canvas layer, so
+     nothing stacks above it): theme color beneath, the image over it. The
+     presenter sets --dsw-bg-image; with no image it resolves to `none` and
+     only the theme color paints. */
+  background-color: var(--dsw-alias-bg-base, #fff);
+  background-image: var(--dsw-bg-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   /* Supporting browsers insert CJK/Latin spacing in inherited prose. */
   text-autospace: normal;
 }

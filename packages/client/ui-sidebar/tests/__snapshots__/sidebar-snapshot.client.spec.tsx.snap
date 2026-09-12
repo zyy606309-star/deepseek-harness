@@ -99,7 +99,7 @@ exports[`sidebar shell snapshots > renders the expanded column (wordmark, capsul
 >
   <div
     class="root quietBars"
-    style="width: 300px;"
+    style="width: 262px;"
   >
     <div
       class="logoRow"
@@ -229,7 +229,7 @@ exports[`sidebar shell snapshots > renders the expanded column in the default lo
 >
   <div
     class="root quietBars"
-    style="width: 300px;"
+    style="width: 262px;"
   >
     <div
       class="logoRow"

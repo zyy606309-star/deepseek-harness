@@ -4,7 +4,9 @@
   grid-template-rows: 100%;
   height: 100%;
   overflow: hidden;
-  background: var(--dsw-alias-bg-base);
+  /* Surface opacity (--dsw-surface-opacity) lets the whole-page background
+     image show through; with no background image it stays 100% opaque. */
+  background: color-mix(in srgb, var(--dsw-alias-bg-base) var(--dsw-surface-opacity, 100%), transparent);
   /* Collapse/expand animates the tracks on the deepsuite sider curve
      (--ds-ease-in-out / --ds-transition-duration-slow, ui-theme base.css). */
   transition: grid-template-columns var(--ds-transition-duration-slow) var(--ds-ease-in-out);
@@ -25,8 +27,10 @@
 .sidebarCol {
   min-width: 0;
   overflow: hidden;
-  background: var(--dsw-specific-sidebar-fill);
-  border-right: 0.5px solid var(--dsw-alias-border-l3);
+  /* The sidebar floats as a detached rounded pane, so the column paints no
+     border-right: the inset gap + the pane's own radius carry the separation
+     from the conversation surface. */
+  background: color-mix(in srgb, var(--dsw-specific-sidebar-fill) var(--dsw-surface-opacity, 100%), transparent);
 }
 
 .centerCol {

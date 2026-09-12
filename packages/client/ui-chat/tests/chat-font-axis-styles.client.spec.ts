@@ -78,8 +78,9 @@ describe('chat flow font-size axis', () => {
     // The DisclosureRow title starts at leading (16 + delta) + gap 6; a fixed
     // 22px indent would misalign at every non-default size.
     const indent = 'calc(22px + var(--dsh-content-font-delta, 0px))'
-    expect(declarationsFrom(read('ReasoningRow.module.css'), '.thinkBody'))
-      .toEqual(expect.arrayContaining([`padding: 4px 0 4px ${indent}`]))
+    // Fork-local deviation: the reasoning body is an opaque rounded card with
+    // its own margin and padding (ReasoningRow.module.css), so it carries no
+    // shared axis indent; the plain-text expanded bodies still follow it.
     expect(declarationsFrom(read('MessageItem.module.css'), '.compactionBody'))
       .toEqual(expect.arrayContaining([`padding: 4px 0 4px ${indent}`]))
     expect(declarationsFrom(read('ContextInjectionRow.module.css'), '.body'))

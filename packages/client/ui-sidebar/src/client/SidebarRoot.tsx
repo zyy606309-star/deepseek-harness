@@ -31,6 +31,15 @@ import css from './SidebarRoot.module.css'
 const COLLAPSE_SETTLE_MS = 150
 
 /**
+ * Floating-pane insets, matching `.root`'s margin in SidebarRoot.module.css: the
+ * pane hangs off BOTH sides of the `.sidebarCol` grid track, with a wider gap on
+ * the left (24px) than the right (14px). The inline width shrinks by their sum so
+ * the pane and its -3px glass bleed stay inside the track and clear of
+ * `overflow: hidden` on every edge, keeping all four rounded corners intact.
+ */
+const SIDEBAR_INSET = 24 + 14
+
+/**
  * How long the column's scrollbars stay drawn after the pointer leaves it.
  * The bar is a pointer affordance here, and hiding it on the leave event
  * itself makes it blink out while the pointer is only crossing the column's
@@ -109,9 +118,10 @@ export function SidebarRoot({
 
   // Freeze the content at its expanded width while it fades out (collapsed
   // && wide): the sliding column then clips it instead of reflowing it. The
-  // rail layout (.collapsed styles) only applies once the fade settles.
+  // rail layout (.collapsed styles) only applies once the fade settles. The
+  // frozen/expanded width is the pane width (track width minus both insets).
   const lastWideWidth = useRef(width)
-  if (!collapsed) lastWideWidth.current = width
+  if (!collapsed) lastWideWidth.current = Math.max(width - SIDEBAR_INSET, 0)
 
   // Rail-in only crossfades a live collapse: a refresh straight into the
   // collapsed state renders the rail statically (no delay-hidden icons).
@@ -170,7 +180,7 @@ export function SidebarRoot({
         css.root, !wide && css.collapsed, !wide && everWide.current && css.railIn,
         collapsed && wide && css.fading, !pointerInside && css.quietBars,
       )}
-      style={wide ? { width: collapsed ? lastWideWidth.current : width } : undefined}
+      style={wide ? { width: collapsed ? lastWideWidth.current : Math.max(width - SIDEBAR_INSET, 0) } : undefined}
       onPointerEnter={() => {
         cancelLinger()
         setPointerInside(true)

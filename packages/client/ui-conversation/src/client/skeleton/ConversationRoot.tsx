@@ -153,28 +153,31 @@ export function ConversationRoot({
   const [pendingWorkspaceId, setPendingWorkspaceId] = useState<WorkspaceId | undefined>()
   const pickerAnchor = useRef<HTMLButtonElement>(null)
 
-  // Publishes the two live measurements floating View chrome reads off the
-  // scroll body: the seat's height as --dsh-composer-height, so controls clear
-  // the composer as it grows, and the scrollport's own height as
-  // --dsh-conversation-viewport-height, so a control can sit in the band the
-  // seat leaves visible. Callback ref, not an effect; stable identity prevents
-  // observer churn while the first blank session fills the resident body
-  // outlet.
+  // Publishes the two live measurements floating View chrome reads: the seat's
+  // height as --dsh-composer-height on the seat's host (the root column), so
+  // controls clear the composer as it grows, and the scrollport's own height as
+  // --dsh-conversation-viewport-height on the scroll body, so a control can sit
+  // in the band the seat leaves visible. The seat is a flex sibling of the
+  // scroll body, so the scrollport is read through its own ref. Callback ref,
+  // not an effect; stable identity prevents observer churn while the first
+  // blank session fills the resident body outlet.
   const seatObserver = useRef<ResizeObserver | null>(null)
+  const scrollportRef = useRef<HTMLDivElement | null>(null)
   const seatResizeRef = useCallback((seat: HTMLDivElement | null): void => {
     seatObserver.current?.disconnect()
     seatObserver.current = null
-    const scroller = seat?.parentElement ?? null
-    if (seat === null || scroller === null) return
+    const seatHost = seat?.parentElement ?? null
+    const scrollport = scrollportRef.current
+    if (seat === null || seatHost === null || scrollport === null) return
     seatObserver.current = new ResizeObserver(() => {
-      scroller.style.setProperty('--dsh-composer-height', `${seat.offsetHeight}px`)
-      scroller.style.setProperty(
+      seatHost.style.setProperty('--dsh-composer-height', `${seat.offsetHeight}px`)
+      scrollport.style.setProperty(
         '--dsh-conversation-viewport-height',
-        `${scroller.clientHeight}px`,
+        `${scrollport.clientHeight}px`,
       )
     })
     seatObserver.current.observe(seat)
-    seatObserver.current.observe(scroller)
+    seatObserver.current.observe(scrollport)
   }, [])
 
   // Publishes the column's live width as --dsh-conversation-column-width so
@@ -373,10 +376,10 @@ export function ConversationRoot({
     <div ref={rootResizeRef} className={css.root} data-phase={phase}>
       {sessionId === undefined ? null : renderSlot('conversation.session.header', {})}
       <div className={css.body}>
-        <div className={css.scrollBody} data-conversation-scroll="">
+        <div ref={scrollportRef} className={css.scrollBody} data-conversation-scroll="">
           {sessionId === undefined ? null : renderSlot('conversation.session', {})}
-          {composerSeat}
         </div>
+        {composerSeat}
         {/* Width handles only while a transcript is on screen; the hero has no
             content column to size. */}
         {phase === 'active' && (['left', 'right'] as const).map(side => (

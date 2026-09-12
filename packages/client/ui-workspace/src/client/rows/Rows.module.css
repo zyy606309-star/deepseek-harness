@@ -56,8 +56,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 14px;
-  line-height: 20px;
+  font: var(--dsw-font-s-14);
 }
 
 .searchResultMeta {
@@ -73,8 +72,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
-  line-height: 17px;
+  font: var(--dsw-font-xxs-12);
 }
 
 .searchResultWorkspace {
@@ -172,8 +170,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 14px;
-  line-height: 20px;
+  /* Role token, not literal px: the sidebar scales with the font-size setting
+     (--dsw-font-scale) and keeps the 22px line rhythm the other s-14 surfaces
+     use, instead of the old fixed 20px. */
+  font: var(--dsw-font-s-14);
+}
+
+/* Workspace/folder headers carry the strong (500) variant for directory
+   emphasis, parallel to the strong-14 role used elsewhere in the client. */
+.projectRow .title {
+  font: var(--dsw-font-s-strong-14);
 }
 
 .renameInput {
@@ -196,15 +202,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
-  line-height: 20px;
+  font: var(--dsw-font-xxs-12);
   color: var(--dsw-alias-label-tertiary);
 }
 
 .time {
   flex: none;
-  font-size: 12px;
-  line-height: 20px;
+  font: var(--dsw-font-xxs-12);
   color: var(--dsw-alias-label-tertiary);
 }
 

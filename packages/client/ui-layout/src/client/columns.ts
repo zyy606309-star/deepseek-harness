@@ -15,8 +15,14 @@ export const SIDEBAR_MIN = 264
 export const SIDEBAR_MAX = 420
 /** Sidebar width before any user drag. */
 export const SIDEBAR_DEFAULT = 280
-/** Closed-sidebar rail: a 24px icon column between 16px horizontal paddings. */
-export const SIDEBAR_COLLAPSED = 56
+/**
+ * Closed-sidebar rail track: the 56px control column (36px control + 2×10px
+ * side padding) plus the 24px left inset `.root.collapsed` keeps so the folded
+ * pill recesses from the viewport edge exactly like the expanded pane. The
+ * track must carry the inset: the pane's 24px margin is inside it, and a
+ * narrower track clips the controls under `.sidebarCol`'s `overflow: hidden`.
+ */
+export const SIDEBAR_COLLAPSED = 56 + 24
 /** Viewport width below which the sidebar auto-collapses to the rail (deepsuite
  * LG breakpoint); a manual toggle below it re-expands over the squeezed center
  * (stores.ts narrowExpanded). */

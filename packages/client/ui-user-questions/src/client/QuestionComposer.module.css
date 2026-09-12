@@ -371,6 +371,9 @@
   background: transparent;
   color: var(--dsw-alias-label-primary);
   caret-color: var(--dsw-alias-state-business-primary);
+  font: inherit;
+  font-size: 14px;
+  line-height: 24px;
 }
 
 .fieldInput::placeholder {
@@ -393,6 +396,11 @@
   border: 0.5px solid var(--dsw-alias-border-l4);
   border-radius: 10px;
   background: var(--dsw-alias-bg-module-platform);
+  color: var(--dsw-alias-label-primary);
+  caret-color: var(--dsw-alias-state-business-primary);
+  font: inherit;
+  font-size: 14px;
+  line-height: 24px;
   --dsh-answer-field-padding: 8px 12px;
 }
 
