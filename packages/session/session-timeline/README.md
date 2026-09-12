@@ -96,7 +96,7 @@ Snapshot data is owned by the plugin and is independent of session persistence. 
 
 #### What the model sees
 
-The next agent request is rebuilt from the retained prefix after the selected turn is deleted. Removed messages and later tool activity are gone from both the live session and the current durable generation.
+The next agent request is rebuilt from the retained prefix after `/rewind` deletes the selected turn. Removed messages and later tool activity are gone from both the live session and the current durable generation.
 
 #### Token effect
 
@@ -123,3 +123,5 @@ Rewinding changes the request prefix at the selected target, so provider cache r
 This package is maintained under the workspace `@deepseek-ai` scope. Its upstream development branch used the private `@x1a0f3n9` scope; no compatibility alias for that name is kept.
 
 </details>
+
+**Runtime invariant:** No companion is published. The plugin owns no durable state of its own: checkpoints are ordinary files under the Session home, and every rewind re-reads the Session log prefix it truncates.

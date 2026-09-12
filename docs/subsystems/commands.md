@@ -171,7 +171,9 @@ find(agent: Agent, name: string): CommandDefinition | undefined
  * before the handler is invoked and `command/done` after settlement (a
  * thrown or aborted handler settles as `kind: 'error'`). Both are direct
  * log-only appends — no turn wraps them, and persistence drains them at
- * ordinary checkpoints. Admission misses (syntax or unknown name) log
+ * ordinary checkpoints. If the handler truncated the matching
+ * `command/run` out of the log, `command/done` is skipped so the pair
+ * cannot become an orphan. Admission misses (syntax or unknown name) log
  * nothing — they never entered a handler. A `command/run` append failure
  * fails the execution loud; a `command/done` append failure on the
  * handler-failure path is contained so the handler's own error stays the

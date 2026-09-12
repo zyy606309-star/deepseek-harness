@@ -1,13 +1,13 @@
 {
   "name": "@deepseek-ai/dsh-session-timeline",
   "description": "Workspace and conversation rewind plugin with durable file checkpoints",
-  "version": "0.1.5-alpha.2",
+  "version": "0.1.5-rc.2",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/LunFengChen/deepseek-harness.git",
+    "url": "git+https://github.com/zyy606309-star/deepseek-harness.git",
     "directory": "packages/session/session-timeline"
   },
   "type": "module",

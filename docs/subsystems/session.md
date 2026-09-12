@@ -804,6 +804,13 @@ workspaceDesktop(): { name: string; available: boolean; fileManager: 'finder' | 
 @Remote('fork') fork(request: SessionForkRequest): Promise<SessionForkValue>
 
 /**
+ * Permanently remove the selected turn and every later event from a Session.
+ * @param request - Session identity and visible event sequence in the turn.
+ * @returns acknowledgement after the durable log has been rewritten.
+ */
+@Remote('deleteFrom') deleteFrom(request: SessionDeleteFromRequest): Promise<SessionDeleteFromValue>
+
+/**
  * Admit one prompt after explicitly resuming its Session.
  * @param request - Session identity, prompt content, source metadata, and delivery mode.
  * @param signal - caller cancellation before prompt admission begins.
