@@ -252,6 +252,9 @@
       // session-log-export lives under session-query/, so the generated aliases map only its
       // bare name; the browser half needs this explicit subpath for source-mode dynamic imports.
       "@deepseek-ai/dsh-session-log-export/client": ["./packages/session-query/session-log-export/src/client"],
+      // session-timeline likewise sits outside packages/client/, so its browser half needs the
+      // same explicit subpath instead of the dsh-client-*/client wildcard.
+      "@deepseek-ai/dsh-session-timeline/client": ["./packages/session/session-timeline/src/client/index.ts"],
       // BEGIN generated package aliases — pnpm run gen-tsconfig-paths
       "@deepseek-ai/dsh-acp": ["./packages/acp/acp/src"],
       "@deepseek-ai/dsh-acp-app": ["./packages/bundle/acp-app/src"],
