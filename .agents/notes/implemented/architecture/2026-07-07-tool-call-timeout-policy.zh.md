@@ -61,7 +61,7 @@ catch 是基础 `next`（而非 waterfall 之外的东西）这一点至关重�
 ```ts ignore-check
 function toolTimeoutResult(timeoutMs: number): ToolExecutionResult {
   return {
-    content: [{ type: 'text', text: `Error: tool call timed out after ${timeoutMs}ms` }],
+    content: [{ type: 'text', text: `Error: tool call timed out after ${timeoutMs}ms. Do not repeat the same call unchanged; narrow its scope or use a smaller follow-up before retrying.` }],
     isError: true,
     error: {
       message: `tool call timed out after ${timeoutMs}ms`,
@@ -71,7 +71,7 @@ function toolTimeoutResult(timeoutMs: number): ToolExecutionResult {
 }
 ```
 
-这是一个协作式截止。它不会通过竞争工具 promise 来杀死任意工作；工具或其调用的能力必须遵循 `exec.signal` 并达到完全停稳。因此声明 `timeoutMs` 意味着「此工具与 `exec.signal` 协作」，插件 README 将此作为其约定。
+这是一个协作式截止。其面向模型的结果是 `Error: tool call timed out after <ms>ms. Do not repeat the same call unchanged; narrow its scope or use a smaller follow-up before retrying.`，而结构化 `error.message` 保持为 `tool call timed out after <ms>ms`。模型不得原样重复相同调用；重试时必须缩小范围或使用更小的后续调用。工具或其调用的能力必须遵循 `exec.signal` 并达到完全停稳；插件不会通过与工具 promise 竞速来杀死任意工作。因此声明 `timeoutMs` 意味着此工具与 `exec.signal` 协作，插件 README 将此作为其约定。
 
 无需新的会话事件来保证可重建性：`TOOL_TIMEOUT` 是该调用的最终面向模型的 `tool/result`，因此现有会话日志已经记录了下一次模型请求所见的内容和结构化 `{ name, code }` 错误。
 

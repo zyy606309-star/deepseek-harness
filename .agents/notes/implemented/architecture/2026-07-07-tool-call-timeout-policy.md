@@ -61,7 +61,7 @@ Signal replacement is by **in-place mutation of `exec.signal`**, not by passing 
 ```ts ignore-check
 function toolTimeoutResult(timeoutMs: number): ToolExecutionResult {
   return {
-    content: [{ type: 'text', text: `Error: tool call timed out after ${timeoutMs}ms` }],
+    content: [{ type: 'text', text: `Error: tool call timed out after ${timeoutMs}ms. Do not repeat the same call unchanged; narrow its scope or use a smaller follow-up before retrying.` }],
     isError: true,
     error: {
       message: `tool call timed out after ${timeoutMs}ms`,
@@ -71,7 +71,7 @@ function toolTimeoutResult(timeoutMs: number): ToolExecutionResult {
 }
 ```
 
-This is a cooperative deadline. It does not kill arbitrary work by racing the tool promise; the tool or the capability it calls must honor `exec.signal` and reach quiescence. Declaring `timeoutMs` therefore MEANS "this tool is cooperative with `exec.signal`", which the plugin README states as its contract.
+This is a cooperative deadline. Its model-visible result is `Error: tool call timed out after <ms>ms. Do not repeat the same call unchanged; narrow its scope or use a smaller follow-up before retrying.`, while the structured `error.message` remains `tool call timed out after <ms>ms`. The model must not repeat the same call unchanged; retry only with a narrower scope or a smaller follow-up. The tool or the capability it calls must honor `exec.signal` and reach quiescence; the plugin does not kill arbitrary work by racing the tool promise. Declaring `timeoutMs` therefore means that the tool is cooperative with `exec.signal`, which the plugin README states as its contract.
 
 No new session event is needed for reconstructability: `TOOL_TIMEOUT` is the final model-facing `tool/result` for that call, so the existing session log already records the content and structured `{ name, code }` error the next model request sees.
 

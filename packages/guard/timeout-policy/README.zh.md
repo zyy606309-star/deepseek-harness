@@ -43,7 +43,7 @@ kind: "package-reference"
 
 ### 你会得到什么
 
-截止时间触发时，插件会中止派生的 `exec.signal`。下游代码遵守取消且 `next()` 完成后，模型会收到标记为错误的 `Error: tool call timed out after <ms>ms` 工具结果，从而决定重试、调整或放弃。忽略或缓慢处理该信号的工具会让调用方继续等待，并且在自身完成前不会产生超时结果；按时完成的调用保持不变。
+截止时间触发时，插件会中止派生的 `exec.signal`。下游代码遵守取消且 `next()` 完成后，模型会收到标记为错误的 `Error: tool call timed out after <ms>ms. Do not repeat the same call unchanged; narrow its scope or use a smaller follow-up before retrying.` 工具结果——结构化 `error.message` 保持 `tool call timed out after <ms>ms` 短文案，重试判定不受影响——从而决定缩小范围、调整或放弃。忽略或缓慢处理该信号的工具会让调用方继续等待，并且在自身完成前不会产生超时结果；按时完成的调用保持不变。
 
 -----
 

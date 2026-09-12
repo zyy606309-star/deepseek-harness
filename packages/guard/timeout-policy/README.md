@@ -43,7 +43,7 @@ The limit is set where the tool is configured. For example, `dsh-tool-web`'s `fe
 
 ### What you get
 
-When the deadline fires, the plugin aborts the derived `exec.signal`. After downstream code honors cancellation and `next()` settles, the model receives `Error: tool call timed out after <ms>ms` as an error result, so it can decide to retry, adjust, or give up. A tool that ignores or slowly handles the signal keeps the caller waiting and produces no timeout result until it settles; calls that finish in time are unchanged.
+When the deadline fires, the plugin aborts the derived `exec.signal`. After downstream code honors cancellation and `next()` settles, the model receives `Error: tool call timed out after <ms>ms. Do not repeat the same call unchanged; narrow its scope or use a smaller follow-up before retrying.` as an error result — the structured `error.message` stays the short `tool call timed out after <ms>ms`, so retry logic is unaffected — and it can decide to narrow, adjust, or give up. A tool that ignores or slowly handles the signal keeps the caller waiting and produces no timeout result until it settles; calls that finish in time are unchanged.
 
 -----
 
