@@ -23,9 +23,6 @@
       "path": "../../host/webserver"
     },
     {
-      "path": "../../client/runtime"
-    },
-    {
       "path": "../../client/ui-slots"
     },
     {
