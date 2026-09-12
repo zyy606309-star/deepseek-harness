@@ -14,7 +14,7 @@
 
 .title {
   margin: 0;
-  font-size: calc(20px * var(--dsw-font-scale));
+  font-size: 20px;
   line-height: 28px;
   font-weight: 500;
   color: var(--dsw-alias-label-primary);

@@ -10,7 +10,7 @@
 }
 
 .title {
-  font-size: calc(14px * var(--dsw-font-scale));
+  font-size: 14px;
   font-weight: 400;
   line-height: 22px;
   color: var(--dsw-alias-label-primary);
@@ -39,7 +39,7 @@
   border-radius: 20px;
   background: transparent;
   font: inherit;
-  font-size: calc(14px * var(--dsw-font-scale));
+  font-size: 14px;
   line-height: 22px;
   color: var(--dsw-alias-label-primary);
   cursor: pointer;
@@ -54,77 +54,4 @@
 .selected {
   background: var(--dsw-alias-bg-module-platform);
   border-color: var(--dsw-static-neutral-bluish-400);
-}
-
-/* Background controls: pick/clear buttons and preview. */
-.fieldLabel {
-  margin-top: 8px;
-  font-size: calc(13px * var(--dsw-font-scale));
-  line-height: 20px;
-  color: var(--dsw-alias-label-secondary);
-}
-
-.backgroundRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pickButton,
-.clearButton,
-.autoButton {
-  padding: 6px 12px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 8px;
-  background: transparent;
-  font: inherit;
-  font-size: calc(13px * var(--dsw-font-scale));
-  line-height: 20px;
-  color: var(--dsw-alias-label-primary);
-  cursor: pointer;
-}
-
-.pickButton:hover,
-.clearButton:hover,
-.autoButton:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-
-.clearButton,
-.autoButton {
-  color: var(--dsw-alias-label-secondary);
-}
-
-.preview {
-  margin-top: 8px;
-  max-width: 100%;
-  max-height: 120px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 8px;
-  object-fit: cover;
-}
-
-.fontSizeRow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.fontSizeSlider {
-  flex: 1 1 auto;
-  accent-color: var(--dsw-alias-brand-primary);
-  cursor: pointer;
-}
-
-.fontSizeValue {
-  min-width: 44px;
-  text-align: right;
-  font-size: calc(13px * var(--dsw-font-scale));
-  line-height: 20px;
-  color: var(--dsw-alias-label-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
-.hiddenFileInput {
-  display: none;
 }

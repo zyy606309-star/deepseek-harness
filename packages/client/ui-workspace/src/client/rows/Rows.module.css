@@ -56,7 +56,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: var(--dsw-font-s-14);
+  font-size: 14px;
+  line-height: 20px;
 }
 
 .searchResultMeta {
@@ -72,7 +73,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: var(--dsw-font-xxs-12);
+  font-size: 12px;
+  line-height: 17px;
 }
 
 .searchResultWorkspace {
@@ -170,21 +172,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  /* Role token, not literal px: the sidebar scales with the font-size setting
-     (--dsw-font-scale) and keeps the 22px line rhythm the other s-14 surfaces
-     use, instead of the old fixed 20px. */
-  font: var(--dsw-font-s-14);
-}
-
-/* Workspace/folder headers carry the strong (500) variant for directory
-   emphasis, parallel to the strong-14 role used elsewhere in the client. */
-.projectRow .title {
-  font: var(--dsw-font-s-strong-14);
+  font-size: 14px;
+  line-height: 20px;
 }
 
 .renameInput {
   min-width: 0;
-  font-size: calc(14px * var(--dsw-font-scale));
+  font-size: 14px;
   line-height: 20px;
   padding: 0 2px;
   border: 0.5px solid var(--dsw-alias-border-l4);
@@ -202,13 +196,15 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: var(--dsw-font-xxs-12);
+  font-size: 12px;
+  line-height: 20px;
   color: var(--dsw-alias-label-tertiary);
 }
 
 .time {
   flex: none;
-  font: var(--dsw-font-xxs-12);
+  font-size: 12px;
+  line-height: 20px;
   color: var(--dsw-alias-label-tertiary);
 }
 
@@ -310,21 +306,21 @@
 }
 
 .hoverTitle {
-  font-size: calc(14px * var(--dsw-font-scale));
+  font-size: 14px;
   line-height: 20px;
   color: #FFFFFF;
   overflow-wrap: break-word;
 }
 
 .hoverPath {
-  font-size: calc(12px * var(--dsw-font-scale));
+  font-size: 12px;
   line-height: 16px;
   color: #CFD3D6;
   word-break: break-all;
 }
 
 .hoverTime {
-  font-size: calc(12px * var(--dsw-font-scale));
+  font-size: 12px;
   line-height: 16px;
   color: #CFD3D6;
 }
@@ -333,7 +329,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: calc(12px * var(--dsw-font-scale));
+  font-size: 12px;
   line-height: 20px;
   color: #ADB2B8;
 }

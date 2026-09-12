@@ -39,7 +39,7 @@
 
 .copied {
   color: #FFFFFF;
-  font-size: calc(14px * var(--dsw-font-scale));
+  font-size: 14px;
   line-height: 20px;
   text-align: center;
 }

@@ -46,7 +46,7 @@
   padding: 6px 8px;
   border-radius: 8px;
   cursor: pointer;
-  font-size: calc(13px * var(--dsw-font-scale));
+  font-size: 13px;
   color: var(--dsw-alias-label-primary);
 }
 
@@ -63,7 +63,7 @@
 }
 
 .detail {
-  font-size: calc(12px * var(--dsw-font-scale));
+  font-size: 12px;
   color: var(--dsw-alias-label-tertiary);
   white-space: nowrap;
   overflow: hidden;
@@ -78,7 +78,7 @@
 
 .status {
   padding: 8px 10px;
-  font-size: calc(13px * var(--dsw-font-scale));
+  font-size: 13px;
   color: var(--dsw-alias-label-tertiary);
 }
 
@@ -88,7 +88,7 @@
   border: 0.5px solid var(--dsw-alias-border-inverted);
   border-radius: 8px;
   background: transparent;
-  font-size: calc(13px * var(--dsw-font-scale));
+  font-size: 13px;
   color: var(--dsw-alias-label-primary);
   outline: none;
 }
@@ -98,7 +98,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  font-size: calc(12px * var(--dsw-font-scale));
+  font-size: 12px;
   color: var(--dsw-alias-state-error-primary);
 }
 
@@ -113,7 +113,7 @@
   border: 0.5px solid var(--dsw-alias-border-inverted);
   border-radius: 6px;
   background: transparent;
-  font-size: calc(12px * var(--dsw-font-scale));
+  font-size: 12px;
   color: var(--dsw-alias-label-primary);
   cursor: pointer;
 }

@@ -38,7 +38,7 @@
   row-gap: 12px;
   align-items: center;
   justify-content: center;
-  font-size: calc(26px * var(--dsw-font-scale));
+  font-size: 26px;
   line-height: 32px;
   font-weight: 500;
   color: var(--dsw-alias-label-primary);
@@ -68,7 +68,7 @@
   background: var(--dsw-alias-state-business-tertiary);
   color: var(--dsw-alias-label-primary-bluish);
   font-family: var(--ds-font-family-code);
-  font-size: calc(12px * var(--dsw-font-scale));
+  font-size: 12px;
   line-height: 18px;
   font-weight: 500;
   white-space: nowrap;
@@ -159,7 +159,7 @@
   border-radius: 16px;
   background: transparent;
   color: var(--dsw-alias-label-primary);
-  font-size: calc(13px * var(--dsw-font-scale));
+  font-size: 13px;
   line-height: 20px;
   font-weight: 500;
   cursor: pointer;
@@ -205,7 +205,7 @@
   border-radius: 22px;
   outline: none;
   background: transparent;
-  font-size: calc(14px * var(--dsw-font-scale));
+  font-size: 14px;
   font-weight: 400;
   line-height: 22px;
   color: var(--dsw-alias-label-primary);
@@ -225,7 +225,7 @@
 
 .modalError {
   margin-top: 8px;
-  font-size: calc(12px * var(--dsw-font-scale));
+  font-size: 12px;
   line-height: 18px;
   color: var(--dsw-alias-state-error-primary);
 }

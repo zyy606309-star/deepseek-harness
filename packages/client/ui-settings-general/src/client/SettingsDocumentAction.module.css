@@ -9,7 +9,7 @@
   max-width: 180px;
   overflow: hidden;
   color: var(--dsw-alias-state-error-primary);
-  font-size: calc(12px * var(--dsw-font-scale));
+  font-size: 12px;
   line-height: 18px;
   text-overflow: ellipsis;
   white-space: nowrap;
