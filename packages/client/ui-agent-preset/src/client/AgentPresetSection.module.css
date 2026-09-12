@@ -8,50 +8,13 @@
 
 .title {
   margin: 0;
-  font-size: 18px;
+  font-size: calc(18px * var(--dsw-font-scale));
   font-weight: 600;
 }
 
 .intro {
   margin: 0;
-  font-size: 13px;
-  color: var(--dsw-alias-label-tertiary);
-}
-
-.pickerPreference {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 14px 16px;
-  border: 0.5px solid var(--dsw-alias-border-l4);
-  border-radius: 14px;
-  background: var(--dsw-alias-bg-module-platform);
-}
-
-.pickerPreferenceCopy {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-
-.pickerPreferenceTitleRow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.pickerPreferenceTitle {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.5;
-}
-
-.pickerPreferenceDescription {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: calc(13px * var(--dsw-font-scale));
   color: var(--dsw-alias-label-tertiary);
 }
 
@@ -71,7 +34,7 @@
 
 .groupHead {
   margin: 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   font-weight: 600;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -91,35 +54,23 @@
 }
 
 .card {
-  border: 0.5px solid var(--dsw-alias-border-l4);
-  border-radius: 20px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
-  background: transparent;
+  background: var(--dsw-alias-bg-layer-3);
   transition: border-color .16s, background .16s;
 }
 
 
-.card:hover:not(.cardActive):not(.cardSelectionDisabled) {
-  background: var(--dsw-alias-interactive-bg-hover);
+.card:hover:not(.cardActive) {
+  border-color: var(--dsw-alias-label-dimmed);
 }
 
-/* The default preset reads as selected exactly like the Appearance cubes:
-   platform fill + the bluish-400 border (static token — the bluish-400 step
-   has no alias-layer name). */
+/* The default preset reads as selected, not merely badged. */
 .cardActive {
-  background: var(--dsw-alias-bg-module-platform);
-  border-color: var(--dsw-static-neutral-bluish-400);
-}
-
-/* Mode selection is off, not the preset itself: mute only the selectable
-   body while the independent view/copy/location actions stay fully usable. */
-.cardSelectionDisabled {
-  background: var(--dsw-alias-bg-module-platform);
-}
-
-.cardSelectionDisabled .cardMain {
-  opacity: 0.48;
+  background: var(--dsw-alias-bg-layer-2);
+  border-color: var(--dsw-alias-label-primary);
 }
 
 /* A broken preset reads as damaged before anything else: the card cannot be
@@ -134,9 +85,8 @@
 
 .brokenBadge {
   border-radius: 999px;
-  corner-shape: round;
   padding: 1px 8px;
-  font-size: 11px;
+  font-size: calc(11px * var(--dsw-font-scale));
   line-height: 17px;
   white-space: nowrap;
   font-weight: 500;
@@ -144,62 +94,12 @@
   color: var(--dsw-alias-bg-layer-3);
 }
 
-/* The discovery-reported reason, verbatim: it names the rows and the fix.
-   A real element rather than the icon row's `data-tip` pseudo-element, for two
-   reasons: generated content joins the card's accessible text, where this would
-   repeat what the alert already carries, and that tooltip is one `nowrap` line
-   for an icon label while this names package specifiers one per line. */
-.brokenTip {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 1;
-  width: max-content;
-  max-width: 100%;
-  padding: 6px 8px;
-  border-radius: 6px;
-  background: var(--dsw-alias-label-primary);
-  color: var(--dsw-alias-bg-layer-3);
-  font-size: 11px;
-  font-weight: 400;
-  line-height: 1.5;
-  text-align: left;
-  white-space: pre-line;
-  overflow-wrap: anywhere;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .12s;
-}
-
-/* Focusing the card reveals it too: a broken card keeps its place in the tab
-   order (`aria-disabled`, not `disabled`), so this is the keyboard path to a
-   reason the card face no longer shows. */
-.brokenBadge:hover .brokenTip,
-.cardMain:focus-visible .brokenTip {
-  opacity: 1;
-}
-
-.cardMain[aria-disabled='true'] {
-  cursor: default;
-}
-
-.cardMain:focus-visible {
-  outline: 2px solid var(--dsw-alias-brand-primary);
-  outline-offset: -2px;
-}
-
-/* The same reason, for a screen reader. A pointer reveals the badge's tooltip
-   and a keyboard reveals it by focusing the card, but neither announces it;
-   this node is what does. Keeping it out of the card face is what lets a
-   picker card show the preset's own description rather than a package
-   specifier. */
+/* The discovery-reported reason, verbatim: it names the file and the fix. */
 .cardBrokenReason {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+  font-size: calc(12px * var(--dsw-font-scale));
+  line-height: 1.5;
+  color: var(--dsw-alias-state-error-primary);
+  overflow-wrap: anywhere;
 }
 
 /* The card body is the control that picks the preset. */
@@ -232,22 +132,33 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  /* Anchors the broken badge's tooltip: the badge itself stays unpositioned so
-     its `::after` resolves against the card's own width instead of against a
-     badge that sits partway across it. A tooltip grown from the badge would
-     run past the card, and past the section for a card in the last column. */
-  position: relative;
 }
 
 .cardName {
-  font-size: 15px;
+  font-size: calc(15px * var(--dsw-font-scale));
   font-weight: 600;
   line-height: 1.4;
 }
 
-/* Placement only: the capsule geometry and palette come from `Tag`. */
+.badge,
+.inUse {
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: calc(11px * var(--dsw-font-scale));
+  line-height: 17px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.badge {
+  border: 1px solid var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-tertiary);
+}
+
 .inUse {
   margin-left: auto;
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-bg-layer-3);
 }
 
 /* Bounded to four lines. A preset publishes its own description, so one long
@@ -258,7 +169,7 @@
    flex-stretched box leaves the clamp height and the box height disagreeing,
    so `.cardId` takes the free space with an auto margin instead. */
 .cardDesc {
-  font-size: 13px;
+  font-size: calc(13px * var(--dsw-font-scale));
   line-height: 1.55;
   color: var(--dsw-alias-label-secondary);
   min-height: 42px;
@@ -273,8 +184,8 @@
 .cardId {
   margin-top: auto;
   font-family: var(--dsw-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
-  font-size: 11px;
-  color: var(--dsw-alias-label-tertiary);
+  font-size: calc(11px * var(--dsw-font-scale));
+  color: var(--dsw-alias-label-dimmed);
 }
 
 .cardFoot {
@@ -282,7 +193,7 @@
   justify-content: flex-end;
   gap: 2px;
   padding: 6px 10px;
-  border-top: 0.5px solid var(--dsw-alias-border-l2);
+  border-top: 1px solid var(--dsw-alias-border-l2);
 }
 
 /* Icon-only actions: the label rides `title` so the row stays quiet until
@@ -325,7 +236,7 @@
   border-radius: 6px;
   background: var(--dsw-alias-label-primary);
   color: var(--dsw-alias-bg-layer-3);
-  font-size: 11px;
+  font-size: calc(11px * var(--dsw-font-scale));
   line-height: 17px;
   white-space: nowrap;
   opacity: 0;
@@ -348,7 +259,7 @@
 .revealedPath {
   margin: 0;
   padding: 6px 16px 10px;
-  font-size: 11px;
+  font-size: calc(11px * var(--dsw-font-scale));
   color: var(--dsw-alias-label-tertiary);
   display: flex;
   gap: 6px;
@@ -373,7 +284,7 @@
   background: none;
   color: var(--dsw-alias-label-secondary);
   font: inherit;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--dsw-font-scale));
   cursor: pointer;
 }
 
@@ -394,7 +305,7 @@
 }
 
 .fieldLabel {
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   font-weight: 500;
   color: var(--dsw-alias-label-secondary);
 }
@@ -402,10 +313,10 @@
 .input {
   box-sizing: border-box;
   padding: 9px 12px;
-  border: 0.5px solid var(--dsw-alias-border-l4);
+  border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 10px;
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--dsw-font-scale));
   background: var(--dsw-alias-bg-layer-1);
   color: var(--dsw-alias-label-primary);
 }
@@ -435,12 +346,12 @@
   padding: 12px;
   max-height: min(52vh, 480px);
   overflow: auto;
-  border: 0.5px solid var(--dsw-alias-border-l4);
+  border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 10px;
   background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-secondary);
   font-family: var(--dsw-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--dsw-font-scale));
   line-height: 1.5;
   white-space: pre;
   tab-size: 2;
@@ -450,7 +361,7 @@
 
 .error {
   margin: 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--dsw-font-scale));
   color: var(--dsw-alias-state-error-primary);
 }
 
@@ -479,9 +390,9 @@
   gap: 6px;
   height: 44px;
   border: 1px dashed var(--dsw-alias-border-l3);
-  border-radius: 20px;
+  border-radius: 12px;
   font: inherit;
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   line-height: 22px;
   background: transparent;
   color: var(--dsw-alias-label-primary);

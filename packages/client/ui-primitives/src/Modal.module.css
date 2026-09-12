@@ -52,7 +52,7 @@
 
 .title {
   margin: 0;
-  font-size: 16px;
+  font-size: calc(16px * var(--dsw-font-scale));
   line-height: 24px;
   font-weight: 500; /* figma wt510, rendered 500 */
   color: var(--dsw-alias-label-primary);
@@ -80,7 +80,7 @@
 .description {
   margin: 0;
   padding: 0 24px;
-  font-size: 14px;
+  font-size: calc(14px * var(--dsw-font-scale));
   line-height: 22px;
   font-weight: 400;
   color: var(--dsw-alias-label-primary);

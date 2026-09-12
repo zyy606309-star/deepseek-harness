@@ -4,8 +4,15 @@
  * font stack deliberately omits a bare `monospace` tail (Windows CJK falls
  * back to SimSun otherwise). */
 :root {
-  --dsw-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
-    'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  /* CJK script font first so Chinese glyphs take a clean modern sans (Source
+     Han Sans CN / Noto Sans SC — the same design; the family name differs by
+     build) rather than a calligraphic form, which reads poorly for technical
+     content. Both spellings are listed so either installed build matches; the
+     Latin fallbacks below still handle ASCII and keep layout metrics stable.
+     Delete the 思源黑体/Noto entries to return to Microsoft YaHei. */
+  --dsw-font-family: 'Source Han Sans CN', '思源黑体 CN', '思源黑体', 'Noto Sans SC', -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+    'Helvetica Neue', Helvetica, Arial, sans-serif;
   --ds-font-family-code: 'SF Mono', 'JetBrains Mono', 'Fira Code', Consolas,
     'Liberation Mono', Menlo, Courier, 'PingFang SC', 'Microsoft YaHei';
   --ds-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
