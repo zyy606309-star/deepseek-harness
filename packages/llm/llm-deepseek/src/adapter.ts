@@ -39,6 +39,19 @@ import { parseSse } from './sse.ts'
 import { translate } from './translate.ts'
 import type { WireError, WireRequest } from './types.ts'
 
+/** A direct DeepSeek request thinking-effort level. */
+export type DeepSeekThinkingEffort = 'off' | 'low' | 'high' | 'max'
+
+/** Map a config thinking-effort level to its branded reasoning-effort id. */
+function thinkingEffortId(effort: DeepSeekThinkingEffort): ReasoningEffortId {
+  switch (effort) {
+    case 'off': return OFF_REASONING_EFFORT
+    case 'low': return LOW_REASONING_EFFORT
+    case 'max': return MAX_REASONING_EFFORT
+    default: return HIGH_REASONING_EFFORT
+  }
+}
+
 /** One optional model entry advertised by the direct-fetch adapter. */
 export interface DeepSeekCatalogModel {
   /** Wire model id accepted by the configured endpoint. */
@@ -51,6 +64,8 @@ export interface DeepSeekCatalogModel {
   contextWindow?: number
   /** Per-request output cap for this model; omission falls back to the profile's {@link DeepSeekConnectionOptions.maxTokens}. */
   maxTokens?: number
+  /** Default thinking effort for this model; omission inherits the provider default. */
+  reasoningEffort?: DeepSeekThinkingEffort
   /** Accepted request modalities; omission is text-only. */
   inputModalities?: ModelModality[]
   /** Total-pixel budget for one deterministic request preview. */
@@ -387,6 +402,12 @@ export class DeepSeekAdapter extends LlmAdapter {
     const configured = connection.models.find(entry => entry.id === model)
     const contextWindow = configured?.contextWindow
       ?? connection.defaultContextWindow
+    // A per-model effort is an explicit override; otherwise the route default
+    // applies. The exhausted route-level mapping is what previously stood in
+    // for every model, so an uncatalogued model keeps the provider behavior.
+    const defaultEffortId = configured?.reasoningEffort !== undefined
+      ? thinkingEffortId(configured.reasoningEffort)
+      : thinkingEffortId(connection.defaults.reasoningEffort ?? 'high')
     return {
       // An uncatalogued endpoint is safely treated as text-only. Declaring an
       // unverified image capability would let the host persist input that the
@@ -406,13 +427,7 @@ export class DeepSeekAdapter extends LlmAdapter {
         : {
           reasoning: {
             efforts: REASONING_EFFORTS,
-            defaultEffort: connection.defaults.reasoningEffort === 'off'
-              ? OFF_REASONING_EFFORT
-              : connection.defaults.reasoningEffort === 'low'
-                ? LOW_REASONING_EFFORT
-                : connection.defaults.reasoningEffort === 'max'
-                  ? MAX_REASONING_EFFORT
-                  : HIGH_REASONING_EFFORT,
+            defaultEffort: defaultEffortId,
           },
         },
     }

@@ -17,7 +17,17 @@ import styles from './ModelsSection.module.css'
 export type DeepSeekModelDraft = Record<string, unknown>
 
 /** The catalog fields this editor writes. */
-type CatalogField = 'id' | 'name' | 'contextWindow' | 'maxTokens'
+type CatalogField = 'id' | 'name' | 'contextWindow' | 'maxTokens' | 'reasoningEffort' | 'inputModalities'
+
+/** Accepted per-model thinking-intensity levels, in display order. */
+export const REASONING_EFFORTS = ['off', 'low', 'high', 'max'] as const
+/** Display label key for each thinking-intensity level. */
+const REASONING_EFFORT_LABEL_KEY = {
+  off: 'reasoningEffortOff',
+  low: 'reasoningEffortLow',
+  high: 'reasoningEffortHigh',
+  max: 'reasoningEffortMax',
+} as const
 
 /** The two token counts edited as K/M-suffixed text behind a row's disclosure. */
 type CapacityField = 'contextWindow' | 'maxTokens'
@@ -74,7 +84,7 @@ export interface DeepSeekModelsValidationFailure {
   index: number
   /** Message key owned by the Models settings section. */
   key: 'modelIdRequired' | 'modelIdDuplicate' | 'modelNameInvalid' | 'modelContextInvalid'
-  | 'modelMaxTokensInvalid'
+  | 'modelMaxTokensInvalid' | 'modelReasoningEffortInvalid' | 'modelImageSupportInvalid'
 }
 
 /** Convert a schema-validated catalog value into records without dropping hidden fields. */
@@ -117,6 +127,27 @@ export function validateDeepSeekModels(value: unknown): DeepSeekModelsValidation
     if (maxTokens !== undefined
       && (typeof maxTokens !== 'number' || !Number.isInteger(maxTokens) || maxTokens <= 0)) {
       return { index, key: 'modelMaxTokensInvalid' }
+    }
+    const inputModalities = model['inputModalities']
+    if (inputModalities !== undefined
+      && (!Array.isArray(inputModalities)
+        || inputModalities.length === 0
+        || inputModalities.some(modality => modality !== 'text' && modality !== 'image')
+        || new Set(inputModalities).size !== inputModalities.length)) {
+      return { index, key: 'modelImageSupportInvalid' }
+    }
+    const input = model['input']
+    if (input !== undefined
+      && (!Array.isArray(input)
+        || input.some(modality => modality !== 'text' && modality !== 'image')
+        || new Set(input).size !== input.length)) {
+      return { index, key: 'modelImageSupportInvalid' }
+    }
+    const reasoningEffort = model['reasoningEffort']
+    if (reasoningEffort !== undefined
+      && (typeof reasoningEffort !== 'string'
+        || !(REASONING_EFFORTS as readonly string[]).includes(reasoningEffort))) {
+      return { index, key: 'modelReasoningEffortInvalid' }
     }
   }
   return undefined
@@ -262,6 +293,54 @@ export function DeepSeekModelsEditor(props: DeepSeekModelsEditorProps): ReactNod
     </label>
   )
 
+  /** Binary image-capability control for one row. */
+  const imageSupportField = (model: DeepSeekModelDraft, index: number): ReactNode => {
+    const modalities = model['inputModalities']
+    const checked = Array.isArray(modalities) && modalities.includes('image')
+    return (
+      <label className={styles['modelCheckbox']}>
+        <input
+          type="checkbox"
+          checked={checked}
+          aria-label={`${props.t('modelImageSupport')} ${String(index + 1)}`}
+          disabled={props.disabled}
+          onChange={(event) => {
+            update(index, 'inputModalities', event.target.checked ? ['text', 'image'] : ['text'])
+          }}
+        />
+        <span>{props.t('modelImageSupport')}</span>
+      </label>
+    )
+  }
+
+  /** One thinking-intensity field of one row, rendered inside the disclosure. */
+  const reasoningEffortField = (model: DeepSeekModelDraft, index: number): ReactNode => {
+    const value = model['reasoningEffort']
+    const selected = typeof value === 'string' && (REASONING_EFFORTS as readonly string[]).includes(value)
+      ? value
+      : ''
+    return (
+      <label className={styles['modelField']}>
+        <span className={styles['modelFieldLabel']}>{props.t('reasoningEffort')}</span>
+        <select
+          className={`${styles['input']} ${styles['selectInput']}`}
+          value={selected}
+          aria-label={`${props.t('reasoningEffort')} ${String(index + 1)}`}
+          disabled={props.disabled}
+          onChange={(event) => {
+            const next = event.target.value
+            update(index, 'reasoningEffort', next === '' ? undefined : next)
+          }}
+        >
+          <option value="">{props.t('reasoningEffortPlaceholder')}</option>
+          {REASONING_EFFORTS.map(level => (
+            <option key={level} value={level}>{props.t(REASONING_EFFORT_LABEL_KEY[level])}</option>
+          ))}
+        </select>
+      </label>
+    )
+  }
+
   return (
     <section className={styles['modelCatalog']} aria-label={props.t('models')}>
       <div className={styles['modelListHead']}>
@@ -343,6 +422,8 @@ export function DeepSeekModelsEditor(props: DeepSeekModelsEditorProps): ReactNod
                     <div className={styles['modelAdvanced']}>
                       {capacityField(model, index, 'contextWindow', props.defaultContextWindow)}
                       {capacityField(model, index, 'maxTokens', props.defaultMaxTokens)}
+                      {imageSupportField(model, index)}
+                      {reasoningEffortField(model, index)}
                     </div>
                   )
                   : null}

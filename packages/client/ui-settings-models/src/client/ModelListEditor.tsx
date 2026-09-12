@@ -19,6 +19,7 @@ import type { ReactNode } from 'react'
 import type { DiscoveredModelView, IApiClient } from '@deepseek-ai/dsh-api-remotes/client'
 import { Button, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import { formatCapacity, parseCapacity } from './DeepSeekModelsEditor.tsx'
+import { REASONING_EFFORTS } from './DeepSeekModelsEditor.tsx'
 import type { DeepSeekModelDraft } from './DeepSeekModelsEditor.tsx'
 import { messageOf } from './store.ts'
 import type { en } from './locales.ts'
@@ -210,7 +211,7 @@ export function ModelListEditor(props: ModelListEditorProps): ReactNode {
     })
   }
 
-  const patch = (index: number, next: Record<string, string | number | undefined>): void => {
+  const patch = (index: number, next: Record<string, string | number | readonly string[] | undefined>): void => {
     onChange(models.map((model, at) => {
       if (at !== index) return model
       // Rebuilt rather than spread over: an emptied optional field has to leave
@@ -428,6 +429,38 @@ export function ModelListEditor(props: ModelListEditorProps): ReactNode {
                     disabled={disabled}
                     onChange={(event) => { editCapacity(index, 'maxTokens', event.target.value) }}
                   />
+                </label>
+                <label className={styles['modelCheckbox']}>
+                  <input
+                    type="checkbox"
+                    checked={Array.isArray(model['input']) && model['input'].includes('image')}
+                    aria-label={`${t('modelImageSupport')} ${index + 1}`}
+                    disabled={disabled}
+                    onChange={(event) => {
+                      patch(index, { input: event.target.checked ? ['text', 'image'] : ['text'] })
+                    }}
+                  />
+                  <span>{t('modelImageSupport')}</span>
+                </label>
+                <label className={styles['modelField']}>
+                  <span className={styles['modelFieldLabel']}>{t('reasoningEffort')}</span>
+                  <select
+                    className={`${styles['input']} ${styles['selectInput']}`}
+                    value={typeof model['reasoningEffort'] === 'string' ? model['reasoningEffort'] : ''}
+                    aria-label={`${t('reasoningEffort')} ${index + 1}`}
+                    disabled={disabled}
+                    onChange={(event) => {
+                      const next = event.target.value
+                      patch(index, { reasoningEffort: next === '' ? undefined : next })
+                    }}
+                  >
+                    <option value="">{t('reasoningEffortPlaceholder')}</option>
+                    {REASONING_EFFORTS.map(level => (
+                      <option key={level} value={level}>
+                        {t(('reasoningEffort' + level.charAt(0).toUpperCase() + level.slice(1)) as keyof typeof en)}
+                      </option>
+                    ))}
+                  </select>
                 </label>
               </div>
             )

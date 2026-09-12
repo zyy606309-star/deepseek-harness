@@ -518,6 +518,20 @@
   line-height: 18px;
 }
 
+.modelCheckbox {
+  display: flex;
+  align-items: center;
+  align-self: end;
+  gap: 8px;
+  min-height: 32px;
+  color: var(--dsw-alias-label-primary);
+  font-size: calc(13px * var(--dsw-font-scale));
+}
+
+.modelCheckbox input {
+  accent-color: var(--dsw-alias-brand-primary);
+}
+
 .modelEmpty {
   padding: 12px;
   border: 1px dashed var(--dsw-alias-border-l3);

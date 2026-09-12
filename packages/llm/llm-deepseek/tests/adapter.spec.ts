@@ -1593,6 +1593,30 @@ describe('plugin registration and config', () => {
     },
   )
 
+  it('uses a per-model reasoningEffort as that model\'s default', async () => {
+    const ctx = new Context()
+    await ctx.plugin(LlmRuntime)
+    await ctx.plugin(LlmDeepSeek, {
+      baseURL: 'http://127.0.0.1:1',
+      models: [
+        { id: 'deepseek-v4-flash', name: 'Flash', reasoningEffort: 'max' },
+        { id: 'deepseek-v4-pro', name: 'Pro' },
+      ],
+    })
+    // A model with an explicit per-model effort carries it; one without inherits
+    // the route default (high).
+    await expect(ctx.llm.resolveModelInfo('deepseek-official', 'deepseek-v4-flash'))
+      .resolves.toMatchObject({ reasoning: { defaultEffort: ReasoningEffortId('max') } })
+    await expect(ctx.llm.resolveModelInfo('deepseek-official', 'deepseek-v4-pro'))
+      .resolves.toMatchObject({ reasoning: { defaultEffort: ReasoningEffortId('high') } })
+  })
+
+  it('rejects an invalid per-model reasoningEffort at the resolver boundary', () => {
+    expect(() => resolveAdapterOptions({
+      models: [{ id: 'm', reasoningEffort: 'ultra' as never }],
+    })).toThrow(/reasoningEffort must be one of/)
+  })
+
   it.each(['low', 'high', 'max'] as const)(
     'rejects disabled-thinking effort %s at the resolver boundary',
     (reasoningEffort) => {

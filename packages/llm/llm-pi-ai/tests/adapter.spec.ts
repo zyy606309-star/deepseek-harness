@@ -573,6 +573,38 @@ describe('provider profile lifecycle', () => {
     })
   })
 
+  it('uses a per-model reasoningEffort as that model\'s default over the route default', async () => {
+    const ctx = new Context()
+    await ctx.plugin(LlmRuntime)
+    await ctx.plugin(LlmPiAi, {
+      providers: {
+        'acme-gateway': {
+          apiKeyEnv: 'PI_TEST_KEY',
+          api: 'openai-completions',
+          baseURL: 'https://acme.test/v1',
+          reasoning: 'low',
+          models: [
+            {
+              id: 'acme-flash',
+              reasoningEfforts: { off: null, low: 'low', high: 'high', max: 'max' },
+              reasoningEffort: 'max',
+            },
+            {
+              id: 'acme-pro',
+              reasoningEfforts: { off: null, low: 'low', high: 'high', max: 'max' },
+            },
+          ],
+        },
+      },
+    })
+    // A model with an explicit per-model effort carries it; one without inherits
+    // the route default (low).
+    await expect(ctx.llm.resolveModelInfo('acme-gateway', 'acme-flash'))
+      .resolves.toMatchObject({ reasoning: { defaultEffort: ReasoningEffortId('max') } })
+    await expect(ctx.llm.resolveModelInfo('acme-gateway', 'acme-pro'))
+      .resolves.toMatchObject({ reasoning: { defaultEffort: ReasoningEffortId('low') } })
+  })
+
   it('sends the declared wire spelling and refuses undeclared levels before network I/O', async () => {
     vi.stubEnv('PI_TEST_KEY', 'test-key')
     const server = await mockServer([{ events: textEvents }])

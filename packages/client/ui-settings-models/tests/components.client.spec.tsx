@@ -512,6 +512,17 @@ describe('ModelsSection', () => {
     expect(validateDeepSeekModels([{ id: 'model', maxTokens: 0 }]))
       .toEqual({ index: 0, key: 'modelMaxTokensInvalid' })
     expect(validateDeepSeekModels([{ id: 'model', maxTokens: 8192 }])).toBeUndefined()
+    expect(validateDeepSeekModels([{ id: 'model', reasoningEffort: 'ultra' }]))
+      .toEqual({ index: 0, key: 'modelReasoningEffortInvalid' })
+    expect(validateDeepSeekModels([{ id: 'model', reasoningEffort: 7 }]))
+      .toEqual({ index: 0, key: 'modelReasoningEffortInvalid' })
+    expect(validateDeepSeekModels([{ id: 'model', reasoningEffort: 'max' }])).toBeUndefined()
+    expect(validateDeepSeekModels([{ id: 'model', inputModalities: ['audio'] }]))
+      .toEqual({ index: 0, key: 'modelImageSupportInvalid' })
+    expect(validateDeepSeekModels([{ id: 'model', inputModalities: ['text', 'image'] }])).toBeUndefined()
+    expect(validateDeepSeekModels([{ id: 'model', input: ['audio'] }]))
+      .toEqual({ index: 0, key: 'modelImageSupportInvalid' })
+    expect(validateDeepSeekModels([{ id: 'model', input: [] }])).toBeUndefined()
   })
 
   it('reads context windows written as counts, thousands, or millions', () => {
@@ -585,6 +596,23 @@ describe('ModelsSection', () => {
         ],
       }],
       expectedRevision: 0,
+    })
+  })
+
+  it('writes image support for a DeepSeek model row', async () => {
+    const { mutate } = await mountDeepSeekCard()
+    fireEvent.click(screen.getByText(en.customized))
+    expandRow(1)
+    const checkbox = screen.getByLabelText(`${en.modelImageSupport} 1`) as HTMLInputElement
+    expect(checkbox.checked).toBe(false)
+    fireEvent.click(checkbox)
+    fireEvent.click(screen.getByText(en.apply))
+
+    await waitFor(() => { expect(mutate).toHaveBeenCalledTimes(1) })
+    expect(mutate.mock.calls[0]?.[0]).toMatchObject({
+      ops: [{ value: expect.arrayContaining([
+        expect.objectContaining({ inputModalities: ['text', 'image'] }),
+      ]) }],
     })
   })
 

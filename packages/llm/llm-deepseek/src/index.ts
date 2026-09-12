@@ -60,7 +60,7 @@ export {
   DEFAULT_STREAM_IDLE_TIMEOUT_MS,
   DeepSeekAdapter,
 } from './adapter.ts'
-export type { DeepSeekAdapterOptions, DeepSeekCatalogModel, DeepSeekConnectionOptions } from './adapter.ts'
+export type { DeepSeekAdapterOptions, DeepSeekCatalogModel, DeepSeekConnectionOptions, DeepSeekThinkingEffort } from './adapter.ts'
 export { DeepSeekFileStore, MAX_CHAT_IMAGE_BYTES } from './file-store.ts'
 export type { DeepSeekFileConnection, DeepSeekFilePolicy, DeepSeekFileReference } from './file-store.ts'
 export { DeepSeekFilesClient, MAX_FILE_EXPIRY_SECONDS, MAX_FILE_UPLOAD_BYTES, MAX_STORED_FILE_BYTES, MAX_STORED_FILE_COUNT, MIN_FILE_EXPIRY_SECONDS } from './files-api.ts'
@@ -94,6 +94,11 @@ const DEFAULT_MODELS: DeepSeekCatalogModel[] = [
 ]
 
 const MODEL_MODALITIES = ['text', 'image'] as const satisfies readonly ModelModality[]
+
+/** Every accepted per-model thinking-effort level. */
+const MODEL_REASONING_EFFORTS = ['off', 'low', 'high', 'max'] as const
+/** Set form of {@link MODEL_REASONING_EFFORTS} for membership checks. */
+const REASONING_EFFORTS_SET: ReadonlySet<string> = new Set(MODEL_REASONING_EFFORTS)
 
 /**
  * Plugin config, validated by the same-named schemastery schema and doubling
@@ -150,6 +155,7 @@ const catalogModel: z<DeepSeekCatalogModel> = z.object({
   description: z.string(),
   contextWindow: z.number().step(1).min(1),
   maxTokens: z.number().step(1).min(1),
+  reasoningEffort: z.union(['off', 'low', 'high', 'max']),
   inputModalities: z.array(z.union(MODEL_MODALITIES)).min(1).default(['text']),
   imagePixelBudget: z.number().step(1).min(1),
   imageMaxBytes: z.number().step(1).min(1),
@@ -212,6 +218,13 @@ function resolveModels(models: readonly DeepSeekCatalogModel[] | undefined): Dee
         `llm-deepseek: catalog model "${model.id}" maxTokens must be a positive integer`,
       )
     }
+    if (model.reasoningEffort !== undefined
+      && !REASONING_EFFORTS_SET.has(model.reasoningEffort)) {
+      throw new Error(
+        `llm-deepseek: catalog model "${model.id}" reasoningEffort must be one of `
+        + 'off, low, high, max',
+      )
+    }
     const inputModalities = model.inputModalities ?? ['text']
     if (inputModalities.length === 0) {
       throw new Error(`llm-deepseek: catalog model "${model.id}" inputModalities must not be empty`)
@@ -245,6 +258,7 @@ function resolveModels(models: readonly DeepSeekCatalogModel[] | undefined): Dee
       ...model.description === undefined ? {} : { description: model.description },
       ...model.contextWindow === undefined ? {} : { contextWindow: model.contextWindow },
       ...model.maxTokens === undefined ? {} : { maxTokens: model.maxTokens },
+      ...model.reasoningEffort === undefined ? {} : { reasoningEffort: model.reasoningEffort },
       inputModalities: [...inputModalities],
       ...hasImage
         ? {

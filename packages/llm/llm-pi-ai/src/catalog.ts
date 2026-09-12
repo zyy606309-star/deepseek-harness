@@ -565,6 +565,11 @@ export interface PiAiModelProfile {
    * declares the offered levels and their wire spellings.
    */
   reasoningEfforts?: false | PiAiReasoningEfforts
+  /**
+   * Default thinking level for this model; omission inherits the route default.
+   * Only a level the model offers becomes its default effort.
+   */
+  reasoningEffort?: ModelThinkingLevel
   /** pi-ai wire-compatibility switches for this model, winning over the route's per field; one its protocol does not declare is refused. */
   compat?: PiAiCompatProfile
 }
@@ -769,6 +774,15 @@ export interface RouteCatalog {
    * picked, so only an explicit configuration lands here.
    */
   configuredMaxTokens: ReadonlyMap<string, number>
+  /**
+   * Per-model default thinking levels this profile explicitly configured, by
+   * model id. A deployment's chosen effort for one exact model, applied by the
+   * harness seam when that model is selected and no per-conversation effort
+   * overrides it. Serving as the model's `reasoning.defaultEffort` is config,
+   * not capability — the offered levels still come from the model's own
+   * `reasoningEfforts`, so only a level a model supports becomes a default.
+   */
+  configuredReasoningEffort: ReadonlyMap<string, ModelThinkingLevel>
 }
 
 /**
@@ -830,6 +844,7 @@ export function resolveRouteModels(request: RouteCatalogRequest): RouteCatalog {
   }
   const seen = new Set<string>()
   const configuredMaxTokens = new Map<string, number>()
+  const configuredReasoningEffort = new Map<string, ModelThinkingLevel>()
   const models = entries.map((entry) => {
     if (entry.id.length === 0) invalid(provider, 'has a model with an empty id')
     if (seen.has(entry.id)) invalid(provider, `lists model "${entry.id}" more than once`)
@@ -859,6 +874,7 @@ export function resolveRouteModels(request: RouteCatalogRequest): RouteCatalog {
     // Only a value the profile named is a deployment choice; the catalog's is
     // the model's capability and stays out of request defaults.
     if (entry.maxTokens !== undefined) configuredMaxTokens.set(entry.id, entry.maxTokens)
+    if (entry.reasoningEffort !== undefined) configuredReasoningEffort.set(entry.id, entry.reasoningEffort)
     return {
       // The installed entry lays the floor, and the fields below override it.
       // Enumerating instead would silently drop every `Model` field this
@@ -889,5 +905,5 @@ export function resolveRouteModels(request: RouteCatalogRequest): RouteCatalog {
     invalid(provider, `sets compat "${field}", but no model on the route speaks a protocol that takes it;`
       + ` it exists on ${takers.join(', ')}`)
   }
-  return { models, configuredMaxTokens }
+  return { models, configuredMaxTokens, configuredReasoningEffort }
 }
