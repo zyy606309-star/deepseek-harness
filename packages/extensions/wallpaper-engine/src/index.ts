@@ -337,4 +337,5 @@ export function apply(ctx) {
   }
 }
 
+/** Cordis plugin surface: the web-server injection and the route-registering apply. */
 export default { inject, apply }
