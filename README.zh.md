@@ -1,96 +1,74 @@
-# DeepSeek Harness
+# DeepSeek Harness（个人 fork）
 
 [English](README.md) | 中文
 
-DeepSeek Harness（`dsh`）是由 [DeepSeek AI](https://deepseek.com) 开发的开源 agent harness（智能体框架）。
+本仓库是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（`dsh`）的个人 fork。上游是一个基于 [Cordis](https://github.com/cordiverse/cordis)、以「一切皆插件」构建的开源 agent harness。本 fork 跟随上游 `0.1.5-rc.2` 线，并附带下面列出的增补；此处未点名的包都是该版本的上游代码。
 
-它构建于**一切皆插件**的架构之上，由 [Cordis](https://github.com/cordiverse/cordis) 驱动，其设计参见论文 [_A Programming Paradigm for Spatiotemporal Composability_](https://arxiv.org/abs/2608.25512)。
+上游文档、指南与插件目录见 [deepseek-harness.github.io](https://deepseek-harness.github.io/deepseek-harness/)。
 
-文档：[https://deepseek-harness.github.io/deepseek-harness/](https://deepseek-harness.github.io/deepseek-harness/)
+## 这个 fork 增加了什么
 
-## 开发者预览
+### 会话时间线
 
-DeepSeek Harness 处于 _开发者预览_ 阶段，正在快速迭代。**未来将出现破坏兼容性的变更。**
+[`@deepseek-ai/dsh-session-timeline`](packages/session/session-timeline/README.zh.md) 为持久化 Session 增加回退、删除、重新生成，输入框压缩按钮，以及可选地从持久检查点恢复工作区文件。删除或回退某一轮会**真正截断尾部**：[`Session.truncate`](packages/core/session/README.zh.md) 与两个持久化后端会把被移除事件从活 Session 和当前 generation 中删掉，而不是写一个 surface 标记。
 
-运行本项目前，请阅读[安全说明](SAFETY.zh.md)。
+### 会话交接
+
+会话行「…」菜单可以复制会话 ID，Web profile 挂载了 [`tool-session-query`](packages/session-query/tool-session-query/README.zh.md)，于是新会话能检索并读取交接过来的那个会话。
+
+### 更省的历史读取
+
+[`packages/session/session-persistence-jsonl`](packages/session/session-persistence-jsonl/README.zh.md) 为一页历史只解码一段连续的日志尾部，而不是还原整份产物；因此打开很长的历史会话不再构建完整对象图，Session 控制器也能在不激活 agent 的情况下提供冷会话分页。
+
+### 压缩修复
+
+[`compaction-basic`](packages/compaction/compaction-basic/README.zh.md) 按 Session **即将使用**的模型计价 pre-step 压力；摘要撞到生成上限时也会保留已产出的文本。
+
+### 本地壁纸
+
+[`@deepseek-ai/dsh-wallpaper-engine`](packages/extensions/wallpaper-engine/README.zh.md) 把本机 Wallpaper Engine 渲染在 Web GUI 背后，并持久化其效果控件。
+
+### 逆向 preset
+
+内置的 [`reverse`](apps/cli/config/agent-presets/reverse/preset.yml) agent preset 携带 [`xiaojianbang-auto-reverse`](.agents/skills/xiaojianbang-auto-reverse/SKILL.md) 技能，并挂载 [`crawler-mcp`](crawler-mcp/README.md) 这个 Model Context Protocol server，用于 CDP 驱动的浏览器、网络与 JavaScript 逆向工作。
 
 <a id="run"></a>
-
-## 运行
-
-### 通过 `npm` 运行
-
-安装 `Node.js`，然后运行：
-
-```sh
-npx @deepseek-ai/dsh web
-```
-
-该命令默认会在 `http://127.0.0.1:3080` 启动 Web UI，本机启动时还会用默认浏览器打开页面。通过 SSH 启动时只打印宿主机 URL，因为本地转发地址由 SSH 客户端或编辑器持有。传入 `--no-open` 可仅运行服务器而不打开浏览器。详见 [Web UI 指南](docs/user/guide/index.zh.md)。
+## 运行这个 fork
 
 <a id="run-from-source"></a>
-
 ### 从源码运行
 
-如需从仓库源码运行：
-
 ```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
+git clone https://github.com/zyy606309-star/deepseek-harness.git
 cd deepseek-harness
 pnpm install
 pnpm run build
-pnpm dsh web
+pnpm dsh --profile web web
 ```
 
-`pnpm run build` 会准备仓库产物。`pnpm dsh web` 会直接使用这些已构建产物，不会重新构建。
+`pnpm run build` 准备仓库产物，`pnpm dsh` 直接使用这些产物、不再重新构建。Web UI 会打印带一次性 token 的启动 URL；打开该 URL 后浏览器才会得到后续请求需要的会话 cookie。
 
-## 社区与支持
+## 跟随上游
 
-- 通过 [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions) 提交反馈或 bug 报告。
-- 为你的插件仓库添加 [`dsh-plugin`](https://github.com/topics/dsh-plugin) 话题，便于被发现。
-- 欢迎加入 DeepSeek Harness 企微群：扫码添加企微小助手并填写入群问卷，完成后小助手会邀请你入群。
+`origin` 是本 fork，`upstream` 是 `deepseek-ai/deepseek-harness`：
 
-<table>
-  <thead>
-    <tr>
-      <th align="center">企微小助手</th>
-      <th align="center">入群问卷</th>
-      <th align="center">微信公众号</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td align="center"><img src="https://cdn.deepseek.com/harness/readme/community-wecom-assistant.png" alt="DeepSeek Harness 企微小助手二维码" width="180" height="180"></td>
-      <td align="center"><a href="https://trtgsjkv6r.feishu.cn/share/base/form/shrcnIt5twSVdLGD52KJBckGCgg"><img src="https://cdn.deepseek.com/harness/readme/community-wecom-survey.png" alt="DeepSeek Harness 入群问卷二维码" width="180" height="180"></a></td>
-      <td align="center"><img src="https://cdn.deepseek.com/harness/readme/community-wechat-official-account.png" alt="DeepSeek Harness 团队微信公众号二维码" width="180" height="180"></td>
-    </tr>
-  </tbody>
-</table>
+```sh
+git fetch upstream
+git merge upstream/master
+pnpm install
+```
 
-## 参与贡献
+## 这个 fork 的已知限制
 
-参见 [CONTRIBUTING.md](CONTRIBUTING.zh.md)。
+- **未开开发者模式的 Windows。** 无法创建符号链接，因此基于 symlink 的用例会以 `EPERM` 失败，`apps/cli/tests/profiles/acp/cordis.yml` 也会被检出成一个内容是目标路径的文本文件。
+- **fork 上的 Actions secret。** `E2E (real DeepSeek API)` 与 installed-wheel 作业需要仓库 secret `DEEPSEEK_API_KEY_EXTERNAL`；缺了它这些作业会在 preflight 阶段失败，而不是自行跳过。
+- **逆向 preset 与本机绑定。** 它的技能与 MCP 条目带绝对 Windows 路径，换主机需要重新指向。
+- **历史被重写过。** 分支 `archive/remote-master-2026-09-13` 保存 `0.1.5` 之前的 fork 血统；仍停在那条血统上的克隆要用 `git fetch origin && git reset --hard origin/master` 同步，而不是 pull。
 
 ## 开发
 
-请先阅读[开发指南](docs/development.zh.md)与[架构文档](docs/architecture.zh.md)。
-
-面向 agent：请遵循 [AGENTS.md](AGENTS.md)。
-
-## 引用
-
-```bibtex
-@misc{deepseek-harness2026,
-  title={DeepSeek Harness: Everything is a Plugin},
-  author={DeepSeek-AI},
-  year={2026},
-  publisher={GitHub},
-  howpublished={\url{https://github.com/deepseek-ai/deepseek-harness}},
-}
-```
+从[开发指南](docs/development.zh.md)与[架构文档](docs/architecture.zh.md)开始。agent 遵循 [AGENTS.md](AGENTS.md)；贡献规则见 [CONTRIBUTING.zh.md](CONTRIBUTING.zh.md)。
 
 ## 许可证
 
-[MIT](LICENSE)
-
-第三方依赖及其许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+[MIT](LICENSE)。上游版权与第三方依赖许可披露于 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

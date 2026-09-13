@@ -1,75 +1,74 @@
-# DeepSeek Harness
+# DeepSeek Harness (personal fork)
 
 English | [中文](README.zh.md)
 
-DeepSeek Harness (`dsh`) is an open-source agent harness developed by [DeepSeek AI](https://deepseek.com).
+This repository is a personal fork of [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`), an open-source agent harness built on [Cordis](https://github.com/cordiverse/cordis) where everything is a plugin. It tracks the upstream `0.1.5-rc.2` line and carries the additions listed below; every package not named here is upstream code at that version.
 
-It is built on an **everything-is-a-plugin** architecture and powered by [Cordis](https://github.com/cordiverse/cordis), whose design is described in [_A Programming Paradigm for Spatiotemporal Composability_](https://arxiv.org/abs/2608.25512).
+Upstream documentation, guides, and the plugin catalogue live at [deepseek-harness.github.io](https://deepseek-harness.github.io/deepseek-harness/).
 
-Documentation: [https://deepseek-harness.github.io/deepseek-harness/](https://deepseek-harness.github.io/deepseek-harness/)
+## What this fork adds
 
-## Developer preview
+### Conversation timeline
 
-DeepSeek Harness is in _developer preview_ and iterating rapidly. **THERE WILL BE COMPATIBILITY-BREAKING CHANGES.**
+[`@deepseek-ai/dsh-session-timeline`](packages/session/session-timeline/README.md) adds rewind, delete, and regenerate for a persisted Session, a composer compact button, and optional restoration of workspace files captured by durable checkpoints. Deleting or rewinding a turn truncates the tail durably: [`Session.truncate`](packages/core/session/README.md) and the persistence backends drop the removed events from the live Session and the current generation instead of writing a surface marker.
 
-Review the [safety notice](SAFETY.md) before running the project.
+### Session hand-off
 
-## Run
+A Session row's overflow menu copies its ID, and the Web profile mounts [`tool-session-query`](packages/session-query/tool-session-query/README.md) so a new Session can search and read the Session it was handed.
 
-### Run from `npm`
+### Cheaper history reads
 
-Install `Node.js`, then run:
+[`packages/session/session-persistence-jsonl`](packages/session/session-persistence-jsonl/README.md) decodes a contiguous log suffix for one history page instead of restoring the whole artifact, so opening a long stored Session no longer builds its full object graph, and the Session controller serves cold pages without promoting an agent.
 
-```sh
-npx @deepseek-ai/dsh web
-```
+### Compaction fixes
 
-The command starts the Web UI at `http://127.0.0.1:3080` by default and opens it in the default browser for a local launch. An SSH launch only prints the host URL because the SSH client or editor owns the local forwarded address. Pass `--no-open` to run the server without opening a browser. See [Web UI guide](docs/user/guide/index.md).
+[`compaction-basic`](packages/compaction/compaction-basic/README.md) prices pre-step pressure against the model a Session is about to use, and a summarization that hits its generation cap keeps the text it produced.
 
+### Local wallpaper
+
+[`@deepseek-ai/dsh-wallpaper-engine`](packages/extensions/wallpaper-engine/README.md) renders a local Wallpaper Engine install behind the Web GUI and persists its effect controls.
+
+### Reverse-engineering preset
+
+The shipped [`reverse`](apps/cli/config/agent-presets/reverse/preset.yml) agent preset carries the [`xiaojianbang-auto-reverse`](.agents/skills/xiaojianbang-auto-reverse/SKILL.md) skill and mounts the [`crawler-mcp`](crawler-mcp/README.md) Model Context Protocol server for CDP-driven browser, network, and JavaScript reverse-engineering work.
+
+<a id="run"></a>
+## Run this fork
+
+<a id="run-from-source"></a>
 ### Run from source
 
-To run from a repository checkout:
-
 ```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
+git clone https://github.com/zyy606309-star/deepseek-harness.git
 cd deepseek-harness
 pnpm install
 pnpm run build
-pnpm dsh web
+pnpm dsh --profile web web
 ```
 
-`pnpm run build` prepares the repository artifacts. `pnpm dsh web` uses those built artifacts without rebuilding.
+`pnpm run build` prepares the repository artifacts, and `pnpm dsh` serves them without rebuilding. The Web UI prints a launch URL carrying a one-time token; opening that URL sets the session cookie the browser needs afterwards.
 
-## Community and support
+## Track upstream
 
-- Submit feedback or bug reports through [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions).
-- Add the [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic to your plugin repository for discoverability.
-- Join <a href="https://discord.gg/Ycq5dCaS4">DeepSeek Harness Discord community</a>.
+`origin` is this fork and `upstream` is `deepseek-ai/deepseek-harness`:
 
-## Contributing
+```sh
+git fetch upstream
+git merge upstream/master
+pnpm install
+```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+## Known limits in this fork
+
+- **Windows without Developer Mode.** Symbolic links cannot be created, so the symlink-based specs fail with `EPERM` and `apps/cli/tests/profiles/acp/cordis.yml` checks out as a text file holding its target path.
+- **Fork Actions secrets.** The `E2E (real DeepSeek API)` and installed-wheel jobs require the repository secret `DEEPSEEK_API_KEY_EXTERNAL`; without it they fail in preflight rather than self-skipping.
+- **The reverse preset is machine-specific.** Its skill and MCP entries carry absolute Windows paths that must be repointed on another host.
+- **Rewritten history.** Branch `archive/remote-master-2026-09-13` holds the pre-`0.1.5` fork lineage; a clone still on that lineage syncs with `git fetch origin && git reset --hard origin/master` rather than a pull.
 
 ## Development
 
-Start with the [development guide](docs/development.md) and [architecture documentation](docs/architecture.md).
-
-For agents, follow [AGENTS.md](AGENTS.md).
-
-## Citation
-
-```bibtex
-@misc{deepseek-harness2026,
-  title={DeepSeek Harness: Everything is a Plugin},
-  author={DeepSeek-AI},
-  year={2026},
-  publisher={GitHub},
-  howpublished={\url{https://github.com/deepseek-ai/deepseek-harness}},
-}
-```
+Start with the [development guide](docs/development.md) and the [architecture documentation](docs/architecture.md). Agents follow [AGENTS.md](AGENTS.md); contribution rules are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-[MIT](LICENSE)
-
-Third-party dependencies and their licenses are disclosed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+[MIT](LICENSE). Upstream copyright and third-party dependency licenses are disclosed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
