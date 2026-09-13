@@ -76,7 +76,7 @@ adb logcat | grep "ArtMethod::RegisterNative"
 
 ### Apatch（内核级 root）
 - 内核级 root 方案，已集成。
-- 输入**超级密钥**启用，密钥为 `xiaojianbang8888`（即作者微信号）。
+- 输入**超级密钥**启用，密钥为 `xiaojianbang8888`。
 - `xiaojianbang-syscall-filter` 的 `load.sh` 和 `xiaojianbang-stealth-hook` 也会使用 KernelPatch superkey（默认值同为 `xiaojianbang8888`，可用 `XJB_KP_SUPERKEY` 覆盖），但这只是通用 KernelPatch/APatch 前置，不代表依赖小肩膀定制系统。
 
 ### 任意批量 so 注入
