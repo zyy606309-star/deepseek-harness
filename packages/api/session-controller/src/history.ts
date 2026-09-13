@@ -16,11 +16,7 @@ import type {
   SessionLogOffset as SessionLogOffsetType,
   SessionSeqCursor,
 } from '@deepseek-ai/dsh-session'
-import {
-  SessionPersistenceNotFoundError,
-  type SessionHistorySuffix,
-  type SessionHistorySuffixOptions,
-} from '@deepseek-ai/dsh-session-persistence'
+import type { SessionHistorySuffix, SessionHistorySuffixOptions } from '@deepseek-ai/dsh-session-persistence'
 import type {} from '@deepseek-ai/dsh-session-projection-cache'
 import { SessionQueryError, type SessionObservation } from '@deepseek-ai/dsh-session-query'
 import type {} from '@deepseek-ai/dsh-subagent'
@@ -345,7 +341,9 @@ export class SessionHistoryController {
     const read = persistence?.readHistorySuffix
     if (read === undefined) return undefined
     return read.call(persistence, address.sessionId, options).catch((error: unknown) => {
-      if (error instanceof SessionPersistenceNotFoundError) rejectNotFound(address)
+      // Structural check: this optional peer may not be installed, and its error
+      // class carries the name the check needs.
+      if (error instanceof Error && error.name === 'SessionPersistenceNotFoundError') rejectNotFound(address)
       throw error
     })
   }
