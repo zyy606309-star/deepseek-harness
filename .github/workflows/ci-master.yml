@@ -109,25 +109,20 @@ jobs:
         if: always()
         run: wineserver -k 2>/dev/null || true
 
-  # Hot-standby drill for the in-house self-hosted pool: every master move
-  # re-runs the complete unsharded aggregate on the persistent 64-core VM,
-  # continuously proving that environment can take over a required lane if
-  # the hosted pools degrade (the switch is then setting the writer-manageable
-  # DSH_CI_FAILOVER_LINUX variable — see the failover runbook, no merge required).
-  # Push-triggered, so this lane always executes the base branch's own
-  # workflow definition. This workflow never listens to pull_request, so the
-  # drill does not appear in PR checks. No cache steps because the VM's
-  # persistent pnpm store and tool caches make them redundant (and saving here
-  # would poison the hosted cache namespace with self-hosted paths).
+  # Fork-local: upstream runs this serial aggregate as a hot-standby drill on
+  # its in-house 64-core VM pool. This fork owns no self-hosted runner, so the
+  # same steps run on a GitHub-hosted runner and the lane proves the hosted
+  # environment instead. Push-triggered, so this lane always executes the base
+  # branch's own workflow definition. This workflow never listens to
+  # pull_request, so the drill does not appear in PR checks.
   serial-linux-selfhosted:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    name: serial / linux (self-hosted standby)
-    runs-on: [self-hosted, linux, x64, vm-backup]
+    name: serial / linux (hosted)
+    runs-on: ubuntu-latest
     steps:
       # DSH_ARCHIVE_BASE_REF below compares the frozen-archive gate against
       # github.event.before, so full history is required: depth 2 would miss it
-      # on multi-commit or force pushes; full fetch is cheap here because
-      # checkout resolves against the VM's local mirror.
+      # on multi-commit or force pushes.
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
@@ -152,8 +147,6 @@ jobs:
       - name: Install (immutable)
         run: pnpm install --frozen-lockfile
 
-      # The persistent VM image owns Playwright's Linux system packages; this
-      # step also proves that browser provisioning remains usable for failover.
       - name: Install Playwright Chromium
         run: pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install chromium
 
@@ -202,21 +195,16 @@ jobs:
           DSH_SNAPSHOT_MAX_CONCURRENCY: '1'
         run: pnpm run check:ci
 
-  # Hot-standby drill for the in-house self-hosted Windows pool: every master
-  # move re-runs the complete unsharded Windows gate inventory on the persistent
-  # VM, continuously proving that environment can take over the required
-  # `windows` lane if the hosted pool degrades (the switch is setting the
-  # writer-manageable DSH_CI_FAILOVER_WINDOWS variable — see the failover
-  # runbook, no merge required). Push-triggered, so this lane always executes
-  # the base branch's own workflow definition. This workflow never listens to
-  # pull_request, so the drill does not appear in PR checks. No cache steps
-  # because the VM's persistent pnpm store and tool caches make them redundant
-  # (and saving here would poison the hosted cache namespace with self-hosted
-  # paths).
+  # Fork-local: upstream runs this serial aggregate as a hot-standby drill on
+  # its in-house Windows pool. This fork owns no self-hosted runner, so the same
+  # gate inventory runs on a GitHub-hosted Windows runner. Push-triggered, so
+  # this lane always executes the base branch's own workflow definition. This
+  # workflow never listens to pull_request, so the drill does not appear in PR
+  # checks.
   serial-windows:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    name: serial / windows (self-hosted standby)
-    runs-on: [self-hosted, dsh-win-ci, windows]
+    name: serial / windows (hosted)
+    runs-on: windows-latest
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v6
