@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-wallpaper-engine",
   "description": "Wallpaper Engine backgrounds for the DSH web GUI (integrated into the fork): render local Video/Web wallpapers behind the chat with iOS-style liquid glass",
-  "version": "0.1.0-rc.7",
+  "version": "0.1.5-rc.2",
   "publishConfig": {
     "access": "public"
   },
