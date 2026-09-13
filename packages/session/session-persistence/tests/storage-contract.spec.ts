@@ -331,3 +331,13 @@ describe('SessionPersistence.truncate', () => {
     )).rejects.toThrow(/does not support destructive session deletion/)
   })
 })
+
+describe('SessionPersistence.readHistorySuffix', () => {
+  it('returns undefined unless a backend overrides the suffix reader', async () => {
+    await expect(SessionPersistence.prototype.readHistorySuffix.call(
+      {} as SessionPersistence,
+      SessionId('unsupported'),
+      { maxMessages: 50 },
+    )).resolves.toBeUndefined()
+  })
+})

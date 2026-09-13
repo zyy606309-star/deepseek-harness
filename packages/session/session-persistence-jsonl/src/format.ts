@@ -344,8 +344,12 @@ function refuseForeignFormatVersion(parsed: object): void {
   )
 }
 
-/** Parse one complete header record supplied independently from event rows. */
-function parseHeaderRecord(record: Buffer): { readonly meta: SessionHeader; readonly restore: SessionFormatRestore } {
+/**
+ * Parse one complete header record supplied independently from event rows.
+ * @param record - the complete first JSONL record, including its newline.
+ * @returns logical metadata and a restore stream positioned after the header.
+ */
+export function parseHeaderRecord(record: Buffer): { readonly meta: SessionHeader; readonly restore: SessionFormatRestore } {
   if (record.length === 0 || record.at(-1) !== 0x0A || record.indexOf(0x0A) !== record.length - 1) {
     throw new Error('empty or header-less session log')
   }

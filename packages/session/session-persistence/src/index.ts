@@ -7,7 +7,7 @@
  */
 
 import { Context, Service } from '@deepseek-ai/cordis'
-import type { SessionEvent, SessionHeader, SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
+import type { SessionEvent, SessionHeader, SessionId, SessionLogOffset, SessionSeqCursor } from '@deepseek-ai/dsh-session'
 import type { SessionHandle, SessionAccess } from './handle.ts'
 import type { SessionPersistenceRevision } from './revision.ts'
 
@@ -104,6 +104,33 @@ export interface SessionPersistenceStatOptions {
 export interface SessionPersistenceListOptions {
   /** Optional cancellation for backend listing work. */
   readonly signal?: AbortSignal
+}
+
+/** Options for {@link SessionPersistence.readHistorySuffix}. */
+export interface SessionHistorySuffixOptions {
+  /** Maximum append-surface user/assistant messages the suffix must cover. */
+  readonly maxMessages: number
+  /** Exclusive upper bound of an older page; omit for the newest page. */
+  readonly beforeSeq?: number
+  /** Inclusive newest seq the page may include; omit for the durable cursor. */
+  readonly throughSeq?: number
+  /** Optional cancellation for backend suffix reads. */
+  readonly signal?: AbortSignal
+}
+
+/**
+ * A contiguous tail of one stored log that covers one history page without
+ * restoring the whole artifact.
+ */
+export interface SessionHistorySuffix {
+  /** Immutable stored header. */
+  readonly header: SessionHeader
+  /** Exact inherited prefix length, or `0` when a seeded cut is not in the suffix. */
+  readonly inheritedEventCount: SessionLogOffset
+  /** Contiguous events covering the requested page, possibly with interrupted-turn closers. */
+  readonly events: SessionEvent[]
+  /** Last logical seq in this view, including in-memory closers. */
+  readonly cursor: SessionSeqCursor
 }
 
 declare module '@deepseek-ai/cordis' {
@@ -209,6 +236,22 @@ export abstract class SessionPersistence extends Service {
    */
   truncate(_id: SessionId, _length: SessionLogOffset): Promise<void> {
     return Promise.reject(new Error('this session persistence backend does not support destructive session deletion'))
+  }
+
+  /**
+   * Read a contiguous tail covering one history page without restoring the
+   * whole log. Backends that cannot cheaply decode a suffix return `undefined`
+   * so callers fall back to a full observation.
+   * @param _id - the stored session to read.
+   * @param _options - page bounds and cancellation.
+   * @returns the suffix, or `undefined` when this backend has no suffix reader
+   *   or the stored generation must be migrated first.
+   */
+  readHistorySuffix(
+    _id: SessionId,
+    _options: SessionHistorySuffixOptions,
+  ): Promise<SessionHistorySuffix | undefined> {
+    return Promise.resolve(undefined)
   }
 }
 
