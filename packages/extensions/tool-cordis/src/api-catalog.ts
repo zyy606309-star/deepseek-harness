@@ -1638,6 +1638,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: '_id', description: 'the live session whose durable log is being rewritten.' }, { name: '_length', description: 'number of events to retain.' }],
         returns: 'resolution after the retained prefix is durable.',
       },
+      {
+        signature: 'readHistorySuffix( _id: SessionId, _options: SessionHistorySuffixOptions, ): Promise<SessionHistorySuffix | undefined>',
+        description: 'Read a contiguous tail covering one history page without restoring the whole log. Backends that cannot cheaply decode a suffix return `undefined` so callers fall back to a full observation.',
+        parameters: [{ name: '_id', description: 'the stored session to read.' }, { name: '_options', description: 'page bounds and cancellation.' }],
+        returns: 'the suffix, or `undefined` when this backend has no suffix reader or the stored generation must be migrated first.',
+      },
     ],
   },
   {
@@ -5249,6 +5255,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SessionHistoryRecord',
     declaration: 'export type SessionHistoryRecord = SessionEventEntry;',
+  },
+  {
+    name: 'SessionHistorySuffix',
+    declaration: 'export interface SessionHistorySuffix {\n    readonly header: SessionHeader;\n    readonly inheritedEventCount: SessionLogOffset;\n    readonly events: SessionEvent[];\n    readonly cursor: SessionSeqCursor;\n}',
+  },
+  {
+    name: 'SessionHistorySuffixOptions',
+    declaration: 'export interface SessionHistorySuffixOptions {\n    readonly maxMessages: number;\n    readonly beforeSeq?: number;\n    readonly throughSeq?: number;\n    readonly signal?: AbortSignal;\n}',
   },
   {
     name: 'SessionId',

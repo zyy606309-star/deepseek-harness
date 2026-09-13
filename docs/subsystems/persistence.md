@@ -419,6 +419,17 @@ abstract list(options?: SessionPersistenceListOptions): Promise<readonly Session
  * @returns resolution after the retained prefix is durable.
  */
 truncate(_id: SessionId, _length: SessionLogOffset): Promise<void>
+
+/**
+ * Read a contiguous tail covering one history page without restoring the
+ * whole log. Backends that cannot cheaply decode a suffix return `undefined`
+ * so callers fall back to a full observation.
+ * @param _id - the stored session to read.
+ * @param _options - page bounds and cancellation.
+ * @returns the suffix, or `undefined` when this backend has no suffix reader
+ *   or the stored generation must be migrated first.
+ */
+readHistorySuffix( _id: SessionId, _options: SessionHistorySuffixOptions, ): Promise<SessionHistorySuffix | undefined>
 ```
 
 Types: [SessionId](core.md) · [SessionLogOffset](session.md)
