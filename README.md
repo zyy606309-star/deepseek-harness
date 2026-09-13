@@ -61,7 +61,7 @@ pnpm install
 ## Known limits in this fork
 
 - **Windows without Developer Mode.** Symbolic links cannot be created, so the symlink-based specs fail with `EPERM` and `apps/cli/tests/profiles/acp/cordis.yml` checks out as a text file holding its target path.
-- **Fork Actions secrets.** The `E2E (real DeepSeek API)` and installed-wheel jobs require the repository secret `DEEPSEEK_API_KEY_EXTERNAL`; without it they fail in preflight rather than self-skipping.
+- **Reduced CI scope.** This fork runs the Linux and Windows lanes only. The macOS sandbox leg, the master lane that packages the Python SDK against the real DeepSeek API, and the `E2E (real DeepSeek API)` workflow are removed or disabled because this checkout has no Apple hardware and no external API key. Pull-request CI keeps its `python runtime` job, which needs the repository secret `DEEPSEEK_API_KEY_EXTERNAL`.
 - **The reverse preset is machine-specific.** Its skill and MCP entries carry absolute Windows paths that must be repointed on another host.
 - **Rewritten history.** Branch `archive/remote-master-2026-09-13` holds the pre-`0.1.5` fork lineage; a clone still on that lineage syncs with `git fetch origin && git reset --hard origin/master` rather than a pull.
 

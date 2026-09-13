@@ -61,7 +61,7 @@ pnpm install
 ## 这个 fork 的已知限制
 
 - **未开开发者模式的 Windows。** 无法创建符号链接，因此基于 symlink 的用例会以 `EPERM` 失败，`apps/cli/tests/profiles/acp/cordis.yml` 也会被检出成一个内容是目标路径的文本文件。
-- **fork 上的 Actions secret。** `E2E (real DeepSeek API)` 与 installed-wheel 作业需要仓库 secret `DEEPSEEK_API_KEY_EXTERNAL`；缺了它这些作业会在 preflight 阶段失败，而不是自行跳过。
+- **CI 范围已裁剪。** 本 fork 只跑 Linux 与 Windows 泳道：macOS 沙箱腿、master 上用真实 DeepSeek API 打包 Python SDK 的泳道，以及 `E2E (real DeepSeek API)` 工作流都已移除或禁用，因为这套环境没有 Apple 硬件，也不配外部 API key。PR 的 CI 仍保留 `python runtime` 作业，它需要仓库 secret `DEEPSEEK_API_KEY_EXTERNAL`。
 - **逆向 preset 与本机绑定。** 它的技能与 MCP 条目带绝对 Windows 路径，换主机需要重新指向。
 - **历史被重写过。** 分支 `archive/remote-master-2026-09-13` 保存 `0.1.5` 之前的 fork 血统；仍停在那条血统上的克隆要用 `git fetch origin && git reset --hard origin/master` 同步，而不是 pull。
 
