@@ -160,5 +160,5 @@ python tools/check_segments.py cpp_output.so python_output.so
 ## 相关链接
 
 - [原始C++项目](https://github.com/F8LEFT/SoFixer)
-- [项目修复历史](FIX_SUMMARY.md)
-- [开发指令文档](CLAUDE.md)
+- 项目修复历史
+- 开发指令文档

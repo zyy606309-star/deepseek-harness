@@ -13,7 +13,7 @@
 
 > [!TIP]
 > 支持Linux系统内核x86_64 4.18及以上版本，aarch64 5.5及以上版本；
-> 需要ROOT权限或特定的 [Linux capabilities](docs/minimum-privileges.md)；
+> 需要ROOT权限或特定的 Linux capabilities；
 > 不支持Windows、macOS系统；
 
 ----
@@ -26,7 +26,7 @@
     - [Docker容器镜像](#docker容器镜像)
   - [小试身手](#小试身手)
   - [模块介绍](#模块介绍)
-    - [openssl  模块](#openssl--模块)
+    - openssl  模块
     - [gotls 模块](#gotls-模块)
     - [其他模块](#其他模块)
   - [使用演示](#使用演示)
@@ -67,11 +67,11 @@ docker pull gojue/ecapture:latest
 docker run --rm --privileged=true --net=host -v ${宿主机文件路径}:${容器内路径} gojue/ecapture ARGS
 ```
 
-> **⚠️ 安全提醒**: `--privileged=true` 会授予容器完整的宿主机访问权限。在生产环境中，建议使用特定的 capabilities 替代。参阅 [最小权限指南](docs/minimum-privileges.md#method-3-docker-with-specific-capabilities)。
+> **⚠️ 安全提醒**: `--privileged=true` 会授予容器完整的宿主机访问权限。在生产环境中，建议使用特定的 capabilities 替代。参阅 最小权限指南。
 
 ## 小试身手
 
-![](./images/ecapture-help-v0.8.9.svg)
+!
 
 捕获基于Openssl动态链接库加密的网络通讯。
 
@@ -92,7 +92,7 @@ User-Agent: curl/7.81.0
 ...
 ```
 
-> 📄 完整的输出示例请参阅 [docs/example-outputs.md](docs/example-outputs.md)。
+> 📄 完整的输出示例请参阅 docs/example-outputs.md。
 
 ## 模块介绍
 eCapture 有8个模块，分别支持openssl/gnutls/nspr/boringssl/gotls等类库的TLS/SSL加密类库的明文捕获、Bash、Mysql、PostGres软件审计。
@@ -130,7 +130,7 @@ openssl模块支持3种捕获模式
 sudo ecapture tls -m pcap -i eth0 --pcapfile=ecapture.pcapng tcp port 443
 ```
 
-> 📄 完整的 pcapng 模式输出请参阅 [docs/example-outputs.md](docs/example-outputs.md#tls-module--pcapng-mode)。
+> 📄 完整的 pcapng 模式输出请参阅 docs/example-outputs.md。
 
 将捕获的明文数据包保存为pcapng文件，再使用`Wireshark`打开查看，之后就可以看到明文的网络包了。
 
@@ -190,11 +190,11 @@ eCapture 还支持其他模块，如`bash`、`mysql`、`nss`、`postgres`等，�
 
 ### 视频：Linux上使用eCapture
 
-[![eCapture User Manual](./images/ecapture-user-manual.png)](https://www.bilibili.com/video/BV1si4y1Q74a "eCapture User Manual")
+![eCapture User Manual](https://www.bilibili.com/video/BV1si4y1Q74a "eCapture User Manual")
 
 ### 视频：Android上使用eCapture
 
-[![eCapture User Manual](./images/ecapture-user-manual-on-android.png)](https://www.bilibili.com/video/BV1xP4y1Z7HB "eCapture for Android")
+![eCapture User Manual](https://www.bilibili.com/video/BV1xP4y1Z7HB "eCapture for Android")
 
 ## eCaptureQ 界面程序
 
@@ -207,7 +207,7 @@ Rust + Tauri + React
 * 远程模式：Windows/macOS/Linux 客户端连接远程 eCapture 服务
 
 ### 其他事件转发项目
-[事件转发优秀项目](./EVENT_FORWARD.md)
+事件转发优秀项目
 
 ### 视频演示
 
@@ -219,7 +219,7 @@ https://github.com/user-attachments/assets/c8b7a84d-58eb-4fdb-9843-f775c97bdbfb
 
 关于 eCapture/eCaptureQ 使用的 Protobuf 日志模式的详细信息，请参见：
 
-- [protobuf/PROTOCOLS-zh_Hans.md](protobuf/PROTOCOLS-zh_Hans.md)
+- protobuf/PROTOCOLS-zh_Hans.md
 
 ## 星标成长曲线
 
@@ -227,15 +227,15 @@ https://github.com/user-attachments/assets/c8b7a84d-58eb-4fdb-9843-f775c97bdbfb
 
 # 安全与运维
 
-- [**安全策略**](SECURITY.md) — 漏洞报告流程与支持的版本
-- [**最小权限指南**](docs/minimum-privileges.md) — 所需的 Linux capabilities 与最小权限配置
-- [**防御与检测**](docs/defense-detection.md) — 如何检测和防御未经授权的使用
-- [**性能基准测试**](docs/performance-benchmarks.md) — 性能开销测量方法与预期特征
-- [**发布验证**](docs/release-verification.md) — 如何验证发布产物的完整性
+- **安全策略** — 漏洞报告流程与支持的版本
+- **最小权限指南** — 所需的 Linux capabilities 与最小权限配置
+- **防御与检测** — 如何检测和防御未经授权的使用
+- **性能基准测试** — 性能开销测量方法与预期特征
+- **发布验证** — 如何验证发布产物的完整性
 
 # 贡献
 
-参考 [CONTRIBUTING](./CONTRIBUTING.md)的介绍，提交缺陷、补丁、建议等，非常感谢。
+参考 CONTRIBUTING的介绍，提交缺陷、补丁、建议等，非常感谢。
 
 # 二次开发
 ## 自行编译
@@ -243,13 +243,13 @@ https://github.com/user-attachments/assets/c8b7a84d-58eb-4fdb-9843-f775c97bdbfb
 如需定制功能或重新编译，请使用 eCapture 官方源码包构建后替换本目录的 `ecapture` 二进制。
 
 ## 动态修改配置
-当eCapture运行后，你可以通过HTTP接口动态修改配置，参考[HTTP API 文档](docs/remote-config-update-api-zh_Hans.md)。
+当eCapture运行后，你可以通过HTTP接口动态修改配置，参考HTTP API 文档。
 
 ## 事件转发
-eCapture支持多种事件转发方式，你可以将事件转发至Burp Suite等抓包软件，详情参考[事件转发API 文档](docs/event-forward-api-zh_Hans.md)。
+eCapture支持多种事件转发方式，你可以将事件转发至Burp Suite等抓包软件，详情参考事件转发API 文档。
 
 # 微信公众号
-![](./images/wechat_gzhh.png)
+!
 
 ## 感谢
 

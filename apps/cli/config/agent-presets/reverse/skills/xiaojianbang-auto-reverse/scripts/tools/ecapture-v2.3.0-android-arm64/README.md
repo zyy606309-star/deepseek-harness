@@ -11,7 +11,7 @@
 
 > [!IMPORTANT]
 > Supports Linux/Android kernel versions x86_64 4.18 and above, **aarch64 5.5** and above.
-> Need ROOT permission or specific [Linux capabilities](docs/minimum-privileges.md).
+> Need ROOT permission or specific Linux capabilities.
 > Does not support Windows and macOS system.
 
 ----
@@ -26,9 +26,9 @@
   - [Modules](#modules)
     - [OpenSSL Module](#openssl-module)
     - [GoTLS Module](#gotls-module)
-    - [Other Modules](#bash-module)
+    - Other Modules
   - [Videos](#videos)
-- [Security & Operations](#security--operations)
+- Security & Operations
 - [Contributing](#contributing)
 - [Compilation](#compilation)
 <!-- /MarkdownTOC -->
@@ -41,7 +41,7 @@
 * Zsh audit, capture zsh command for Host Security Audit.
 * MySQL query SQL audit, support mysqld 5.6\5.7\8.0, and MariaDB.
 
-![](./images/ecapture-help-v0.8.9.svg)
+!
 
 # Getting started
 
@@ -67,7 +67,7 @@ docker pull gojue/ecapture:latest
 docker run --rm --privileged=true --net=host -v ${HOST_PATH}:${CONTAINER_PATH} gojue/ecapture ARGS
 ```
 
-> **⚠️ Security Note**: `--privileged=true` grants full host access. For production use, consider specific capabilities instead. See [Minimum Privileges Guide](docs/minimum-privileges.md#method-3-docker-with-specific-capabilities).
+> **⚠️ Security Note**: `--privileged=true` grants full host access. For production use, consider specific capabilities instead. See Minimum Privileges Guide.
 
 see [Docker Hub](https://hub.docker.com/r/gojue/ecapture) for more information.
 
@@ -89,7 +89,7 @@ header field ":authority" = "google.com"
 ...
 ```
 
-> 📄 For complete output examples, see [docs/example-outputs.md](docs/example-outputs.md).
+> 📄 For complete output examples, see docs/example-outputs.md.
 
 ## Modules
 The eCapture tool comprises 8 modules that respectively support plaintext capture for TLS/SSL encryption libraries like OpenSSL, GnuTLS, NSPR, BoringSSL, and GoTLS. Additionally, it facilitates software audits for Bash, MySQL, and PostgreSQL applications.
@@ -128,7 +128,7 @@ sudo ecapture tls -m pcap -i eth0 --pcapfile=ecapture.pcapng tcp port 443
 
 This command saves captured plaintext data packets as a pcapng file, which can be viewed using `Wireshark`.
 
-> 📄 For complete pcapng mode output, see [docs/example-outputs.md](docs/example-outputs.md#tls-module--pcapng-mode).
+> 📄 For complete pcapng mode output, see docs/example-outputs.md.
 
 #### Keylog Mode
 
@@ -196,7 +196,7 @@ techniques, making them easy to use. Supports two modes:
 * Remote Mode: Windows/macOS/Linux client connects to a remote eCapture service
 
 ### Event Forwarding
-[Event Forwarding Projects](./EVENT_FORWARD.md)
+Event Forwarding Projects
 
 ### Video Demonstration
 
@@ -208,34 +208,34 @@ https://github.com/user-attachments/assets/c8b7a84d-58eb-4fdb-9843-f775c97bdbfb
 
 For details of the Protobuf log schema used by eCapture/eCaptureQ, see:
 
-- [protobuf/PROTOCOLS.md](./protobuf/PROTOCOLS.md)
+- protobuf/PROTOCOLS.md
 
 ## Stargazers over time
 [![Stargazers over time](https://starchart.cc/gojue/ecapture.svg)](https://starchart.cc/gojue/ecapture)
 
 # Security & Operations
 
-- [**Security Policy**](SECURITY.md) — Vulnerability reporting and supported versions
-- [**Minimum Privileges**](docs/minimum-privileges.md) — Required Linux capabilities and least-privilege configuration
-- [**Defense & Detection**](docs/defense-detection.md) — How to detect and defend against unauthorized usage
-- [**Performance Benchmarks**](docs/performance-benchmarks.md) — Overhead measurement methodology and expected characteristics
-- [**Release Verification**](docs/release-verification.md) — How to verify the integrity of release artifacts
+- **Security Policy** — Vulnerability reporting and supported versions
+- **Minimum Privileges** — Required Linux capabilities and least-privilege configuration
+- **Defense & Detection** — How to detect and defend against unauthorized usage
+- **Performance Benchmarks** — Overhead measurement methodology and expected characteristics
+- **Release Verification** — How to verify the integrity of release artifacts
 
 # Contributing
-See [CONTRIBUTING](./CONTRIBUTING.md) for details on submitting patches and the contribution workflow.
+See CONTRIBUTING for details on submitting patches and the contribution workflow.
 
 # Compilation
 ## Custom Compilation
 
-You can customize the features you want, such as setting the offset address for `uprobe` to support statically compiled OpenSSL libraries. Refer to the [compilation guide](./docs/compilation.md) for compilation instructions.
+You can customize the features you want, such as setting the offset address for `uprobe` to support statically compiled OpenSSL libraries. Refer to the compilation guide for compilation instructions.
 
 ## Configurations Remote Update
 
-After eCapture is running, you can dynamically modify the configurations through HTTP interfaces. Refer to the [HTTP API Documentation](./docs/remote-config-update-api.md).
+After eCapture is running, you can dynamically modify the configurations through HTTP interfaces. Refer to the HTTP API Documentation.
 
 ## Event Forwarding
 
-eCapture supports multiple event forwarding methods. You can forward events to packet capture software such as Burp Suite. For details, refer to the [Event Forwarding API Documentation](./docs/event-forward-api.md).
+eCapture supports multiple event forwarding methods. You can forward events to packet capture software such as Burp Suite. For details, refer to the Event Forwarding API Documentation.
 
 ## Acknowledgements
 

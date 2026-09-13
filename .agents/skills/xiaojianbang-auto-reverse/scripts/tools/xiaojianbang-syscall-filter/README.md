@@ -12,7 +12,7 @@
 因为运行在内核态，目标 App 在用户态无法察觉自己的 syscall 被改写，也无法通过扫描
 自身内存发现 hook（对比用户态 inline svc hook，后者容易被反检测代码反查）。
 
-> 想读懂代码实现/改造模块，看 [ARCHITECTURE.md](./ARCHITECTURE.md)。本文只讲怎么用。
+> 想读懂代码实现/改造模块，看 ARCHITECTURE.md。本文只讲怎么用。
 
 ---
 
