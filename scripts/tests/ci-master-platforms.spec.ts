@@ -96,15 +96,9 @@ describe('master-only platform scheduling', () => {
     const master = workflow('ci-master.yml')
     expect(master.on.push).toEqual({ branches: ['master'] })
     expect(Object.keys(master.on).sort()).toEqual(['push', 'workflow_dispatch'])
-    const runtime = master.jobs['python-runtime']!
-    expect(runtime).toMatchObject({
-      if: masterPush,
-      uses: runtimeBuilder,
-      with: { ci: true, targets: 'node24-linux-arm64,node24-macos-arm64,node24-macos-x64' },
-      secrets: { DEEPSEEK_API_KEY_EXTERNAL: '${{ secrets.DEEPSEEK_API_KEY_EXTERNAL }}' },
-    })
-    expect(runtime.needs).toBeUndefined()
-    expect(runtime['continue-on-error']).toBeUndefined()
+    // This fork schedules no deferred python carrier: the master lane that
+    // packages the SDK against the real API needs a key this checkout lacks.
+    expect(master.jobs['python-runtime']).toBeUndefined()
     const builder = workflow('build-exe-for-python-sdk.yml')
     expect(builder.concurrency?.['cancel-in-progress']).toBe(
       '${{ !inputs.release }}',
