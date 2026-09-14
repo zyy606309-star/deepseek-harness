@@ -151,6 +151,11 @@
   config:
     - id: compaction-basic
       name: '@deepseek-ai/dsh-compaction-basic'
+      config:
+        # Automatic condensation fires at 70% of the routed model's declared
+        # contextWindow instead of the 0.8 default, so the summarization
+        # request stays well below this deployment endpoint's size ceiling.
+        thresholdRatio: 0.7
 
     - id: command-compact
       name: '@deepseek-ai/dsh-command-compact'
