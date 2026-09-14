@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import { AssistantStreamAccumulator, createUserMessage, createSystemMessage, ToolCallId, createMessage } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock, Message, TokenUsage } from '@deepseek-ai/dsh-llm'
-import SessionStore, { Session, SessionId, SessionSeq, canonicalHeader } from '@deepseek-ai/dsh-session'
+import SessionStore, { Session, SessionId, SessionLogOffset, SessionSeq, canonicalHeader } from '@deepseek-ai/dsh-session'
 import type { EpochHeader, SessionEvent, SessionSeq as SessionSeqType } from '@deepseek-ai/dsh-session'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import TokenMeter from '@deepseek-ai/dsh-token-meter'
@@ -642,5 +642,47 @@ describe('malformed replay and listener lifecycle', () => {
     activeMeter = ctx.tokenMeter
     expect(activeMeter.measure(session).logRevision).toBe(3)
     await secondFiber.dispose()
+  })
+})
+
+describe('TokenMeter replay across a truncated log', () => {
+  it('refolds the priced surface when a rewind shrinks the live log', () => {
+    const session = Session.create(SessionId('truncated-live-log'))
+    session.append('user/message', createUserMessage({
+      content: [{ type: 'text', text: 'kept' }],
+      source: { kind: 'user' },
+    }), { surfaceOp: 'append' })
+    appendSuccessfulCall(session, header('mock-model'))
+    const subject = meter()
+    expect(subject.measure(session).nodes.map(node => node.seq)).toEqual([...session.surface.nodes])
+
+    // A later turn the rewind removes: the log shrinks below the meter's cursor,
+    // so a prefix rewrite invalidates every position the meter already folded.
+    session.append('step/start', { turn: 2, step: 1 })
+    session.append('user/message', createUserMessage({
+      content: [{ type: 'text', text: 'withdrawn' }],
+      source: { kind: 'user' },
+    }), { surfaceOp: 'append' })
+    expect(subject.measure(session).nodes).toHaveLength(3)
+    session.truncate(SessionLogOffset(5))
+
+    expect([...session.surface.nodes]).toEqual([0, 3])
+    expect(subject.measure(session).nodes.map(node => node.seq)).toEqual([...session.surface.nodes])
+  })
+
+  it('measures an emptied session without retaining fold state', () => {
+    const session = Session.create(SessionId('truncated-to-empty'))
+    session.append('user/message', createUserMessage({
+      content: [{ type: 'text', text: 'withdrawn' }],
+      source: { kind: 'user' },
+    }), { surfaceOp: 'append' })
+    const subject = meter()
+    expect(subject.measure(session).nodes).toHaveLength(1)
+
+    session.truncate(SessionLogOffset(0))
+
+    expect(subject.measure(session).nodes).toEqual([])
+    expect(subject.measure(session).nodes).toEqual([])
+    expect([...session.surface.nodes]).toEqual([])
   })
 })

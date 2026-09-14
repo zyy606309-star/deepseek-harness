@@ -60,6 +60,8 @@ interface MeasurementAnchor {
 
 interface ReplayState {
   consumedEvents: SessionLogOffsetType
+  /** Event folded at `consumedEvents - 1`; its identity proves the folded prefix survived. */
+  lastFolded: SessionEvent | undefined
   header: EpochHeader | undefined
   surface: MeterSurfaceNode[]
   stepStart: { turn: number; step: number } | undefined
@@ -137,6 +139,11 @@ export class TokenMeter extends Service {
    * `requestHeader` replaces the latest logged envelope for pressure and node
    * pricing; the node set always describes the current session surface. Every
    * call clones those positional nodes, so measurement is O(surface).
+   *
+   * A rewind or turn deletion splices the live log, which makes every already
+   * folded position describe a different event. The replay state detects that
+   * rewrite and refolds the shortened log, so the returned node set stays the
+   * current session surface.
    *
    * @param session - session to replay through its current durable tail.
    * @param requestHeader - optional effective request envelope replacing the latest logged header.
@@ -217,9 +224,10 @@ export class TokenMeter extends Service {
   /** Catch one session's fold up to the current durable tail. */
   private _sync(session: Session): ReplayState {
     let state = this.states.get(session)
-    if (state === undefined) {
+    if (state === undefined || !this._prefixIntact(state, session)) {
       state = {
         consumedEvents: SessionLogOffset(0),
+        lastFolded: undefined,
         header: undefined,
         surface: [],
         stepStart: undefined,
@@ -234,8 +242,22 @@ export class TokenMeter extends Service {
       const event = session.eventAt(SessionSeq(state.consumedEvents))!
       this._foldEvent(state, event)
       state.consumedEvents = SessionLogOffset(state.consumedEvents + 1)
+      state.lastFolded = event
     }
     return state
+  }
+
+  /**
+   * Whether the live log still begins with the prefix this replay state folded.
+   * A rewind or turn deletion splices the log in place, which a cursor-versus-
+   * `session.seq` comparison cannot detect: only the identity of the last
+   * folded event proves the folded positions still hold the same events. A
+   * shrunk log invalidates every position, so the whole prefix must refold.
+   */
+  private _prefixIntact(state: ReplayState, session: Session): boolean {
+    if (state.consumedEvents === 0) return true
+    // oxlint-disable-next-line typescript/no-deprecated -- Deferred fold migration shared with the _sync history read.
+    return session.eventAt(SessionSeq(state.consumedEvents - 1)) === state.lastFolded
   }
 
   /**
