@@ -7,20 +7,21 @@ description: 覆盖从 APK/Java 层到 native 的完整 Android 逆向流程（�
 
 ## 职责
 
-覆盖 Android 逆向完整流程（APK→Java→native）。native 检测链分析与稳定绕过工程：把动态证据、静态反编译、patch、验证和实验记录形成可复现闭环：分析 `.so` 的 JNI、constructor、dlopen、syscall、反调试、Root、Hook、Frida、模拟器、完整性/CRC 检测链，定位 `SIGKILL`/`SIGSEGV`/`SIGTRAP`/`BRK`/匿名 RX/direct syscall/constructor 早期闪退，给出 patch 候选、最终 patch、风险边界和验证结果。helper 与真实检测链分开记录，不把分析结论只留在对话或临时日志里。
+覆盖 Android 逆向完整流程（APK→Java→native）。**先做方案层枚举（详见 `references/workflow-standards.md` §9.0）：枚举所有可行解决层面（Java/框架层 → 网络库层 → SSL 层 → syscall 层 → native so 层），从最高可行层入手，只有上层确实不可行时才下沉到 native**——"保护在 so 里"只否定 MITM，不等于解法必须在 native。native 检测链分析与稳定绕过工程：把动态证据、静态反编译、patch、验证和实验记录形成可复现闭环：分析 `.so` 的 JNI、constructor、dlopen、syscall、反调试、Root、Hook、Frida、模拟器、完整性/CRC 检测链，定位 `SIGKILL`/`SIGSEGV`/`SIGTRAP`/`BRK`/匿名 RX/direct syscall/constructor 早期闪退，给出 patch 候选、最终 patch、风险边界和验证结果。helper 与真实检测链分开记录，不把分析结论只留在对话或临时日志里。
 
 仅用于自有或用户明确许可的样本、研究和调试环境；遇到目标边界不清的场景，先说明边界并停止会造成未授权访问、隐蔽控制或数据外传的操作。
 
 ## 完整流程（前置 → native）
 
-一个完整逆向任务按此路径推进；前置阶段（进 `.so` 之前）见 `references/apk-java-recon.md`，native 深度分支见 `references/workflow-standards.md` §0-§13 与下方强约束速查第1-24条：
+一个完整逆向任务按此路径推进；前置阶段（进 `.so` 之前）见 `references/apk-java-recon.md`，native 深度分支见 `references/workflow-standards.md` §0-§13 与下方强约束速查第1-29条：
 
+0. **方案层枚举（先做，见 `references/workflow-standards.md` §9.0）**：确认目标后先枚举所有可行解决层面（Java/框架层 → 网络库层 → SSL 层 → syscall 层 → native so 层），从最高层评估可行性与成本，选定层后再进入下方流程；禁止因"保护在 so 里"就默认解法在 native。
 1. 目标与授权确认（`references/safety-and-confirmation-rules.md`）。
 2. APK 信息收集：包名/版本/权限/组件/入口/壳与加固特征。
 3. Java/DEX 静态分析（首选 `garlic`，回退 `jadx`）：入口启动链、native 方法声明与绑定、调用图、"这 App 干什么"。
 4. 行为观察（动态，可选）：启动/崩溃/网络/so 加载序列。
 5. native 库发现：找出真正要逆的 `.so`，初判是否壳化/加密。
-6. 命中 native 检测/壳化/算法/崩溃 → 进入 native 深度分支（第1-24条 + §0-§13）；否则在第3-5步收尾并说明理由。
+6. 命中 native 检测/壳化/算法/崩溃，**且第0步层枚举确认上层（Java/网络库/SSL/syscall）不可行或成本更高** → 进入 native 深度分支（第1-29条 + §0-§13）；否则在第3-5步收尾并说明理由。
 
 ## 按需前置门槛
 
@@ -50,7 +51,7 @@ description: 覆盖从 APK/Java 层到 native 的完整 Android 逆向流程（�
 
 1. **全程中文**回答与记录；仅用户明确要求其他语言才切换并记录答复。（本文件为语言规则唯一出处）
 2. **Windows 读取中文文件必须显式 UTF-8**：读本 Skill、`references/*.md`、项目实验记录、中文日志时用 `Get-Content -Encoding UTF8`、`[IO.File]::ReadAllText(path,[Text.Encoding]::UTF8)` 或 Python `encoding='utf-8'`；不要先用 PowerShell 默认编码读再向用户汇报“乱码后重读”。详见 `references/cross-platform.md`。
-3. **工具路线按任务类型决策**：过检测类→Frida 干掉检测；硬禁令：当用户目标是“过检测/让 Frida 注入后 App 正常运行/用 Frida 跑起来/注入不被发现”时，禁止把 HWBP/stealth-hook 作为主流程，HWBP 只能作为辅助验证手段；分析算法类→无 Frida 检测用 Frida、有则 HWBP、HWBP 不支持再回 Frida 过检测。详见 `references/workflow-standards.md` §9.0。
+3. **工具路线按任务类型决策（先做第29条方案层枚举，先选层再选工具）**：过检测类→Frida 干掉检测；硬禁令：当用户目标是“过检测/让 Frida 注入后 App 正常运行/用 Frida 跑起来/注入不被发现”时，禁止把 HWBP/stealth-hook 作为主流程，HWBP 只能作为辅助验证手段；分析算法类→无 Frida 检测用 Frida、有则 HWBP、HWBP 不支持再回 Frida 过检测。详见 `references/workflow-standards.md` §9.0。
 4. **注入/patch 前先评估** `.text` CRC / 强反 Frida，再按第3条选路线，不默认 Frida spawn。详见 §9.0。
 5. **Java 层反编译首选 garlic（无需关 checksum）；garlic 不可用回退 jadx，jadx 必须关 dex checksum**（`-Pdex-input.verify-checksum=no` 或 gui 关闭）；**定位具体类/查谁引用了某方法或字符串用 ASC**（按需查询、毫秒级，与 garlic 互补：先 ASC 定位 → 再 garlic/jadx 全量精读，大 APK 不必等全量反编译）。详见 `references/tooling-and-paths.md`。
 6. **加密/壳化 `.so` dump/fix 是硬门禁**：分析 `.so` 前必须判断磁盘 so 是否加密、壳化、自解密或运行时重建；一旦命中，禁止直接分析磁盘 so 下结论或给 patch，必须先 MemDumper/frida_memdump dump/fix 运行期 so 或真实可执行段并校验产物。未确认可分析时只能补证据。分流见 `references/dump-ida-ollvm-tools.md`「MemDumper 工具分流」。
@@ -76,6 +77,7 @@ description: 覆盖从 APK/Java 层到 native 的完整 Android 逆向流程（�
 26. **长任务按需开启**：只有用户明确要求“长任务/一直跑/自动跑/跑到成功/别停”等才用 goal 工具建长任务目标并自动延续轮次；证据必须边跑边落盘实验记录；仅当同一阻塞条件持续至少 3 轮才允许标记 blocked，困难/不确定/还有剩余工作不算阻塞；只在重大抉择（授权边界不清、是否小肩膀定制系统、Frida 版本不匹配需用户决定）停下提问；未明确要求时不主动开启 goal。
 27. **patch 后仍反复被 SIGKILL，先抬头查进程树再继续逆编码**：主进程内 patch 完仍反复被杀（尤其 signal 9 稳定），不要继续低头逆加密；先停手 `ps` 看同名多进程、hook `clone`/`fork` 确认有无独立检测子进程、确认子进程重新解密了哪份内层 ELF——"patch 主进程"≠"过了检测"（子进程常重新解密、基址不同，父进程 patch 覆盖不到）。确认检测在哪个进程后决定 patch 落点（含击杀/冻结检测载体进程本身，属进程级绕过，不违背"隐藏 root 环境"边界）。详见 `references/workflow-standards.md` §10 与 `references/shell-signatures.md` 特征 20。
 28. **设备重启 / 高风险设备操作必须经用户明确同意**：任何会重启设备、切换启动槽位、刷写分区（boot/vendor_boot 等）、清除数据、重新刷系统等操作，**必须先向用户说明操作与目的、等待用户明确同意后才执行**；禁止在未经用户同意时自行 `adb reboot`、`fastboot reboot`、`fastboot set_active`、`fastboot flash boot` 等。重启类操作尤甚——它可能中断正在进行的分析、导致模块未对齐、或触发 bootloop，且一旦发生就难以即时恢复。用户明确要求"重启""重刷"等才视为授权。详见 `references/safety-and-confirmation-rules.md` 授权边界与 `references/custom-system.md`。
+29. **方案层枚举纪律（先选层，再选工具）**：确认目标后必须先枚举所有可行解决层面——**Java/框架层 → 网络库层（OkHttp/Cronet/gzip 解压）→ SSL/TLS 层 → syscall 层 → native so 层**，从最高层评估可行性与成本，选定层后再动手；禁止因"SSL pinning / 保护在 so 里"就直奔 native（**pinning 只否定 MITM，不否定进程内 hook；进程内 hook 可在任意层做**）。拿到第一条可行方案后必须额外枚举更高层替代；未验证的"某路线不可行/会被拦"只能标为假设（**Frida 能不能用，先实跑一次**）；用户说"我记得以前很简单"时**追问其工具/框架**，而不是解释为什么难；同一层内"改变量→试错"超 3 轮立刻回退到层面重选。详见 `references/workflow-standards.md` §9.0。
 
 补充硬约束：工作前先读项目 `AGENTS.md`/README/已有实验记录/脚本/日志；不要在任务开始前一次性检查所有工具环境，只有准备使用某个工具或能力时才检查对应前置；分析过程必须边分析边同步写实验记录，详细记录分析思路、实际操作、操作目的、所用工具、运行命令、代码变更、检测代码明细、实验结果和下一步计划；所有已经分析出的检测代码都必须写入记录，不遗漏 so/函数/offset、关键伪代码或汇编、判断条件、常量/字符串、syscall/API、返回值/状态码、fatal/kill/abort/BRK 分支和上下游调用；新 `.so` 工具逆向在用户未明确授权直接分析时，先走 `references/safety-and-confirmation-rules.md` 的确认流程；定制系统能力未完成首次确认时，禁止启用整体/抽取式脱壳、任意 so 注入、native 注册监听、定制系统内置 Apatch root 等依赖能力；`syscall-filter`、`stealth-hook` 不需要定制系统确认，但使用前必须确认 root/su、APatch/KernelPatch、KPM、arm64/GKI 等各自通用前置；任何闪退、崩溃或退出必须先用 `xiaojianbang-syscall-filter` 定位 syscall 与 pc/lr/sp 归属；分析 `.so` 前必须判断加密/壳化/自解密/运行时重建，命中则必须 dump/fix 后分析，禁止直接分析磁盘 so 下结论；闪退静态分析必须先看 `.init`、`.init_array`/constructor、`JNI_OnLoad`/RegisterNatives，再分析匿名 RX/memfd、CRC/完整性校验、崩溃点所在函数和上下游，未完成前禁止动态验证；分析 `.so` 前必须核对 `mmap/mprotect(PROT_EXEC)`、`memfd_create`、匿名 RX/memfd 映射，发现关键匿名代码必须先 dump/fix 后分析；使用任何 Frida 功能前必须先确认设备端 frida-server 活跃进程，未启动时先查 `/data/local/tmp/frida-server*` 并用已有文件启动，找不到才询问用户路径；发现 Frida 版本不匹配时禁止自行更换版本，只能建议用户自行更换并在实验记录中说明；Frida spawn/attach/早期注入异常必须先完成锁屏/亮屏/解锁与必要 reboot 复测闭环，未完成前禁止优先归因到版本、端口、脚本或继续叠加 hook/patch；需要使用 adb/反汇编工具/garlic/jadx 且找不到路径时，先查 PATH、项目 `scripts/` 与 `third_party/`、已有实验记录和常见路径；若本轮确实需要 garlic、jadx 或 rizin 且仍未命中，必须做宿主机全盘搜索，并在实验记录中说明结果；Java/Kotlin 层首选 garlic（无需关 checksum）、garlic 不可用回退 jadx（关 checksum）、`.so` 静态分析默认 rizin（伪代码可选 Ghidra headless 回退，用户明确要用 IDA 才切 IDA 并记录）；rizin 导出统一用 `rizin_export.py` 输出到 `artifacts/inp/`，需要伪代码时加 `--ghidra-support`（详见 `references/rizin-tools.md`、`references/tool-installation.md`、`references/dump-ida-ollvm-tools.md`）；`libcapture`/`libtrace` 默认视为定制系统轮询噪声；不覆盖旧实验记录。
 
